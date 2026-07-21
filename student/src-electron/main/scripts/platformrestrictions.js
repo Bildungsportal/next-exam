@@ -34,18 +34,23 @@
  * deactivate this nasty "windows" button or 3FingerSlideUp Gesture in windows 11 - you could edit the registry and reboot but thats obviously not what we want
  */
 
-import childProcess from 'child_process';
-import { clipboard, globalShortcut } from 'electron';
-import config from '../config.js';
+import {clipboard, globalShortcut} from 'electron';
+import config from '../../../src/utils/config.js';
 import log from 'electron-log';
-import { SchedulerService } from './schedulerservice.ts';
+import {SchedulerService} from './schedulerservice.ts';
 import platformDispatcher from './platformDispatcher.js';
-import { enableLinuxRestrictions, disableLinuxRestrictions, killLinuxAppsToClose } from './restrictions/lin.js';
-import { enableWindowsRestrictions, disableWindowsRestrictions, killWindowsAppsToClose, killWindowsExplorer } from './restrictions/win.js';
-import { killMacAppsToClose, clearMacClipboard } from './restrictions/mac.js';
-import { updateRemoteAssistant } from './remoteAssistantScan.js';
-import { stopAssessmentSession } from './assessmentSession.js';
-import { appsToClose } from './appsToClose.js';
+import {disableLinuxRestrictions, enableLinuxRestrictions, killLinuxAppsToClose} from './restrictions/lin.js';
+import {
+    disableWindowsRestrictions,
+    enableWindowsRestrictions,
+    killWindowsAppsToClose,
+    killWindowsExplorer
+} from './restrictions/win.js';
+import {clearMacClipboard, killMacAppsToClose} from './restrictions/mac.js';
+import {updateRemoteAssistant} from './remoteAssistantScan.js';
+import {isElectronWindow, isIOS} from "../../../src/types/platform.ts";
+import {stopAssessmentSession} from './assessmentSession.js';
+import {appsToClose} from './appsToClose.js';
 
 let clipboardInterval;
 let configStore = {
@@ -118,17 +123,29 @@ export async function disableRestrictions() {
     if (clipboardInterval) {
         clipboardInterval.stop();
     }
-
-    globalShortcut.unregister('CommandOrControl+V', () => { console.log('activate clipboard'); });
-    globalShortcut.unregister('CommandOrControl+Shift+V', () => { console.log('activate clipboard'); });
-    globalShortcut.unregister('CommandOrControl+C', () => { console.log('activate clipboard'); });
-    globalShortcut.unregister('CommandOrControl+X', () => { console.log('activate clipboard'); });
-
+    if (isElectronWindow(window)) {
+        globalShortcut.unregister('CommandOrControl+V', () => {
+            console.log('activate clipboard');
+        });
+        globalShortcut.unregister('CommandOrControl+Shift+V', () => {
+            console.log('activate clipboard');
+        });
+        globalShortcut.unregister('CommandOrControl+C', () => {
+            console.log('activate clipboard');
+        });
+        globalShortcut.unregister('CommandOrControl+X', () => {
+            console.log('activate clipboard');
+        });
+    }
     if (platformDispatcher.platform === 'linux') {
         disableLinuxRestrictions(configStore);
     }
 
     if (platformDispatcher.platform === 'win32') {
         disableWindowsRestrictions();
+    }
+
+    if (isIOS(window)) {
+        disableIOSRestrictions();
     }
 }

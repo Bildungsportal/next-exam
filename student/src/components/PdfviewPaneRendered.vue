@@ -3,20 +3,20 @@
         <ul class="nav nav-tabs bg-white pdf-toolbar">
         <li v-if="examtype === 'editor' && toolbar.showInsert" class="nav-item">
             <div class="nav-link btn btn-light btn-sm unstyled" id="insert-button" @click="insertImage()" :title="$t('editor.insert')">
-            <img src="/src/assets/img/svg/edit-download.svg" class="white">
+            <img src="/img/svg/edit-download.svg" class="white">
             </div>
         </li>
 
         <li v-if="!localLockdown && toolbar.showPrint" class="nav-item">
             <div class="nav-link btn btn-success btn-sm unstyled unstyled-send" id="print-button" @click="printBase64(true)" :title="$t('editor.printToPrinter')">
-            <img src="/src/assets/img/svg/print.svg" class="white">
+            <img src="/img/svg/print.svg" class="white">
             <span class="ms-2 send-label">{{ $t('editor.printToPrinter') }}</span>
             </div>
         </li>
 
         <li v-if="!localLockdown && toolbar.showSend" class="nav-item">
             <div class="nav-link btn btn-success btn-sm unstyled unstyled-send" id="send-button" @click="printBase64()" :title="$t('editor.send')">
-            <img src="/src/assets/img/svg/document-send.svg" class="white">
+            <img src="/img/svg/document-send.svg" class="white">
             <span class="ms-2 send-label">{{ $t('editor.send') }}</span>
             </div>
         </li>
@@ -36,7 +36,7 @@
             <span class="tool-underline tool-underline--red"></span>
             </button>
             <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'pen-red' }" @click.stop="setTool('pen-red')" title="Pen red">
-            <img src="/src/assets/img/svg/document-edit.svg" class="white">
+            <img src="/img/svg/document-edit.svg" class="white">
             </button>
             <button type="button" class="btn btn-light pdf-tool-btn pdf-tool-btn--text" :class="{ active: tool === 'text' }" @click.stop="setTool('text')" :title="$t('editor.pdfAnnotationText')">T</button>
             <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'delete' }" @click.stop="setTool('delete')" :title="$t('editor.pdfAnnotationDelete')">

@@ -27,15 +27,13 @@ import webglFindings from './preload/scripts/simplevmdetect.js';  // has to run 
 let config = ipcRenderer.sendSync('getconfig')  // we need to fetch the updated version of the systemconfig from express api (server.js)
 const backendFindings = ipcRenderer.sendSync('get-cpu-info')  // { isVM, reasons, vendor } from vmDetection.js
 
-if (webglFindings.detected || backendFindings?.isVM) {
-    ipcRenderer.send('virtualized', { webgl: webglFindings, backend: backendFindings })
-}
+
 
 // Expose configuration (readonly) to the renderer process
-    contextBridge.exposeInMainWorld('config', config);
+contextBridge.exposeInMainWorld('config', config);
 
 // Expose ipcRenderer methods safely via contextBridge
-    contextBridge.exposeInMainWorld('ipcRenderer', {
+contextBridge.exposeInMainWorld('ipcRenderer', {
         send: (channel, data) => ipcRenderer.send(channel, data),
         sendSync: (channel, data) => ipcRenderer.sendSync(channel, data),
         on: (channel, func) => ipcRenderer.on(channel, (event, ...args) => func(event, ...args)),
@@ -44,7 +42,9 @@ if (webglFindings.detected || backendFindings?.isVM) {
         removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel), // Removes all listeners for a channel
     });
 
-
+if (webglFindings.detected || backendFindings?.isVM) {
+    ipcRenderer.send('virtualized', { webgl: webglFindings, backend: backendFindings })
+}
 
 // let spacePressed = false;
 

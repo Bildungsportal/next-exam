@@ -27,14 +27,14 @@
     <div id="toolbar" class="d-inline p-1">
         <div :title="$t('editor.splitview')" @click="toggleSplitview()"
              class="invisible-button btn btn-outline-info p-0 ms-1 me-1 mb-0 btn-sm">
-            <img src="/src/assets/img/svg/view-split-left-right.svg" class="" width="22" height="22">
+            <img src="/view-split-left-right.svg" class="" width="22" height="22">
         </div>
-        <button :title="$t('editor.saveCopyAs')" @click="saveContent(null, 'manual'); " class="btn d-inline btn-success p-0 pe-2 ps-1 ms-1 mb-0 btn-sm"><img src="/src/assets/img/svg/document-save-as.svg" class="white" width="20" height="20" ></button>
-        <button title="delete" @click="clearAll(); " class=" btn  d-inline btn-danger p-0 pe-2 ps-1 ms-2 mb-0 btn-sm"><img src="/src/assets/img/svg/edit-delete.svg" class="white" width="20" height="20" ></button>
-        <button title="paste" @click="showClipboard(); " class="btn  d-inline btn-secondary p-0 pe-2 ps-1 ms-2 mb-0 btn-sm"><img src="/src/assets/img/svg/edit-paste-style.svg" class="white" width="20" height="20" ></button>
+        <button :title="$t('editor.saveCopyAs')" @click="saveContent(null, 'manual'); " class="btn d-inline btn-success p-0 pe-2 ps-1 ms-1 mb-0 btn-sm"><img src="/img/svg/document-save-as.svg" class="white" width="20" height="20" ></button>
+        <button title="delete" @click="clearAll(); " class=" btn  d-inline btn-danger p-0 pe-2 ps-1 ms-2 mb-0 btn-sm"><img src="/img/svg/edit-delete.svg" class="white" width="20" height="20" ></button>
+        <button title="paste" @click="showClipboard(); " class="btn  d-inline btn-secondary p-0 pe-2 ps-1 ms-2 mb-0 btn-sm"><img src="/img/svg/edit-paste-style.svg" class="white" width="20" height="20" ></button>
         <div class="btn-group  ms-2 me-1 mb-0 " role="group">
-            <div class="btn btn-outline-info btn-sm p-0 pe-2 ps-1  mb-0" @click="setsource('suite')"> <img src="/src/assets/img/svg/formula.svg" class="" width="20" height="20" >suite</div>
-            <div class="btn btn-outline-info btn-sm p-0 pe-2 ps-1  mb-0" @click="setsource('classic')"> <img src="/src/assets/img/svg/formula.svg" class="" width="20" height="20" >classic</div>
+            <div class="btn btn-outline-info btn-sm p-0 pe-2 ps-1  mb-0" @click="setsource('suite')"> <img src="/img/svg/formula.svg" class="" width="20" height="20" >suite</div>
+            <div class="btn btn-outline-info btn-sm p-0 pe-2 ps-1  mb-0" @click="setsource('classic')"> <img src="/img/svg/formula.svg" class="" width="20" height="20" >classic</div>
         </div>
         
 
@@ -43,18 +43,18 @@
 
 
         <!-- exam materials start - these are base64 encoded files fetched on examstart or section start-->
-        <div id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 ms-2 mb-0 btn-sm" @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img src="/src/assets/img/svg/gtk-convert.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.materials') }}</div>
+        <div id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 ms-2 mb-0 btn-sm" @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img src="/img/svg/gtk-convert.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.materials') }}</div>
 
         <div v-for="file in examMaterials" :key="file.filename" class="d-inline" style="text-align:left">
-            <div v-if="(file.filetype === 'htm')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
-            <div v-if="(file.filetype === 'docx')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
-            <div v-if="(file.filetype === 'pdf')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
-            <div v-if="(file.filetype === 'audio')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="loadBase64file(file)"><img src="/src/assets/img/svg/im-google-talk.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
-            <div v-if="(file.filetype === 'image')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
-        </div>       
-        
+            <div v-if="(file.filetype === 'htm')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
+            <div v-if="(file.filetype === 'docx')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
+            <div v-if="(file.filetype === 'pdf')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
+            <div v-if="(file.filetype === 'audio')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="loadBase64file(file)"><img src="/img/svg/im-google-talk.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
+            <div v-if="(file.filetype === 'image')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
+        </div>
+
         <div v-if="allowedUrls.length !== 0"  v-for="allowedUrl in allowedUrls  " class="btn btn-outline-success p-0 pe-2 ps-1 me-1 mb-0 btn-sm allowed-url-button" :title="getUrlDisplay(allowedUrl)" @click="showUrl(getUrlDisplay(allowedUrl))">
-            <img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{getUrlDisplay(allowedUrl)}}
+            <img src="/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{getUrlDisplay(allowedUrl)}}
         </div>
         <!-- exam materials end -->
 
@@ -65,9 +65,9 @@
         <!-- local files start -->
         <div class="white text-muted me-2 ms-2 small d-inline-block mb-0" style="vertical-align: middle;">{{ $t('editor.localfiles') }} </div>
         <div v-for="file in localfiles" class="d-inline mb-0">
-            <div v-if="(file.type == 'pdf')"   :class="{'bg-warning': file.name == currentFile}" class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-0 btn-sm" @click="selectedFile=file.name; loadPDF(file.name)"><img src="/src/assets/img/svg/document-replace.svg" class="" width="20" height="20" > {{file.name}} </div>
-            <div v-if="(file.type == 'ggb')"   :class="{'bg-warning': file.name == currentFile}" class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-0 btn-sm" @click="selectedFile=file.name; loadGGB(file.name)"><img src="/src/assets/img/svg/document-replace.svg" class="" width="20" height="20" > {{file.name}} </div>
-            <div v-if="(file.type == 'image')" class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-0 btn-sm" @click="loadImage(file.name)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
+            <div v-if="(file.type === 'pdf')"   :class="{'bg-warning': file.name == currentFile}" class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-0 btn-sm" @click="selectedFile=file.name; loadPDF(file.name)"><img src="/img/svg/document-replace.svg" class="" width="20" height="20" > {{file.name}} </div>
+            <div v-if="(file.type === 'ggb')"   :class="{'bg-warning': file.name == currentFile}" class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-0 btn-sm" @click="selectedFile=file.name; loadGGB(file.name)"><img src="/img/svg/document-replace.svg" class="" width="20" height="20" > {{file.name}} </div>
+            <div v-if="(file.type === 'image')" class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-0 btn-sm" @click="loadImage(file.name)"><img src="/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
         </div>
         <!-- local files end -->
 
@@ -128,7 +128,7 @@
             <div id="focuswarning" class="infodiv p-4 d-block focuswarning" >
                 <div class="mb-3 row">
                     <div class="mb-3 "> {{$t('editor.leftkiosk')}} <br> {{$t('editor.tellsomeone')}} </div>
-                    <img src="/src/assets/img/svg/eye-slash-fill.svg" class=" me-2" width="32" height="32" >
+                    <img src="/img/svg/eye-slash-fill.svg" class=" me-2" width="32" height="32" >
                     <div class="mt-3"> {{ formatTime(entrytime) }}</div>
                 </div>
             </div>
@@ -168,7 +168,7 @@
             @keydown.space.prevent="insertFromClipboard(item)"
           >
             <img
-              src="/src/assets/img/svg/edit-paste-style.svg"
+              src="/img/svg/edit-paste-style.svg"
               alt=""
               width="16"
               height="16"
@@ -211,6 +211,7 @@ import {ref} from "vue";
 import {useConfigStore} from "../stores/configStore.ts";
 import {useInfoStore} from "../stores/infoStore.ts";
 import {autoCleanupMixin} from "../mixins/autoCleanupMixin.ts";
+import {isIOS} from "../types/platform.ts";
 
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
@@ -361,9 +362,9 @@ export default {
         },
     },
     async mounted() {
-        this.currentFile = `${this.clientname}.ggb`
-        this.entrytime = new Date().getTime()
-         
+        this.currentFile = `${this.clientname}.ggb`;
+        this.entrytime = new Date().getTime()  ;
+
         this._onUnhandledRejection = (event) => {
             const reason = event?.reason;
             const message = typeof reason === 'string' ? reason : reason && reason.message;
@@ -404,6 +405,10 @@ export default {
             })
         });
 
+        let examMaterials = await this.getExamMaterials()
+        this.examMaterials = examMaterials.materials;
+        this.allowedUrls = examMaterials.allowedUrls;
+        console.log("geogebra @ getmaterials: get materials request done, set materials: ", this.examMaterials, examMaterials);
         signalBridge.on('getmaterials', (event) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
             console.log("geogebra @ getmaterials: get materials request received")
             this.getExamMaterials()
@@ -789,7 +794,7 @@ export default {
 
         setsource(source) {
             this.initGeoGebra(source)
-        }, 
+        },
 
 
 
@@ -808,7 +813,9 @@ export default {
             if (this.pincode !== '0000') this.localLockdown = false;
 
             if (this.exammode !== prevExammode) this.injectCSS();
-            this.battery = await navigator.getBattery().then(battery => battery)
+
+            // TODO: check how to fix this for ios
+            this.battery = isIOS() ? 0 : await navigator.getBattery().then(battery => battery)
                 .catch(error => { console.error('Error accessing the Battery API:', error); });
 
             this.internetCheckCounter++;

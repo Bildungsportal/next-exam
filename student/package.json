@@ -27,7 +27,14 @@
     "notarize:mac:arm64": "node scripts/notarize-app-only.cjs",
     "notarize:mac:x64": "cross-env NXE_EB_MAC_ARCH=x64 node scripts/notarize-app-only.cjs",
     "build:win:portable": "npm run prebuild && npm run cleanwin && quasar build --verbose -m electron -T win -A x64",
-    "build:win:msi": "npm run prebuild && npm run cleanwin && cross-env NXE_EB_WIN_TARGET=msi quasar build --verbose -m electron -T win -A x64"
+    "build:win:msi": "npm run prebuild && npm run cleanwin && cross-env NXE_EB_WIN_TARGET=msi quasar build --verbose -m electron -T win -A x64",
+    "build:linux:iosbranch": "npm run prebuild && npm run clean && quasar build --verbose -m electron -l && npm run protect:main",
+    "build:mac:x64:iosbranch": "npm run prebuild && npm run clean && quasar build --verbose -m electron -m --arch x64 && npm run protect:main",
+    "build:mac:arm64:iosbranch": "npm run prebuild && npm run clean && quasar build --verbose -m electron -m --arch arm64 && npm run protect:main",
+    "build:win:portable:iosbranch": "npm run prebuild && npm run cleanwin && quasar build --verbose -m electron -w portable:x64 && npm run protect:main",
+    "build:win:msi:iosbranch": "npm run prebuild && npm run cleanwin && quasar build --verbose -m electron -w msi:x64 && npm run protect:main",
+    "build:ios": "npm run prebuild && quasar build -m capacitor -T ios --skip-pkg",
+    "dev:ios": "quasar dev -m capacitor -T ios"
   },
   "env": {
     "//": "Used in build scripts",
@@ -40,7 +47,9 @@
     "rollup"
   ],
   "dependencies": {
-    "@capacitor/device": "^8.0.0",
+    "@capacitor/device": "^8.0.2",
+    "@capacitor/filesystem": "^8.1.2",
+    "@capacitor/status-bar": "^8.0.2",
     "@jimp/jpeg": "^0.22.12",
     "@noble/ciphers": "^2.2.0",
     "@noble/curves": "^2.2.0",
@@ -87,6 +96,7 @@
     "asn1js": "^3.0.10",
     "bootstrap": "^5.3.8",
     "bytenode": "^1.5.7",
+    "capacitor-udp-socket": "^7.0.0",
     "chalk": "^5.4.1",
     "cors": "^2.8.5",
     "cross-env": "^7.0.3",
@@ -109,6 +119,7 @@
     "mammoth": "^1.8.0",
     "moment-timezone": "^0.5.45",
     "node-wifi": "^2.0.16",
+    "npm-run-path": "^6.0.0",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^5.6.205",
     "pinia": "^3.0.4",
@@ -126,6 +137,8 @@
     "yaml": "^2.7.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.4.0",
+    "@capacitor/core": "^8.4.0",
     "@intlify/unplugin-vue-i18n": "^5.0.0",
     "@quasar/app-vite": "^2.1.0",
     "@types/node": "^20.5.9",
@@ -144,6 +157,7 @@
     "vite": "^5.4.6",
     "vite-plugin-commonjs": "^0.10.3",
     "vite-plugin-resolve": "^2.5.2",
+    "vite-plugin-static-copy": "^3.1.5",
     "vue": "^3.5.6"
   },
   "engines": {
@@ -156,7 +170,7 @@
     "tiff": "5.0.3",
     "@parcel/watcher": "npm:@favware/skip-dependency@1.2.2"
   },
-  "buildVersion": "2.0.0.4",
+  "buildVersion": "2.0.0.1",
   "version": "2.0.0",
-  "buildNumber": "4"
+  "buildNumber": "1"
 }

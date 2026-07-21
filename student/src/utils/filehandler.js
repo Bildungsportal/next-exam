@@ -4,6 +4,10 @@ import mammoth from 'mammoth';
 import {SignalBridge} from './signalBridge.js';
 import {odtToTiptapHtml} from './odtToTiptapHtml.js';
 import { resolveEditorExamConfig, resolveGroupKey } from 'next-exam-shared/editorExamConfig.js';
+import {examApiFetch} from "../../../shared/examApiFetch.js";
+import log from "electron-log";
+import {useInfoStore} from "../stores/infoStore.ts";
+import {useConfigStore} from "../stores/configStore.ts";
 
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
@@ -548,21 +552,22 @@ export async function loadGGB(file, base64=false){
 /**
  * fetch exam materials in base64 from teacher
  */
-export async function getExamMaterials(){
-    let examMaterials = await signalBridge.invoke('getExamMaterials')
-    
-    if (examMaterials){
-        this.examMaterials = examMaterials.materials
+export async function getExamMaterials() {
+    let examMaterials = await fetchExamMaterials()
+    console.log('filehandler @ getExamMaterials: got materials:', examMaterials)
+    if (examMaterials) {
+
+        let materials = examMaterials.materials
         let allowedUrls = examMaterials.allowedUrls || [];                                         // ensure array
         let currentUrls = this.allowedUrls || [];
-        
-        // check if allowedUrls are identical to avoid re-setting blocking
-        if (JSON.stringify([...allowedUrls].sort()) === JSON.stringify([...currentUrls].sort())) {
-            console.log("filehandler @ getExamMaterials: allowedUrls are identical - skipping webview blocking setup");
-            return;
-        }
 
-        
+        // check if allowedUrls are identical to avoid re-setting blocking
+        // if (JSON.stringify([...allowedUrls].sort()) === JSON.stringify([...currentUrls].sort())) {
+        //     console.log("filehandler @ getExamMaterials: allowedUrls are identical - skipping webview blocking setup");
+        //     return;
+        // }
+
+
         console.log("filehandler @ getExamMaterials: received new examMaterials")
         this.allowedUrls = allowedUrls
 
@@ -571,21 +576,28 @@ export async function getExamMaterials(){
         const webviewPane = document.getElementById('safebrowser');
         if (webviewPane) {
             console.log('filehandler @ getExamMaterials: setting WebviewPane dom-ready event to block websites');
- 
+
             // remove existing listener if present to prevent accumulation
             if (webviewPane._blockingDomReadyHandler) {
                 webviewPane.removeEventListener('dom-ready', webviewPane._blockingDomReadyHandler);
             }
+            console.log('filehandler @ getExamMaterials: 1')
             // create named handler function and store reference
             webviewPane._blockingDomReadyHandler = async () => {  // content id can only be accessed after dom-ready event                
                 // try to get webContentsId with retry logic
+
+                console.log('filehandler @ getExamMaterials: 2')
                 const tryStartBlocking = async (retries = 10, delay = 100) => {
                     for (let i = 0; i < retries; i++) {
                         if (webviewPane.getWebContentsId) {
+
+                            console.log('filehandler @ getExamMaterials: 2')
                             const guestId = webviewPane.getWebContentsId();
                             if (guestId) {
+
+                                console.log('filehandler @ getExamMaterials: 3')
                                 // send webview id + allowlist to main process to block navigation before it happens
-                                await signalBridge.invoke('start-blocking-for-webview', { guestId, allowedUrls });
+                                await signalBridge.invoke('start-blocking-for-webview', {guestId, allowedUrls});
                                 console.log(`filehandler @ getExamMaterials: started blocking for WebviewPane ${guestId}`);
                                 return;
                             }
@@ -599,17 +611,55 @@ export async function getExamMaterials(){
                 };
                 await tryStartBlocking();
             };
+
+            console.log('filehandler @ getExamMaterials: 4')
             webviewPane.addEventListener('dom-ready', webviewPane._blockingDomReadyHandler);
-            
+
         } else {
             console.log('filehandler @ getExamMaterials: WebviewPane not in DOM');
         }
 
-    } 
-    else{
+    } else {
         this.examMaterials = []
         this.allowedUrls = []
     }
+    return examMaterials
 }
+
+    async function fetchExamMaterials() {
+        console.log("filehandler @ fetchExamMaterials")
+        let infoStore = useInfoStore()
+        console.log("filehandler @ fetchExamMaterials: 1")
+        let payload = {
+            group: infoStore.group,
+            lockedSection: infoStore.lockedsection,
+        }
+        console.log("filehandler @ fetchExamMaterials: 2")
+
+        let examMaterials = false
+        if (infoStore.locallockdown) {
+            return false
+            console.log("filehandler @ fetchExamMaterials: 3")
+        }
+        else{
+            console.log("filehandler @ fetchExamMaterials: 4")
+            // Fetch request with the corresponding options
+            examMaterials = examApiFetch(`https://${infoStore.serverip}:${useConfigStore().serverApiPort}/server/data/getexammaterials/${infoStore.servername}`, {
+                method: "POST",
+                body: JSON.stringify(payload),
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${infoStore.token}` },
+            })
+                .then(response => response.json()) // Receive response as JSON
+                .then(data => {
+                    console.log("filehandler @ fetchExamMaterials: received data", data)
+                    return data
+                })
+                .catch(err => log.error(`ipchandler @ getExamMaterials: ${err}`));
+
+            console.log("filehandler @ fetchExamMaterials: received exam materials", examMaterials)
+            return examMaterials
+        }
+    }
+
 
 

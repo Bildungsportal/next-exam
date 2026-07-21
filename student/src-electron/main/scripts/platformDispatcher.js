@@ -26,7 +26,7 @@ import fs from 'fs';
 import { join } from 'path';
 import { app } from 'electron';
 import log from 'electron-log';
-import config from '../config.js';
+import config from '../../../src/utils/config.js';
 import os from 'os';
 import path from 'path';
 import dotenv from 'dotenv';
@@ -152,8 +152,8 @@ class PlatformDispatcher {
   _whichDesktopName() {
     if (this.platform === 'win32') {
       return "explorer.exe";
-    } 
-    
+    }
+
     else if (this.platform === 'linux') {
       if (this.runningInCage) {
         return "cage";

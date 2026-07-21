@@ -47,10 +47,10 @@ export const useInfoStore = defineStore("info", {
         async updateInfo(): Promise<boolean> {
             let response = await signalBridge.invoke('getinfoasync')
             if (response) {
-                let clientinfo = response.clientinfo
-
+                let clientinfo = response.clientinfo;
                 this.serverstatus = response.serverstatus;
-                this.examtype = clientinfo.examtype;
+                this.examtype = clientinfo.examtype === null ? this.examtype : clientinfo.examtype;
+                console.log("infoStore - updateInfo: ", this.examtype)
                 this.serverip = clientinfo.serverip;
                 this.servername = clientinfo.servername;
                 this.servertoken = clientinfo.servertoken;
@@ -63,9 +63,10 @@ export const useInfoStore = defineStore("info", {
                 this.exammode = !!clientinfo.exammode;
                 this.lockedSection = clientinfo.lockedSection ?? 1;
                 this.online = !!clientinfo?.token;
+                this.token = clientinfo?.token;
             }
             await this.refreshNetworkInfo();
-            return true
+            return true;
         },
         // Brief section-switch overlay until target lockedSection is active.
         beginSectionSwitch(sectionNumber: number): void {

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import config from '../../src-electron/main/config.js';
+import config from '../utils/config.js';
 
 export const useConfigStore = defineStore("config", {
     state: () => ({

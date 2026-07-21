@@ -28,7 +28,7 @@ const buildDate = now.getFullYear() +
 
 
 // 1. Update config.js
-const configJsPath = './src-electron/main/config.js';
+const configJsPath = './src/utils/config.js';
 
 let configJsContent = `
 /**

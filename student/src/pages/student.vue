@@ -11,7 +11,7 @@
     <!-- Header START -->
     <div v-show="!isLoading" class="w-100 p-3 text-white bg-dark text-left" style="height: 66px; z-index: 1000;">
     <span class="text-white m-1 d-inline-flex align-items-center flex-wrap ms-1">
-        <img src='/src/assets/img/svg/speedometer.svg' class="white me-2" width="32" height="32">
+        <img src='/img/svg/speedometer.svg' class="white me-2" width="32" height="32">
         <span class="fs-4 align-middle me-2" @click="handleClick">Next-Exam</span>
         <span v-if="cageLauncherApps.length" class="d-inline-flex align-items-center flex-wrap gap-2 cage-launcher-group">
             <button v-for="app in cageLauncherApps" :key="app.path" type="button"
@@ -93,7 +93,7 @@
         <!-- SIDEBAR START -->
         <div class="p-3 text-white bg-dark h-100 student-sidebar" style="width: 240px; min-width: 240px;">
             <div class="btn btn-light ms-1 text-start infobutton nobutton">
-                <img src='/src/assets/img/svg/server.svg' class="me-2" width="16" height="16"> {{ $t('student.exams') }}
+                <img src='/img/svg/server.svg' class="me-2" width="16" height="16"> {{ $t('student.exams') }}
             </div>
             <br>
 
@@ -113,7 +113,7 @@
                      class="btn btn-success m-1 " :class="(token)? 'disabledexam':''" style="padding:0;">
                     <img id="biplogo"
                          style="filter: hue-rotate(140deg);  width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; "
-                         src="/src/assets/img/login_students.jpg">
+                         src="/img/login_students.jpg">
                     <span v-if="bipUsername" id="biploginbuttonlabel">{{ bipUsername }}</span>
                     <span v-else id="biploginbuttonlabel">Logout</span>
                 </div>
@@ -121,7 +121,7 @@
                      style="padding:0;" :class="(token)? 'disabledexam':''">
                     <img id="biplogo"
                          style="width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; "
-                         src="/src/assets/img/login_students.jpg">
+                         src="/img/login_students.jpg">
                     <span v-if="bipUsername" id="biploginbuttonlabel">{{ bipUsername }}</span><span v-else
                                                                                                     id="biploginbuttonlabel">Login</span>
                 </div>
@@ -242,7 +242,7 @@
 
                         <div
                             style="display:flex; flex-direction: row; justify-content: space-between; padding:0px; margin:0px;">
-                            <img v-if="!server.reachable" src="/src/assets/img/svg/emblem-warning.svg"
+                            <img v-if="!server.reachable" src="/img/svg/emblem-warning.svg"
                                  :title="$t('student.unreachable')"
                                  style="width:20px;height:20px;vertical-align:top;cursor: help;position: absolute; margin-top:8px; margin-left:8px; ">
 
@@ -301,10 +301,8 @@
 </template>
 
 <script lang="ts">
-import validator, {isEmpty} from 'validator'
+import validator from 'validator'
 import log from 'electron-log/renderer'
-import {SchedulerService} from '../utils/schedulerservice.js'
-import {isElectronWindow} from "../types/platform.ts";
 import {SignalBridge} from '../utils/signalBridge.js'
 import { initScreenshotScheduler, hasActiveScreenshotStream, isFullDesktopCaptureLikely, ensureDisplayStreamAsync, setCageWindowCaptureFallback, setLinuxKioskRunningInCage, isCageWindowCaptureFallback } from '../utils/screenshotCapture.js'
 import { getLinuxKioskInfo } from '../utils/linuxCageKiosk.js'
@@ -320,8 +318,11 @@ import { autoCleanupMixin } from "../mixins/autoCleanupMixin.ts";
 import { useConfigStore } from "stores/configStore.ts";
 import { ref } from 'vue';
 import { showLocalVmQemuIssueDialog } from 'next-exam-shared/qemuLocalVmDialogs.js'
+import loggingBridge from "../utils/loggingBridge.js";
+import { StatusBar } from "@capacitor/status-bar";
+import {isElectronWindow, isIOS} from "../types/platform.js";
 
-function unhandledRejectionFunction(event: PromiseRejectionEvent) {
+function unhandledRejectionFunction(event: any) {
   const reason = event?.reason;
   const msg = typeof reason === 'string' ? reason : reason && reason.message;
   if (msg && (msg.includes('GUEST_VIEW_MANAGER_CALL') || msg.includes('ERR_FAILED'))) {
@@ -367,8 +368,6 @@ export default {
             serverstatus: null,
             serverlist: [],
             serverlistAdvanced: [],
-            fetchinterval: null as SchedulerService,
-            autoUpdateInterval: null as SchedulerService,
             startExamEvent: null,
             advanced: false,
             serverip: "" as string,
@@ -685,6 +684,7 @@ export default {
         },
 
         async selectPreferredInterface() {
+            loggingBridge.info('selectPreferredInterface');
             if (this.activeDialog || !this.hostip?.availableInterfaces?.length) return;
             this.activeDialog = true;
             this.$swal.fire({
@@ -732,7 +732,7 @@ export default {
 
             let IPCresponse = signalBridge.sendSync('loginBiP', this.biptest)
             if (IPCresponse && IPCresponse.status === "success") {
-                
+
             }
             console.log(IPCresponse)
         },
@@ -814,7 +814,7 @@ export default {
                 console.error("student.vue@fetchBipExams: cannot fetch from bip api without valid token")
                 return;
             }
-            
+
             const url = this.getBiPUrl() + '/webservice/rest/server.php?wstoken=' + token + '&wsfunction=local_dpu_get_exams_student&moodlewsrestformat=json';
            
             await this.autoFetch(url, { method: "GET" })
@@ -884,6 +884,16 @@ export default {
 
 
         setupLocalLockdown() {
+
+            signalBridge.send('locallockdown', {
+                password: "Test",
+                exammode: "ggb",
+                clientname: "username",
+                languagetool: false,
+                spellchecklang: "german",
+                suggestions: true
+            })
+
             const inputOptions = {
                 'de-DE': this.$t("student.de"),
                 'en-GB': this.$t("student.en"),
@@ -944,7 +954,7 @@ export default {
                 cancelButtonText: this.$t("editor.cancel"),
                 focusConfirm: false,
                 icon: false,
-                didOpen:() => {
+                didOpen: () => {
                     const localUserElement = document.getElementById("localuser");
                     const localPasswordElement = document.getElementById("localpassword");
                     const localPasswordConfirmElement = document.getElementById("localpasswordconfirm");
@@ -961,10 +971,14 @@ export default {
                         var lettersOnly = /^[a-zA-ZäöüÄÖÜß ]+$/;  //give some special chars for german a chance
                         var key = e.key || String.fromCharCode(e.which);
                         // Allow Enter key to pass through
-                        if (e.key === 'Enter') { return; }
-                        if (!lettersOnly.test(key)) { e.preventDefault(); }
+                        if (e.key === 'Enter') {
+                            return;
+                        }
+                        if (!lettersOnly.test(key)) {
+                            e.preventDefault();
+                        }
                     });
-                    
+
                     // Add Enter key listener to confirm dialog - attach to both input fields and document
                     const swalInstance = this.$swal;
                     const handleEnterKey = (e) => {
@@ -973,7 +987,7 @@ export default {
                             swalInstance.clickConfirm();
                         }
                     };
-                    
+
                     // Add listener to document for general Enter key handling
                     this.autoEventListener(document,"keydown", handleEnterKey);
                     // Add listener directly to input fields to catch Enter when focused
@@ -1399,7 +1413,7 @@ export default {
                                     this.safeAssign('networkerror', false);
                                 }
                             }).catch(err => {
-                            log.error(`student.vue @ fetchInfo (advanced): ${err.message}`);
+                            loggingBridge.error(`student.vue @ fetchInfo (advanced): ${err.message}`);
                             this.safeAssign('networkerror', true);
                         });
                     } else {
@@ -1440,7 +1454,7 @@ export default {
                 this.applyOnlineExamStatusToServerlist();
 
 
-            } 
+            }
             else {  // No multicast: still show manual IP servers and BiP exams from the portal
                 let newServerlist = this.serverlistAdvanced.length !== 0 ? [...this.serverlistAdvanced] : [];
                 newServerlist = this.mergeBipExamsIntoServerlist(newServerlist);
@@ -1484,7 +1498,6 @@ export default {
              * For manually added servers: remove after more than 2 failures
              */
             for (let server of this.serverlist) {
-                //log.info(`student.vue @ fetchinfo: checking server ${server.servername} (${server.serverip})`)
                 if (!server.serverip) continue;
                 const serverIdentifier = this.getServerIdentifier(server);
                 const isManual = this.isManuallyAddedServer(server);
@@ -1690,8 +1703,8 @@ export default {
                 if (!hasActiveScreenshotStream()) {
                     const ok = await ensureDisplayStreamAsync();
                     if (!ok) {
-                        this.$swal.fire({ title: "Error", text: this.$t("student.screenshotpermission"), icon: 'error', showCancelButton: false });
-                        return;
+                        // this.$swal.fire({ title: "Error", text: this.$t("student.screenshotpermission"), icon: 'error', showCancelButton: false });
+                        // return;
                     }
                 }
                 // Win AA kiosk auto-grants sources[0]=screen via main-process handler, so the picker-misclick
@@ -1726,14 +1739,15 @@ export default {
 
 
                 //  console.log({clientname:this.username, servername:servername, serverip, serverip, pin:this.pincode, bipuserID:this.bipuserID })
-                let IPCresponse = signalBridge.sendSync('register', {
+                let IPCresponse = await signalBridge.sendSync('register', {
                     clientname: this.username,
                     servername: servername,
-                    serverip,
-                    serverip,
-                    pin: this.pincode,
-                    bipuserID: this.bipuserID
+                    serverip: serverip,
+                    //serverip,
+                    pin: this.pincode+"",
+                    bipuserID: this.bipuserID+""
                 })
+                console.log(`student @ registerClient: ${JSON.stringify(IPCresponse, null, 2)}`)
                 if (IPCresponse) {
                     console.log(`student @ registerClient: ${IPCresponse.message}`)
                     if (IPCresponse.token) {
@@ -1847,6 +1861,14 @@ export default {
         });
     },
     async mounted() {
+      if (isIOS()) {
+        try {
+          await StatusBar.hide();
+        } catch (error) {
+          console.warn('Status bar error:', error);
+        }
+      }
+
         document.querySelector("#statusdiv").style.visibility = "hidden";
         this.isLoading = false;
 
@@ -1876,11 +1898,10 @@ export default {
             el.focus();
         });
 
-        this.fetchinterval = this.autoSchedulerService(this.fetchInfo, 4000)
+        this.autoSchedulerService(this.fetchInfo, 4000);
+        this.autoSchedulerService(this.bipAutoUpdate, 10000);
 
-        this.autoUpdateInterval = this.autoSchedulerService(this.bipAutoUpdate, 10000)
-
-        // add event listener to user input field to supress all special chars
+      // add event listener to user input field to supress all special 1chars
         this.autoEventListener(document.getElementById("user"), "keypress", function (e) {
           // var lettersOnly = /^[a-zA-Z ]+$/;
           var lettersOnly = /^[a-zA-ZäöüÄÖÜß ]+$/;  //give some special chars for german a chance
@@ -1890,6 +1911,7 @@ export default {
           }
         });
 
+        // TODO: Modify windowhandling and token saving
         signalBridge.on('entering-exam-mode', () => {
             this.enteringExamModeOverlay = true;
         });
@@ -1922,6 +1944,7 @@ export default {
         signalBridge.removeAllListeners('localvm-compat-check-start');
         signalBridge.removeAllListeners('localvm-compat-check-end');
         signalBridge.removeAllListeners('qemu-not-available');
+        signalBridge.removeAllListeners('updateReceived');
     }
 }
 </script>

@@ -23,16 +23,22 @@
 
 
 import {isElectronWindow, isIOS} from '../types/platform.ts'
-import { IosTaskDispatcher } from './ios/iosTaskDispatcher.js'
-
-
+import IosTaskDispatcher from './ios/iosTaskDispatcher.js'
 
 // class wraps ipcRenderer methods with platform checks
 export class SignalBridge {
     // constructor stores reference to target window
     constructor(targetWindow = window) {
         this.targetWindow = targetWindow
+        this.iosTaskDispatcher = IosTaskDispatcher
     }
+
+    // Some functionally still needs to be used like implemented in iosTaskDispatcher to test other functionality,
+    // e.g. getinfoasync is needed to test checkhostip, therefore the empty object fallback of
+    // Swift fallback is not enough
+    pluginList = [
+        'checkhostip', 'setPreferredInterface', 'getinfoasync', 'register', 'startExam', 'endExam', 'switch-exam-section', 'gracefullyexit'
+    ]
 
     // send forwards all params to electron or leaves hook for ios
     send(channel, ...args) {
@@ -44,8 +50,11 @@ export class SignalBridge {
         }
 
         if (isIOS()) {
-            IosTaskDispatcher.dispatch(channel, ...args)
-            return
+            if (this.pluginList.includes(channel)) {
+                win.ipcRenderer.send(channel, ...args)
+            } else {
+                return this.iosTaskDispatcher.dispatch(channel, ...args)
+            }
         }
 
         // log unsupported platform information
@@ -61,7 +70,11 @@ export class SignalBridge {
         }
 
         if (isIOS()) {
-            return IosTaskDispatcher.dispatch(channel, ...args)
+            if (this.pluginList.includes(channel)) {
+                return win.ipcRenderer.sendSync(channel, ...args)
+            } else {
+                return this.iosTaskDispatcher.dispatch(channel, ...args)
+            }
         }
 
         // log unsupported platform information
@@ -73,12 +86,16 @@ export class SignalBridge {
     async invoke(channel, ...args) {
         const win = this.targetWindow
 
-        if (isElectronWindow(win) && win.ipcRenderer && typeof win.ipcRenderer.invoke === 'function') {
-            return await win.ipcRenderer.invoke(channel, ...args)
+        if (isElectronWindow(win) && win.ipcRenderer && typeof win.ipcRenderer.on === 'function') {
+            return await win.ipcRenderer.invoke(channel, ...args);
         }
 
         if (isIOS()) {
-            return await IosTaskDispatcher.dispatch(channel, ...args)
+            if (this.pluginList.includes(channel)) {
+                return await win.ipcRenderer.invoke(channel, ...args)
+            } else {
+                return await this.iosTaskDispatcher.dispatch(channel, ...args)
+            }
         }
 
         // log unsupported platform information
@@ -98,8 +115,13 @@ export class SignalBridge {
         }
 
         if (isIOS()) {
-            IosTaskDispatcher.dispatch(channel, ...args)
-            return
+            if (this.pluginList.includes(channel)) {
+                win.ipcRenderer.on(channel, callback)
+                return
+            } else {
+                this.iosTaskDispatcher.dispatch(channel, callback)
+                return
+            }
         }
 
         // log unsupported platform information

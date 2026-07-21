@@ -1,6 +1,14 @@
 import { defineBoot } from "#q-app/wrappers";
 import i18n from "../locales/locales.js";
 import VueSweetalert2 from "vue-sweetalert2";
+import config from '../utils/config.js';
+import NavigationHandler from "../utils/navigationHandler.js";
+import multicastclient from "../../src-electron/main/scripts/multicastclient.js";
+import LoggingBridge from "../utils/loggingBridge.js";
+import IosTaskDispatcher from "../utils/ios/iosTaskDispatcher.js";
+import {isIOS} from "../types/platform.js";
+import { ipcRenderer as capacitorIpcRenderer } from "../plugins/ipc-renderer.js";
+import IosUpdateListener from "../utils/ios/iosUpdateListener.js";
 
 // "async" is optional;
 // more info on params: https://v2.quasar.dev/quasar-cli-vite/boot-files
@@ -28,6 +36,7 @@ export default defineBoot(async ( { app, router } ) => {
                 });
         }
     };
+    app.config.globalProperties.$config = config;
 
     app.use(i18n);
 // Das Plugin wird mit den Optionen installiert, die nun den globalen didOpen Hook enthalten.
@@ -44,4 +53,13 @@ export default defineBoot(async ( { app, router } ) => {
             }, 300);
         }
     })
+
+    if (isIOS()) {
+        window.ipcRenderer = capacitorIpcRenderer
+    }
+
+    LoggingBridge.init(window);
+    NavigationHandler.init(LoggingBridge, multicastclient, config, router);
+    IosTaskDispatcher.init(LoggingBridge, multicastclient, NavigationHandler);
+    IosUpdateListener.init(multicastclient);
 })

@@ -5,7 +5,7 @@
         <div  class=" position-absolute start-50 translate-middle text-center" style="top: 50vh; width: 100% ">
         
                 <div class="exambanner w-100 p-3   shadow text-right">
-                    <img src="/src/assets/img/svg/shield-lock.svg" class="me-2  " width="32" height="32" >
+                    <img src="/img/svg/shield-lock.svg" class="me-2  " width="32" height="32" >
                     <span class="fs-4 align-middle me-4 ">Exam-Mode </span>
                 </div>
         

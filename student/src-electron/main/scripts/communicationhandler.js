@@ -42,7 +42,7 @@ import { checkQemuAvailability } from '../../../../shared/qemuAvailability.js';
 import { getQemuInstallInfo } from '../../../../shared/qemuInstallInfo.js';
 import { pickLocalVmGroupConfig } from '../../../../shared/localVmDisplayResolutions.js';
 import { stopProxy } from './vncproxy.js';
-import { switchExamSection } from './switchExamSection.js';
+import { switchExamSectionFiles } from '../../../src/utils/switchExamSection.ts';
 import {
     buildLocalSubmissionSigningSecret,
     deriveSigningIdentity,
@@ -50,6 +50,7 @@ import {
     SUBMISSION_SIGN_MODE_BIP,
     SUBMISSION_SIGN_MODE_LOCAL,
 } from '../../../../shared/submissionPdfSign.js';
+import config from "../config.js";
 
 
 
@@ -87,10 +88,10 @@ import {
         log.warn(`communicationhandler @ applySecurityFocusLost: forcing lockdown (reason=${reason})`);
         const ci = this.multicastClient?.clientinfo;
         if (ci) setClientFocusLock(ci, reason, message);
-        const examWin = WindowHandler.inExamMode() ? WindowHandler.mainWin() : null;
+        const examWin = WindowHandler?.inExamMode() ? WindowHandler?.mainWin() : null;
         if (examWin && !this.config?.development) {
             examWin.moveTop();
-            WindowHandler.applyElectronKioskMode(examWin);
+            platformDispatcher.applyElectronKioskMode(examWin);
             examWin.show();
             examWin.focus();
         }
@@ -320,7 +321,7 @@ import {
             });
         }
 
-       
+
         if (this.multicastClient.clientinfo.localLockdown
             && (this.multicastClient.clientinfo.serverip === '127.0.0.1' || this.multicastClient.clientinfo.servername === 'localhost')) {
             return;
@@ -1046,11 +1047,11 @@ import {
             if (WindowHandler.exitWarningOpen || WindowHandler.exitQuestionOpen || WindowHandler.minimizeWarningOpen) {
                 log.warn("communicationhandler @ startExam: Dialog is still open - exam will start anyway")
             }
-    
+
             let displays = screen.getAllDisplays()
             let primary = screen.getPrimaryDisplay()
-        
-            if (!primary || primary === "" || !primary.id){ primary = displays[0] }       
+
+            if (!primary || primary === "" || !primary.id){ primary = displays[0] }
 
             // when allowSectionSwitch: client chooses section, clientinfo.lockedSection is authoritative; do not overwrite with server
             if (!serverstatus.allowSectionSwitch || !this.multicastClient.clientinfo.lockedSection) {
@@ -1083,7 +1084,7 @@ import {
             log.info("communicationhandler @ startExam: initializing exam")
             this._snapshotExamStartIp()
             await WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus);  // does not create a new window, but loads the exam route into the existing main window
-        } 
+        }
         finally {
             this._startExamRunning = false;
         }
@@ -1226,7 +1227,7 @@ import {
 
         WindowHandler.removeBlurListener();
         // WindowHandler.logWindowListenerCounts('after endExam');
-      
+
         if (this.multicastClient.clientinfo.exammode){
             this.multicastClient.clientinfo.exammode = false
             this.multicastClient.clientinfo.examStartIp = false

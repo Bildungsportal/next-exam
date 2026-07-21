@@ -17,9 +17,11 @@
 
 
 import dgram from 'dgram';
-import config from '../config.js';  // node not vue (relative path needed)
-import log from 'electron-log';
+import config from '../../../src/utils/config.js';  // node not vue (relative path needed)
+//import log from 'electron-log';
 import {SchedulerService} from './schedulerservice.ts'
+import {UdpBridge} from "../../../src/utils/udpBridge.js";
+import LoggingBridge from "../../../src/utils/loggingBridge.js";
 
 /**
  * STORES ALL CLIENT/Server INFORMATION
@@ -74,7 +76,7 @@ class MulticastClient {
 
 
         this.client.on('error', (err) => {
-            log.error(`multicastclient @ init: UDP MC Client error:\n${err.stack}`);
+            LoggingBridge.error(`multicastclient @ init: UDP MC Client error:\n${err.stack}`);
             this.client.close();
         });
 
@@ -83,22 +85,19 @@ class MulticastClient {
             // On Windows we bind directly to the chosen host IP instead of 0.0.0.0 //
             const bindAddr = process.platform === 'win32' ? config.hostip : '0.0.0.0';
 
-            this.client.bind(this.PORT, bindAddr, () => {
+            this.client.bind(this.PORT, bindAddr,  () => {
                 try {
                     try { this.client.setBroadcast(true); } catch (e) { /* optional for multicast receive */ }
                     this.client.setMulticastTTL(128);
                     this.client.addMembership(this.MULTICAST_ADDR, config.hostip);
-                    log.info(`UDP MC Client bound to ${bindAddr}:${this.PORT} and joined ${this.MULTICAST_ADDR}`);
+                    LoggingBridge.info(`UDP MC Client bound to ${bindAddr}:${this.PORT} and joined ${this.MULTICAST_ADDR}`)
                 } catch (e) {
-                    log.error(`Multicast Join failed: ${e.message}`);
+                    LoggingBridge.error(`Multicast Join failed: ${e.message}`);
                 }
-            });
-
-
-
+            })
         }
         catch (e){ 
-            log.error(`mulitcastclient @ init: ${e}`) 
+            LoggingBridge.error(`mulitcastclient @ init: ${e}`)
         }
             
         this.client.on('message', (message, rinfo) => { this.messageReceived(message, rinfo) })
@@ -132,7 +131,7 @@ class MulticastClient {
         serverInfo.timestamp = new Date().getTime()   //record timestamp of last message from server (ignore servertimestamp because it may have a different system time)
         
         if (this.isNewExamInstance(serverInfo)) {
-            log.info(`multicastclient @ messageReceived: Adding new Exam Instance "${serverInfo.servername}" to Serverlist`)
+            LoggingBridge.info(`multicastclient @ messageReceived: Adding new Exam Instance "${serverInfo.servername}" to Serverlist`)
             this.examServerList.push(serverInfo)
         }
     }
@@ -159,7 +158,7 @@ class MulticastClient {
             const now = new Date().getTime()
 
             if (now - 16000 > this.examServerList[i].timestamp) {
-                log.warn(`multicastclient @ isDeprecatedInstance: Removing inactive server '${this.examServerList[i].servername}' from list`)
+                LoggingBridge.warn(`multicastclient @ isDeprecatedInstance: Removing inactive server '${this.examServerList[i].servername}' from list`)
                 this.examServerList.splice(i, 1)
             }
         }

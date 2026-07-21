@@ -1,7 +1,13 @@
 /**
  * VUE.js Frontend - Routing
  */
-import {createRouter, createWebHashHistory} from 'vue-router'
+import {
+    createRouter,
+    createWebHashHistory,
+    RouteLocationNormalized,
+    RouteLocationNormalizedLoaded,
+    Router
+} from 'vue-router'
 import {defineRouter} from '#q-app/wrappers';
 
 /**
@@ -38,6 +44,15 @@ const rdpview = () => import('/src/pages/rdpview.vue')
 const localvmview = () => import('/src/pages/localvmview.vue')
 
 
+import {isElectronWindow} from '../types/platform.js';
+import {SignalBridge} from '../utils/signalBridge.js';
+import config from "../utils/config.js";
+
+// signalBridge instance centralizes ipc calls with platform checks
+const signalBridge = new SignalBridge(window);
+
+
+
 //console.log(config)  // config is exposed to the renderer (frontend) in preload.js (it's readonly here!)
 
 // check if we run this app in electron (host is always "localhost" then)
@@ -71,6 +86,8 @@ async function fetchInfo() {
 }
 
 
+let routerInstance: Router | null  = null;
+
 export default defineRouter(function ( { store }) {
 
 // check if we run this app in electron (host is always "localhost" then)
@@ -79,6 +96,9 @@ export default defineRouter(function ( { store }) {
     if (userAgent.indexOf(' electron/') > -1) {
         configStore.electron = true;
     }
-
-    return createRouter({history: createWebHashHistory(), routes});   // use appropriate history implementation for server/client // import.meta.env.SSR is injected by Vite.
+    const Router = createRouter({history: createWebHashHistory(), routes})   // use appropriate history implementation for server/client // import.meta.env.SSR is injected by Vite.
+    routerInstance = Router
+    return Router
 });
+
+export {routerInstance as router}

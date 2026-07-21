@@ -170,27 +170,25 @@
                 loadingVersion.style.opacity = '1';
             }
         }
-
-        // Try to update version text and show text elements when config.version is available
-        let loadingVersion = document.getElementById('initial-loading-version');
-        if (loadingVersion && config && config.version) {
-            loadingVersion.textContent = config.version;
-            showTextElements();
-        } else {
-            let attempts = 0;
-            const checkConfig = setInterval(function() {
-                loadingVersion = document.getElementById('initial-loading-version');
-                if (loadingVersion && config && config.version) {
-                    loadingVersion.textContent = config.version;
-                    showTextElements();
-                    clearInterval(checkConfig);
-                }
-                attempts++;
-                if (attempts > 50) { // Stop after 5 seconds
-                    clearInterval(checkConfig);
-                }
-            }, 100);
-        }
+         let loadingVersion = document.getElementById('initial-loading-version');
+         if (loadingVersion && window.config && window.config.version) {
+             loadingVersion.textContent = window.config.version;
+             showTextElements();
+         } else {
+             let attempts = 0;
+             const checkConfig = setInterval(function() {
+                 loadingVersion = document.getElementById('initial-loading-version');
+                 if (loadingVersion && window.config && window.config.version) {
+                     loadingVersion.textContent = window.config.version;
+                     showTextElements();
+                     clearInterval(checkConfig);
+                 }
+                 attempts++;
+                 if (attempts > 50) { // Stop after 5 seconds
+                     clearInterval(checkConfig);
+                 }
+             }, 100);
+         }
     </script>
 
   </head>

@@ -24,8 +24,8 @@ import { getLinuxCageDetectionLogLines } from './main/scripts/cageDetect.js';
 import { getWindowsKioskDetectionLogLines, syncAllowedKioskAppsClientinfo } from './main/scripts/win/windowsKioskSetup.js';
 import chalk from 'chalk';
 import log from 'electron-log';
-import { app, BrowserWindow, powerSaveBlocker, nativeTheme, globalShortcut, Menu, dialog, session, desktopCapturer } from 'electron'
-import config from './main/config.js';
+import { app, BrowserWindow, powerSaveBlocker, nativeTheme, globalShortcut, Tray, Menu, dialog, session, desktopCapturer } from 'electron'
+import config from '../src/utils/config.js';
 import multicastClient from './main/scripts/multicastclient.js'
 import path from 'path'
 import fs from 'fs'
