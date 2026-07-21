@@ -200,8 +200,18 @@ app.whenReady().then(()=>{
     powerSaveBlocker.start('prevent-display-sleep')
 
     WindowHandler.createWindow()
- 
-    globalShortcut.register('CommandOrControl+Shift+H', () => {  const win = BrowserWindow.getFocusedWindow(); if (win) { win.webContents.toggleDevTools() }});
+
+    // Window-scoped (Wayland-safe); globalShortcut needs XDG portal and often fails silently
+    const mainWin = WindowHandler.mainwindow
+    if (mainWin) {
+        mainWin.webContents.on('before-input-event', (event, input) => {
+            const mod = process.platform === 'darwin' ? input.meta : input.control
+            if (input.type === 'keyDown' && mod && input.shift && input.key.toLowerCase() === 'h') {
+                event.preventDefault()
+                mainWin.webContents.toggleDevTools()
+            }
+        })
+    }
     globalShortcut.register('Alt+Left', () => {  return false });  // Navigation attempt blocked
 
 })
