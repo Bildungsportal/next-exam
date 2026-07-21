@@ -154,14 +154,10 @@ const attachEduvidualMoodleProofHeaders = (guest, { moodleDomain, moodleTestId, 
     return true;
 };
 
-/** Exam file key: serverstatus.encryptionPassword; local lockdown uses serverstatus.password only. */
+/** Exam file key: serverstatus.encryptionPassword; local lockdown stores plaintext (no NXE1). */
 const resolveExamDecryptPassword = (multicastClient) => {
-    const examPw = String(multicastClient?.serverstatus?.encryptionPassword ?? '').trim();
-    if (examPw) return examPw;
-    if (multicastClient?.clientinfo?.localLockdown) {
-        return String(multicastClient?.serverstatus?.password ?? '').trim();
-    }
-    return '';
+    if (multicastClient?.clientinfo?.localLockdown) return '';
+    return String(multicastClient?.serverstatus?.encryptionPassword ?? '').trim();
 };
 
 // Encrypt once for disk; if buffer is already NXE1, write as-is (avoids nested ciphertext).
