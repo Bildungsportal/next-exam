@@ -119,6 +119,29 @@ public final class MulticastClient: CAPPlugin, CAPBridgedPlugin {
             guard let self else { throw PluginError.notInitialized }
             return await self.getinfoasync().asDictionary
         }
+        
+        IPCBridge.shared.handle("pingexamserver") { [weak self] payload async throws -> Any? in
+            guard let dict = payload as? [String: Any],
+                  let serverip = dict["serverip"] as? String,
+                  !serverip.isEmpty else {
+                return ["ok": false]
+            }
+            do {
+                let urlString = "https://\(serverip):\(Config.serverApiPort)/server/control/pong"
+                guard let url = URL(string: urlString) else { return ["ok": false] }
+                var request = URLRequest(url: url, timeoutInterval: 4.0)
+                request.httpMethod = "GET"
+                request.setValue("NEXT_EXAM_API_SECRET", forHTTPHeaderField: "x-next-exam-app-secret")
+                let delegate = LocalNetworkSessionDelegate()
+                let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
+                let (_, response) = try await session.data(for: request)
+                let ok = (response as? HTTPURLResponse)?.statusCode == 200
+                return ["ok": ok]
+            } catch {
+                return ["ok": false]
+            }
+        }
+        
         IPCBridge.shared.on("register") { [weak self] event in
             guard let self else {
                 event.returnValue = ["error": "not initialized"]
@@ -153,6 +176,10 @@ public final class MulticastClient: CAPPlugin, CAPBridgedPlugin {
         
         IPCBridge.shared.on("gracefullyexit") { [weak self] payload throws in
             CommunicationHandler.shared.gracefullyEndExam()
+            CommunicationHandler.shared.resetConnection()
+        }
+        
+        IPCBridge.shared.on("disconnect") { [weak self] payload throws in
             CommunicationHandler.shared.resetConnection()
         }
 
