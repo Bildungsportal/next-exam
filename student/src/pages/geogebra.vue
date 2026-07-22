@@ -27,7 +27,7 @@
     <div id="toolbar" class="d-inline p-1">
         <div :title="$t('editor.splitview')" @click="toggleSplitview()"
              class="invisible-button btn btn-outline-info p-0 ms-1 me-1 mb-0 btn-sm">
-            <img src="/view-split-left-right.svg" class="" width="22" height="22">
+            <img src="/img/svg/view-split-left-right.svg" class="" width="22" height="22">
         </div>
         <button :title="$t('editor.saveCopyAs')" @click="saveContent(null, 'manual'); " class="btn d-inline btn-success p-0 pe-2 ps-1 ms-1 mb-0 btn-sm"><img src="/img/svg/document-save-as.svg" class="white" width="20" height="20" ></button>
         <button title="delete" @click="clearAll(); " class=" btn  d-inline btn-danger p-0 pe-2 ps-1 ms-2 mb-0 btn-sm"><img src="/img/svg/edit-delete.svg" class="white" width="20" height="20" ></button>
@@ -930,6 +930,7 @@ export default {
             if (!this.ggbReady || !window.ggbApplet) return;
             const filename = `${this.clientname}.ggb`;
             const loadResult = await signalBridge.invoke('loadGGB', filename);
+            console.log("geogebra @ loadBackupGgbIfPresent: ", loadResult);
             if (loadResult?.status !== 'success' || !loadResult.content) return;
             window.ggbApplet.setBase64(loadResult.content);
             this.currentFile = filename;

@@ -79,7 +79,7 @@
                         </div>
                         <div v-else>{{ statusMessage }}</div>
                         <div v-if="vmStateText && !isHashMismatch && !isVerifyingHash" class="text-subtitle2 text-grey-5 q-mt-xs">
-                            {{ vmStateText }}
+                            {{ vmStateText }}ƒ
                         </div>
                     </div>
                     <div v-if="showRetry" class="q-mt-sm">

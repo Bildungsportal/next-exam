@@ -381,10 +381,11 @@
             }
             signalBridge.invoke('switch-exam-section', sectionNumber)
               .finally(() => {
-                if (isIOS()) {
-                  iosUpdateListener.handleUpdateReceived(true, sectionNumber);
-                }
+
                 this._scheduleEndSectionSwitchOverlay();
+                if (isIOS()) {
+                    iosUpdateListener.handleUpdateReceived(sectionNumber);
+                }
                 setTimeout(() => {
                   if (infoStore.switchingToSection === sectionNumber) infoStore.endSectionSwitchOverlay();
                 }, 12000);

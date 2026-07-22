@@ -321,6 +321,8 @@ import { showLocalVmQemuIssueDialog } from 'next-exam-shared/qemuLocalVmDialogs.
 import loggingBridge from "../utils/loggingBridge.js";
 import { StatusBar } from "@capacitor/status-bar";
 import {isElectronWindow, isIOS} from "../types/platform.js";
+import {useInfoStore} from "../stores/infoStore.js";
+import {storeToRefs} from "pinia";
 
 function unhandledRejectionFunction(event: any) {
   const reason = event?.reason;
@@ -358,12 +360,14 @@ export default {
       let bipIntegration = ref(configStore.bipIntegration);
       let bipApiUrl = ref(configStore.bipApiUrl);
       let bipDemo = ref(configStore.bipDemo);
-      return { username, pincode, development, version, serverApiPort, electron, info, buildDate, hostip, bipIntegration, bipApiUrl, bipDemo };
+
+      let { token } = storeToRefs(useInfoStore());
+      return { username, pincode, development, version, serverApiPort, electron, info, buildDate, hostip, bipIntegration, bipApiUrl, bipDemo,
+          token};
     },
 
     data() {
         return {
-            token: "",
             clientinfo: {},
             serverstatus: null,
             serverlist: [],
@@ -1499,43 +1503,43 @@ export default {
                 const serverIdentifier = this.getServerIdentifier(server);
                 const isManual = this.isManuallyAddedServer(server);
                 signalBridge.invoke('pingexamserver', { serverip: server.serverip })
-                .then((result) => {
-                    if (!result?.ok) throw new Error('Response not OK');
-                    // Optimized: Only set if value changes
-                    if (server.reachable !== true) {
-                        server.reachable = true;
-                    }
-                    // Reset failure count if server is reachable again
-                    if (isManual && this.serverFailureCount[serverIdentifier] !== undefined) {
-                        this.serverFailureCount[serverIdentifier] = 0;
-                    }
-                })
-                .catch(err => {
-                    if (err.name === 'AbortError') {
-                        console.warn('student.vue @ fetchinfo (ping): Fetch request was aborted due to timeout');
-                    } else {
-                        console.warn(`student.vue @ fetchinfo: ${err.message} - Server unavailable `);
-                    }
-                    // Optimized: Only set if value changes
-                    if (server.reachable !== false) {
-                        server.reachable = false;
-                    }
-                    // Track failures for manually added servers
-                    if (isManual) {
-                        // Initialize counter if not exists
-                        if (this.serverFailureCount[serverIdentifier] === undefined) {
+                    .then((result) => {
+                        if (!result?.ok) throw new Error('Response not OK');
+                        // Optimized: Only set if value changes
+                        if (server.reachable !== true) {
+                            server.reachable = true;
+                        }
+                        // Reset failure count if server is reachable again
+                        if (isManual && this.serverFailureCount[serverIdentifier] !== undefined) {
                             this.serverFailureCount[serverIdentifier] = 0;
                         }
-                        // Increment failure count
-                        this.serverFailureCount[serverIdentifier]++;
-                        // Remove server if more than 2 failures
-                        if (this.serverFailureCount[serverIdentifier] > 2) {
-                            console.log(`student.vue @ fetchinfo: Removing manually added server ${serverIdentifier} after ${this.serverFailureCount[serverIdentifier]} failures`);
-                            this.removeFailedManualServer(serverIdentifier);
+                    })
+                    .catch(err => {
+                        if (err.name === 'AbortError') {
+                            console.warn('student.vue @ fetchinfo (ping): Fetch request was aborted due to timeout');
+                        } else {
+                            console.warn(`student.vue @ fetchinfo: ${err.message} - Server unavailable `);
                         }
-                    }
-                });
-            }   
+                        // Optimized: Only set if value changes
+                        if (server.reachable !== false) {
+                            server.reachable = false;
+                        }
+                        // Track failures for manually added servers
+                        if (isManual) {
+                            // Initialize counter if not exists
+                            if (this.serverFailureCount[serverIdentifier] === undefined) {
+                                this.serverFailureCount[serverIdentifier] = 0;
+                            }
+                            // Increment failure count
+                            this.serverFailureCount[serverIdentifier]++;
+                            // Remove server if more than 2 failures
+                            if (this.serverFailureCount[serverIdentifier] > 2) {
+                                console.log(`student.vue @ fetchinfo: Removing manually added server ${serverIdentifier} after ${this.serverFailureCount[serverIdentifier]} failures`);
+                                this.removeFailedManualServer(serverIdentifier);
+                            }
+                        }
+                    });
+            }
         },
 
         getLocalVmConfig() {
@@ -1893,6 +1897,8 @@ export default {
             if (!el || this.bipToken || this.token) return;
             el.focus();
         });
+       // Fetch info asynchronously without blocking
+        this.fetchInfo();
 
         this.autoSchedulerService(this.fetchInfo, 4000);
         this.autoSchedulerService(this.bipAutoUpdate, 10000);

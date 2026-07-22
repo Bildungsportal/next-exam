@@ -1,4 +1,4 @@
-import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
+import * as pdfjsLib from 'pdfjs-dist';
 
 /** Horizontal advance of a text item in viewport px (pdfjs width is text-space; scale changed across majors). */
 export function textItemRunWidthPx(tx, item, measureCtx, str) {

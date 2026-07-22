@@ -4,7 +4,7 @@ import * as pkijs from 'pkijs';
 import * as asn1js from 'asn1js';
 import { p256 } from '@noble/curves/nist.js';
 import { sha256 } from '@noble/hashes/sha2.js';
-import { bytesToHex, hexToBytes, concatBytes } from '@noble/hashes/utils.js';
+import { bytesToHex, hexToBytes, concatBytes } from '@noble/ciphers/utils.js';
 import { bytesToNumberBE, numberToBytesBE } from '@noble/curves/utils.js';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { SignPdf } from '@signpdf/signpdf';

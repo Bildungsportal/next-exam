@@ -170,6 +170,7 @@
     import { parsePdfToPages } from 'next-exam-shared/pdfparser/index.js'
     import { pdfPageAnnotationsMixin } from 'next-exam-shared/pdfPageAnnotationsMixin.js'
     import { SignalBridge } from '../utils/signalBridge.js'
+    import PdfHelper from "../utils/pdfHelper.ts";
 
     const signalBridge = new SignalBridge(window)
 
@@ -300,7 +301,7 @@
         async loadAnnotations() {
         try {
             const key = this.annotationsKey
-            const raw = await signalBridge.invoke('readPdfAnnotations', key)
+            const raw = (await PdfHelper.readPdfAnnotations(key)).data;
             if (!raw) {
             this.annotations = []
             return
@@ -323,7 +324,7 @@
         try {
             const key = this.annotationsKey
             const payload = JSON.stringify({ version: 1, annotations: this.annotations }, null, 2)
-            await signalBridge.invoke('writePdfAnnotations', key, payload)
+            await PdfHelper.writePdfAnnotations(key, payload);
         } catch (e) {
             console.warn('PdfviewPaneRendered: saveAnnotations failed', e)
         }

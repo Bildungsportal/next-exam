@@ -558,8 +558,8 @@ import config from "../../../src/utils/config.js";
                     const serverSection = Number(serverstatus.lockedSection || 1);
                     const clientSection = Number(this.multicastClient.clientinfo.lockedSection || 1);
                     if (serverSection !== clientSection){
-                        await switchExamSection(this, serverstatus, serverSection);
-                    }
+                        switchExamSectionFiles(config.examdirectory, clientSection, serverSection)
+                            .then(this.startExam(serverstatus));                    }
                 }
             }
         }
@@ -907,27 +907,27 @@ import config from "../../../src/utils/config.js";
         });
     }
 
-    /** Stop LocalVM + VNC proxy when leaving a localvm section (section switch, not full endExam). */
-    async stopLocalVmIfActive() {
-        const localVmActive = this.multicastClient.clientinfo.examtype === 'localvm'
-            || this.multicastClient.clientinfo.localVMState === 'running';
-        if (!localVmActive) return;
-        stopProxy();
-        try {
-            log.info('communicationhandler @ stopLocalVmIfActive: requesting VM shutdown');
-            await qemuService.stopVmAsync({ graceful: true, shutdownTimeoutMs: 8000, killTimeoutMs: 8000 });
-        } catch (e) {
-            log.warn('communicationhandler @ stopLocalVmIfActive: graceful shutdown failed, killing VM');
-            await qemuService.stopVmAsync({ graceful: false, killTimeoutMs: 8000 });
-        }
-        try {
-            await qemuService.killAllLocalQemu(this.config.workdirectory);
-        } catch (e) {
-            log.warn('communicationhandler @ stopLocalVmIfActive: killAllLocalQemu sweep', e);
-        }
-        this.multicastClient.clientinfo.localVMHost = null;
-        this.multicastClient.clientinfo.localVMState = null;
-    }
+     /** Stop LocalVM + VNC proxy when leaving a localvm section (section switch, not full endExam). */
+     async stopLocalVmIfActive() {
+         const localVmActive = this.multicastClient.clientinfo.examtype === 'localvm'
+             || this.multicastClient.clientinfo.localVMState === 'running';
+         if (!localVmActive) return;
+         stopProxy();
+         try {
+             log.info('communicationhandler @ stopLocalVmIfActive: requesting VM shutdown');
+             await qemuService.stopVmAsync({ graceful: true, shutdownTimeoutMs: 8000, killTimeoutMs: 8000 });
+         } catch (e) {
+             log.warn('communicationhandler @ stopLocalVmIfActive: graceful shutdown failed, killing VM');
+             await qemuService.stopVmAsync({ graceful: false, killTimeoutMs: 8000 });
+         }
+         try {
+             await qemuService.killAllLocalQemu(this.config.workdirectory);
+         } catch (e) {
+             log.warn('communicationhandler @ stopLocalVmIfActive: killAllLocalQemu sweep', e);
+         }
+         this.multicastClient.clientinfo.localVMHost = null;
+         this.multicastClient.clientinfo.localVMState = null;
+     }
 
     /** QEMU preflight + start for LocalVM; sectionSwitch keeps exammode on recoverable failures. */
     async bootLocalVmExamSection(serverstatus, effectiveSection, { sectionSwitch = false } = {}) {
@@ -1040,6 +1040,7 @@ import config from "../../../src/utils/config.js";
      * @param serverstatus contains information about exammode, examtype, and other settings from the teacher instance
      */
     async startExam(serverstatus){
+        log.info('communicationhandler @ startExam: start');
         if (this._endExamRunning) {
             log.debug('communicationhandler @ startExam: endExam still running, defer');
             return;

@@ -209,11 +209,22 @@ export default defineConfig(( ctx: any ) => {
         ]);
         viteConf.server.fs.allow = [...fsAllow];
         viteConf.resolve = viteConf.resolve || {};
+        // Resolve noble/* subpath imports directly to ESM files — bypasses package.json export conditions that differ by @noble version
+        const nobleHashes = path.resolve(__dirname, 'node_modules/@noble/hashes');
+        const nobleCiphers = path.resolve(__dirname, 'node_modules/@noble/ciphers');
+        const nobleCurves = path.resolve(__dirname, 'node_modules/@noble/curves');
         viteConf.resolve.alias = {
-          ...viteConf.resolve.alias,
-          'pdfjs-dist/legacy/build/pdf.mjs': pdfjsLegacyPdf,
-          'pdfjs-dist/legacy/build/pdf.worker.mjs': pdfjsLegacyWorker,
-          'next-exam-shared': sharedDir,
+            ...viteConf.resolve.alias,
+            'pdfjs-dist/legacy/build/pdf.mjs': pdfjsLegacyPdf,
+            'pdfjs-dist/legacy/build/pdf.worker.mjs': pdfjsLegacyWorker,
+            'next-exam-shared': sharedDir,
+            // @noble/* subpath → ESM files directly (avoids Rolldown export condition mismatch)
+            '@noble/hashes/scrypt.js': path.join(nobleHashes, 'scrypt.js'),
+            '@noble/hashes/sha2.js': path.join(nobleHashes, 'sha2.js'),
+            '@noble/ciphers/aes.js': path.join(nobleCiphers, 'aes.js'),
+            '@noble/ciphers/utils.js': path.join(nobleCiphers, 'utils.js'),
+            '@noble/curves/nist.js': path.join(nobleCurves, 'nist.js'),
+            '@noble/curves/utils.js': path.join(nobleCurves, 'utils.js'),
         };
         // Ensure single copy of TipTap/ProseMirror to avoid "Duplicate use of selection JSON ID gapcursor"
         viteConf.resolve.dedupe = viteConf.resolve.dedupe || [];
@@ -223,8 +234,24 @@ export default defineConfig(( ctx: any ) => {
         viteConf.optimizeDeps = viteConf.optimizeDeps || {};
         viteConf.optimizeDeps.include = viteConf.optimizeDeps.include || [];
         viteConf.optimizeDeps.include.push('pdfjs-dist');
+
         viteConf.build = viteConf.build || {};
         viteConf.build.chunkSizeWarningLimit = 8000;
+        // Capacitor/iOS: strip sourceMappingURL comments from worker chunks — WKWebView cannot fetch .map files
+        if (ctx.mode.capacitor) {
+          viteConf.plugins = viteConf.plugins || [];
+          viteConf.plugins.push({
+            name: 'strip-worker-sourcemap-comments',
+            generateBundle(_, bundle) {
+              for (const item of Object.values(bundle)) {
+                const entry = item as { type?: string; code?: string; fileName?: string };
+                if (entry?.type === 'chunk' && entry.code && entry.fileName?.includes('worker')) {
+                  entry.code = entry.code.replace(/\n?\/\/# sourceMappingURL=\S+\.map\s*$/m, '');
+                }
+              }
+            }
+          });
+        }
         // Electron: build renderer into public/ so one copy – no duplication; base ./ so relative paths work from public/index.html
         if (ctx.mode.electron && ctx.prod) {
           const baseOut = viteConf.build?.outDir ?? path.join(__dirname, 'dist', 'electron', 'UnPackaged');
@@ -276,11 +303,10 @@ export default defineConfig(( ctx: any ) => {
       //   [ 'package-name', { ..pluginOptions.. }, { server: true, client: true } ]
       // ]
       rollupOptions: {
-        external: [
-          'electron',
-          ...builtinModules,
-          ...Object.keys(pkg.dependencies || {}),
-        ],
+        // Capacitor/iOS: bundle everything; Electron: deps are available via node_modules at runtime
+        external: ctx.mode.electron
+          ? ['electron', ...builtinModules, ...Object.keys(pkg.dependencies || {})]
+          : [],
       },
     },
 

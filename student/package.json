@@ -34,7 +34,9 @@
     "build:win:portable:iosbranch": "npm run prebuild && npm run cleanwin && quasar build --verbose -m electron -w portable:x64 && npm run protect:main",
     "build:win:msi:iosbranch": "npm run prebuild && npm run cleanwin && quasar build --verbose -m electron -w msi:x64 && npm run protect:main",
     "build:ios": "npm run prebuild && quasar build -m capacitor -T ios --skip-pkg",
-    "dev:ios": "quasar dev -m capacitor -T ios"
+    "dev:ios": "quasar dev -m capacitor -T ios",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "env": {
     "//": "Used in build scripts",
@@ -150,6 +152,7 @@
     "electron-devtools-installer": "^4.0.0",
     "esbuild": "^0.27.2",
     "javascript-obfuscator": "^5.4.2",
+    "jsdom": "^29.1.1",
     "nodemon": "^3.1.6",
     "patch-package": "^8.0.1",
     "sass": "^1.77.0",
@@ -158,6 +161,7 @@
     "vite-plugin-commonjs": "^0.10.3",
     "vite-plugin-resolve": "^2.5.2",
     "vite-plugin-static-copy": "^3.1.5",
+    "vitest": "^2.1.0",
     "vue": "^3.5.6"
   },
   "engines": {
@@ -170,7 +174,7 @@
     "tiff": "5.0.3",
     "@parcel/watcher": "npm:@favware/skip-dependency@1.2.2"
   },
-  "buildVersion": "2.0.0.5",
+  "buildVersion": "2.0.0.0",
   "version": "2.0.0",
-  "buildNumber": "5"
+  "buildNumber": "0"
 }

@@ -1193,7 +1193,7 @@ class IpcHandler {
         ipcMain.on('restrictions', () => {
             //this also stops the clearClipboard interval
             disableRestrictions(this.WindowHandler.mainWin())
-        } )
+        })
 
 
         /**
@@ -2023,7 +2023,7 @@ class IpcHandler {
         /**
          * ASYNC GET BACKUP FILE from examdirectory
          * @param filename filename without
-         */ 
+         */
         ipcMain.handle('getbackupfile', async (event, filename) => {
             log.info(`ipchandler @ getbackupfile: Request received for filename: ${filename}`)
             if (!filename) {

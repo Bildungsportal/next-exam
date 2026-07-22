@@ -13,6 +13,7 @@ export const useConfigStore = defineStore("config", {
         bipIntegration: config.bipIntegration as boolean,
         bipApiUrl: config.bipApiUrl as string,
         bipDemo: config.bipDemo as boolean,
-        showdevtools: config.showdevtools as boolean
+        showdevtools: config.showdevtools as boolean,
+        examdirectory: config.examdirectory as string
     }),
 });

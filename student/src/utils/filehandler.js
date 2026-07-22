@@ -524,6 +524,7 @@ export async function loadGGB(file, base64=false){
 
             if (!base64){
                 const loadResult = await signalBridge.invoke('loadGGB', file);
+                log.info("filehandler @ loadGGB: check loadGGB result: ", loadResult);
                 if (loadResult.status === "success") {
                     const base64GgbFile = loadResult.content;
                     if (!applyBase64ToGgb(base64GgbFile)) {

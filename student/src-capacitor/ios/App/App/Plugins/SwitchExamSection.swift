@@ -15,7 +15,7 @@ func switchExamSection(
         return
     }
 
-    print("[WARN] switchExamSection: changing section to \(newSectionNumber) \(newSection.sectionname ?? ""), Examtype: \(newSection.examtype ?? "")")
+    print("[WARN] switchExamSection: changing section to \(newSectionNumber) \(newSection.sectionname), Examtype: \(newSection.examtype)")
 
     multicastClient.clientinfo.examtype      = newSection.examtype
     multicastClient.clientinfo.lockedSection = newSectionNumber

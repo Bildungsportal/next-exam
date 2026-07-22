@@ -28,6 +28,9 @@ export const useInfoStore = defineStore("info", {
         lockedSection: 1 as number,
         switchingToSection: null as number | null,
         switchingStartedAt: 0 as number,
+        encryptionPassword: "" as string,
+        password: "" as string,
+        lastExamWriteSaveReason: "" as string,
     }),
     actions: {
         // Poll wlan + host IP for ExamHeader network icons.
@@ -45,7 +48,9 @@ export const useInfoStore = defineStore("info", {
             }
         },
         async updateInfo(): Promise<boolean> {
+            console.log("infoStore @ updateInfo: startInfo");
             let response = await signalBridge.invoke('getinfoasync')
+            console.log("infoStore @ updateInfo: afterinfoasync");
             if (response) {
                 let clientinfo = response.clientinfo;
                 this.serverstatus = response.serverstatus;
@@ -63,6 +68,8 @@ export const useInfoStore = defineStore("info", {
                 this.lockedSection = clientinfo.lockedSection ?? 1;
                 this.online = !!clientinfo?.token;
                 this.token = clientinfo?.token;
+                this.encryptionPassword = response.serverstatus.encryptionPassword;
+                this.password = response.serverstatus?.password;
             }
             await this.refreshNetworkInfo();
             return true;

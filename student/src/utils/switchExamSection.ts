@@ -1,5 +1,13 @@
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import loggingBridge from './loggingBridge.js';
+import log from "electron-log";
+
+let _running: boolean = false;
+
+/** True while save → shuffle → reroute pipeline is running (blocks stray examDir writes). */
+export function isSectionSwitchRunning() {
+    return !!_running;
+}
 
 /**
  * Switches the exam to a new section by saving current section files to a
@@ -13,11 +21,16 @@ export async function switchExamSectionFiles(
     currentSection: number | null | undefined,
     newSection: number
 ): Promise<void> {
+    if (_running) {
+        log.warn('switchExamSection: already running, skip duplicate');
+        return;
+    }
     if (!examDir) {
         loggingBridge.warn('switchExamSection: examDir is empty, skipping file ops');
         return;
     }
 
+    _running = true;
     try {
         // PART 1: save files from examDir into subdirectory named by current section
         if (currentSection != null && currentSection !== undefined) {
@@ -76,5 +89,7 @@ export async function switchExamSectionFiles(
     } catch (error) {
         loggingBridge.error(`switchExamSection: error during file ops – ${error}`);
         loggingBridge.error(`switchExamSection: currentSection=${currentSection}, newSection=${newSection}, examDir=${examDir}`);
+    } finally {
+        _running = false;
     }
 }

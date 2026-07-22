@@ -7,6 +7,8 @@ import {useInfoStore} from "../../stores/infoStore.js";
 const signalBridge = new SignalBridge(window)
 
 class IosUpdateListener {
+    currentExamType: string = "";
+    lastServerStatus: any = null;
     infoStore: any = null;
 
     async init(): Promise<void> {
@@ -17,27 +19,45 @@ class IosUpdateListener {
         await this.infoStore.updateInfo();
 
         signalBridge.on('startExam', (serverstatus) => {
-            const section = serverstatus.lockedSection;
-            let newExamType = serverstatus.examSections[section].examtype;
-            const examPath = `/${newExamType}/${this.infoStore.token}/${section}`;
+            loggingBridge.debug("iosUpdateListener @ startExam: message received: ", serverstatus);
+            this.lastServerStatus = serverstatus;
+            this.infoStore.exammode = serverstatus.exammode;
+            this.infoStore.lockedSection = serverstatus.lockedSection;
+            this.handleUpdateReceived();
+        });
 
-            loggingBridge.debug("iosUpdateListener @ handleUpdateReceived: currentExamType, ", this.infoStore.examtype, "newExamType: ", newExamType);
-            this.infoStore.lockedSection = section;
-            if (this.infoStore.examtype !== newExamType) {
-                this.infoStore.exammode = serverstatus.exammode;
-                this.infoStore.examtype = newExamType;
-                router.push({
-                    path: examPath
-                });
-            }
+        signalBridge.on('updateReceived', (update) => {
+            loggingBridge.debug("iosUpdateListener @ updateReceived: message received: ", update);
+            this.lastServerStatus = update.serverstatus;
+            this.handleUpdateReceived();
         });
 
         signalBridge.on('endExam', () => {
-            loggingBridge.debug("endExam received in update handler: ");
+            loggingBridge.debug("iosUpdateListener @ endExam: received signal");
             router.push("/student");
             this.infoStore.examtype = "";
             this.infoStore.exammode = false;
         });
+    }
+
+    handleUpdateReceived(sectionNumber: number = null): void {
+        const newSectionNumber = sectionNumber ? sectionNumber : this.infoStore.lockedSection;
+        loggingBridge.debug("iosUpdateListener @ handleUpdateReceived: current serverstatus is:", this.lastServerStatus, "sectionNumber: ", newSectionNumber);
+        this.infoStore.lockedSection = newSectionNumber;
+        if (this.infoStore.exammode) {
+            let newExamType = this.lastServerStatus.examSections[newSectionNumber].examtype;
+
+            loggingBridge.debug("iosUpdateListener @ handleUpdateReceived: currentExamType, ", this.currentExamType, "newExamType: ", newExamType);
+            if (this.currentExamType !== newExamType) {
+                this.infoStore.examtype = newExamType;
+                this.currentExamType = newExamType;
+                const examPath = `/${newExamType}/${this.infoStore.token}/${newSectionNumber}`;
+                loggingBridge.debug("iosUpdateListener @ handleUpdateReceived: router push to: ", examPath);
+                router.push({
+                    path: examPath
+                });
+            }
+        }
     }
 }
 
