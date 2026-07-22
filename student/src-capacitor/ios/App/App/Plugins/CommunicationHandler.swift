@@ -251,7 +251,7 @@ final class CommunicationHandler {
         // MARK: - Screenshot Interval
         // JS: `|| === 0` pattern ensures 0 is treated as a valid value, hence Optional in Swift
         let screenshotinterval = serverstatus.screenshotinterval
-        let intervalMs = Int(screenshotinterval)! * 1000
+        let intervalMs = screenshotinterval * 1000
         if mc.clientinfo.screenshotinterval != intervalMs {
             log(.info, "communicationhandler @ processUpdatedServerstatus: ScreenshotInterval changed to \(intervalMs)")
             mc.clientinfo.screenshotinterval = intervalMs

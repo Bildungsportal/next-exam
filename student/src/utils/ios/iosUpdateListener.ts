@@ -19,7 +19,7 @@ class IosUpdateListener {
         signalBridge.on('startExam', (serverstatus) => {
             const section = serverstatus.lockedSection;
             let newExamType = serverstatus.examSections[section].examtype;
-            const examPath = `/${newExamType}/${this.infoStore.token}`;
+            const examPath = `/${newExamType}/${this.infoStore.token}/${section}`;
 
             loggingBridge.debug("iosUpdateListener @ handleUpdateReceived: currentExamType, ", this.infoStore.examtype, "newExamType: ", newExamType);
             this.infoStore.lockedSection = section;
