@@ -22,7 +22,7 @@
  */
 
 // Import PDF.js
-import * as pdfjsLib from 'pdfjs-dist';
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { filterMethods } from '../shared/filters.js';
 import { detectorMethods } from './detectors.js';
 import { fontAdjustments, fontMethods } from '../shared/fonts.js';
@@ -106,13 +106,11 @@ class PdfParser {
 
     setupWorker() {
         if (pdfjsLib.GlobalWorkerOptions && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
-            console.log("v5/index @ setupWorker: ", pdfjsLib.GlobalWorkerOptions.workerSrc)
             // Resolved at runtime in Electron renderer; alias in quasar.config provides build-time path
             pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-                "pdfjs-dist/build/pdf.worker.min.mjs",
+                'pdfjs-dist/legacy/build/pdf.worker.mjs',
                 import.meta.url
             ).toString();
-            console.log("v5/index @ setupWorker: ", pdfjsLib.GlobalWorkerOptions.workerSrc)
         }
 
         /* ReadableStream async iterator is not supported even on quite recent Safari */

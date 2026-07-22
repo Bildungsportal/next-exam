@@ -558,8 +558,8 @@ import config from "../../../src/utils/config.js";
                     const serverSection = Number(serverstatus.lockedSection || 1);
                     const clientSection = Number(this.multicastClient.clientinfo.lockedSection || 1);
                     if (serverSection !== clientSection){
-                        switchExamSectionFiles(config.examdirectory, clientSection, serverSection)
-                            .then(this.startExam(serverstatus));                    }
+                        await switchExamSection(this, serverstatus, serverSection);
+                    }
                 }
             }
         }

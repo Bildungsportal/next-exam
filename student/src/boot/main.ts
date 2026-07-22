@@ -13,7 +13,7 @@ import PdfHelper from "../utils/pdfHelper.ts";
 // Electron-only: lazy-import to avoid Vite bundling Node modules into Capacitor builds.
 const electron = {
     get multicastclient() { return import(/* @vite-ignore */ '../../src-electron/main/scripts/multicastclient.js'); },
-    get UpdateListener() { return import(/* @vite-ignore */ '../utils/UpdateListener.ts'); },
+    get UpdateListener() { return import(/* @vite-ignore */ '../utils/updateListener.ts'); },
 };
 
 // "async" is optional;

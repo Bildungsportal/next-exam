@@ -70,6 +70,26 @@ export async function switchExamSection(CommunicationHandler, serverstatus, newS
             return;
         }
 
+        // --- 3) shuffle examDir: root → fromSection/, then toSection/ → root ---
+        if (fs.existsSync(examDir) && fromSection != null) {
+            const savePath = `${examDir}/${fromSection}`;
+            if (!fs.existsSync(savePath)) fs.mkdirSync(savePath, { recursive: true });
+            for (const file of fs.readdirSync(examDir)) {
+                const oldPath = `${examDir}/${file}`;
+                if (!fs.statSync(oldPath).isFile()) continue;
+                fs.copyFileSync(oldPath, `${savePath}/${file}`);
+                fs.unlinkSync(oldPath);
+            }
+        }
+        const loadPath = `${examDir}/${toSection}`;
+        if (fs.existsSync(loadPath)) {
+            for (const file of fs.readdirSync(loadPath)) {
+                const sourcePath = `${loadPath}/${file}`;
+                if (!fs.statSync(sourcePath).isFile()) continue;
+                fs.copyFileSync(sourcePath, `${examDir}/${file}`);
+            }
+        }
+
         // --- 4) clientinfo (after files on disk) ---
         multicastClient.clientinfo.examtype = serverstatus.examSections[toSection].examtype;
         multicastClient.clientinfo.lockedSection = toSection;

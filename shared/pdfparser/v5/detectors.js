@@ -1,4 +1,4 @@
-import * as pdfjsLib from 'pdfjs-dist';
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { decodeConstructPathArgs, flatDrawOpsToLegacyPathOps } from '../constructPathArgs.js';
 import { textItemRunWidthPx } from '../shared/filters.js';
 

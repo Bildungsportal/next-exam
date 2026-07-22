@@ -7,7 +7,7 @@
 </template>
 
 <script>
-import * as pdfjsLib from 'pdfjs-dist';
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 const PRINT_RENDER_SCALE = 3;
 
