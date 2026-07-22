@@ -388,40 +388,6 @@ class IpcHandler {
             updateSystemTray(i18n.locale);
         })
 
-
-        ipcMain.handle('getExamMaterials', async (event) => {
-
-            let clientinfo = this.multicastClient.clientinfo
-            let servername = clientinfo.servername
-            let serverip = clientinfo.serverip
-            let studenttoken = clientinfo.token
-
-            let payload = {
-                group: clientinfo.group,
-                lockedSection: clientinfo.lockedSection,
-            }
-
-            let examMaterials = false
-            if (this.multicastClient.clientinfo.localLockdown) {
-                return false
-            }
-            else{
-                // Fetch request with the corresponding options
-                examMaterials = await examApiFetch(`https://${serverip}:${this.config.serverApiPort}/server/data/getexammaterials/${servername}`, {
-                    method: "POST",
-                    body: JSON.stringify(payload),
-                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${studenttoken}` },
-                })
-                .then(response => response.json()) // Receive response as JSON
-                .then(data => {
-                    // log.info("ipchandler @ getExamMaterials: received data", data)
-                    return data
-                })
-                .catch(err => log.error(`ipchandler @ getExamMaterials: ${err}`));
-                return examMaterials
-            }
-        })
-
         ipcMain.handle('start-proxy', async (event, payload) => {
             try {
                 const { host, port } = payload || {};

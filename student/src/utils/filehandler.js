@@ -627,37 +627,29 @@ export async function getExamMaterials() {
 }
 
     async function fetchExamMaterials() {
-        // console.log("filehandler @ fetchExamMaterials")
-        let infoStore = useInfoStore()
-        //console.log("filehandler @ fetchExamMaterials: 1")
-        let payload = {
+        const infoStore = useInfoStore()
+        if (infoStore.localLockdown) {
+            return false
+        }
+        await infoStore.updateInfo()
+        const payload = {
             group: infoStore.group,
             lockedSection: infoStore.lockedSection,
         }
-        //console.log("filehandler @ fetchExamMaterials: 2")
-
-        let examMaterials = false
-        if (infoStore.localLockdown) {
-            return false
-            //console.log("filehandler @ fetchExamMaterials: 3")
-        }
-        else{
-           // console.log("filehandler @ fetchExamMaterials: 4")
-            // Fetch request with the corresponding options
-            examMaterials = examApiFetch(`https://${infoStore.serverip}:${useConfigStore().serverApiPort}/server/data/getexammaterials/${infoStore.servername}`, {
+        try {
+            return await examApiFetch(`https://${infoStore.serverip}:${useConfigStore().serverApiPort}/server/data/getexammaterials/${infoStore.servername}`, {
                 method: "POST",
                 body: JSON.stringify(payload),
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${infoStore.token}` },
             })
-                .then(response => response.json()) // Receive response as JSON
-                .then(data => {
-                    //console.log("filehandler @ fetchExamMaterials: received data", data)
-                    return data
+                .then(response => response.json())
+                .catch(err => {
+                    log.error(`filehandler @ fetchExamMaterials: ${err}`)
+                    return false
                 })
-                .catch(err => log.error(`ipchandler @ getExamMaterials: ${err}`));
-
-            // console.log("filehandler @ fetchExamMaterials: received exam materials", examMaterials)
-            return examMaterials
+        } catch (err) {
+            log.error(`filehandler @ fetchExamMaterials: ${err}`)
+            return false
         }
     }
 

@@ -76,6 +76,7 @@ import config from "../../../src/utils/config.js";
         this.localVmStartState = 'idle' // idle|starting|blocked
         this._startExamRunning = false
         this._endExamRunning = false
+        this._groupPushedInStudentStatus = false
         this.updateScheduler = new SchedulerService(this.requestUpdate.bind(this), 5000)
         this.updateScheduler.start()
     }
@@ -533,6 +534,7 @@ import config from "../../../src/utils/config.js";
         if (studentstatus.group){
             if (this.multicastClient.clientinfo.group !== studentstatus.group){
                 this.multicastClient.clientinfo.group = studentstatus.group;
+                this._groupPushedInStudentStatus = true;
                 if (this.multicastClient.clientinfo.exammode) {
                 WindowHandler.mainWin()?.webContents?.send('getmaterials');
             }
@@ -566,17 +568,21 @@ import config from "../../../src/utils/config.js";
         const section = serverstatus.examSections[sectionForSync];
         if (section?.groups) {
             this.multicastClient.clientinfo.groups = true;
-            const clientname = this.multicastClient.clientinfo.name;
-            const groupA = section.groupA?.users ?? [];
-            const groupB = section.groupB?.users ?? [];
-            const prevGroup = this.multicastClient.clientinfo.group;
-            if (groupB.includes(clientname)) this.multicastClient.clientinfo.group = 'b';
-            else if (groupA.includes(clientname)) this.multicastClient.clientinfo.group = 'a';
-            else this.multicastClient.clientinfo.group = 'a';
-            if (this.multicastClient.clientinfo.group !== prevGroup) {
-                if (this.multicastClient.clientinfo.exammode) {
-                WindowHandler.mainWin()?.webContents?.send('getmaterials');
-            }
+            const skipUserGroupSync = this._groupPushedInStudentStatus;
+            this._groupPushedInStudentStatus = false;
+            if (!skipUserGroupSync) {
+                const clientname = this.multicastClient.clientinfo.name;
+                const groupA = section.groupA?.users ?? [];
+                const groupB = section.groupB?.users ?? [];
+                const prevGroup = this.multicastClient.clientinfo.group;
+                if (groupB.includes(clientname)) this.multicastClient.clientinfo.group = 'b';
+                else if (groupA.includes(clientname)) this.multicastClient.clientinfo.group = 'a';
+                else this.multicastClient.clientinfo.group = 'a';
+                if (this.multicastClient.clientinfo.group !== prevGroup) {
+                    if (this.multicastClient.clientinfo.exammode) {
+                    WindowHandler.mainWin()?.webContents?.send('getmaterials');
+                }
+                }
             }
         } else {
             this.multicastClient.clientinfo.groups = false;
