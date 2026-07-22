@@ -2316,10 +2316,12 @@ computed: {
             }
         },
 
-        // when exam sections are toggled off, reset activeSection to 1
+        // when exam sections are toggled off, force section 1 + clear allowSectionSwitch (else student startExam keeps stale lockedSection)
         onToggleExamSections(){
-            if (!this.serverstatus.useExamSections && this.serverstatus.activeSection > 1) {
+            if (!this.serverstatus.useExamSections) {
+                this.serverstatus.allowSectionSwitch = false
                 this.serverstatus.activeSection = 1
+                this.serverstatus.lockedSection = 1
             }
         },
 
