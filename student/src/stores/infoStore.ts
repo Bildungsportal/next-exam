@@ -48,9 +48,7 @@ export const useInfoStore = defineStore("info", {
             }
         },
         async updateInfo(): Promise<boolean> {
-            console.log("infoStore @ updateInfo: startInfo");
             let response = await signalBridge.invoke('getinfoasync')
-            console.log("infoStore @ updateInfo: afterinfoasync");
             if (response) {
                 let clientinfo = response.clientinfo;
                 this.serverstatus = response.serverstatus;
