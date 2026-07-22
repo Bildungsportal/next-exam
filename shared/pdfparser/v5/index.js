@@ -132,49 +132,28 @@ class PdfParser {
     }
 
     async renderPageToCanvas(page, viewport) {
-        console.log("v5 pdfparser @ renderPageToCanvas", page, viewport);
+        if (this.enableLogging) console.log("v5 pdfparser @ renderPageToCanvas", page, viewport);
         const canvas = document.createElement('canvas');
-        console.log("v5 pdfparser @ renderPageToCanvas - canvas", canvas);
         const context = canvas.getContext('2d');
-        console.log("v5 pdfparser @ renderPageToCanvas - context", context);
         canvas.width = viewport.width;
         canvas.height = viewport.height;
-        
+
         await page.render({
             canvasContext: context,
             viewport: viewport
         }).promise;
 
-        console.log("v5 pdfparser @ renderPageToCanvas - after render");
+        if (this.enableLogging) console.log("v5 pdfparser @ renderPageToCanvas - after render");
 
         return canvas.toDataURL('image/png');
     }
 
     async processPage(page, pageNum) {
-
-        // ✅ Debug: See what methods exist
-        console.log('Page object:', page);
-        console.log('Page methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(page)));
-        console.log('Has getTextContent:', typeof page.getTextContent);
-        console.log('Has getTextContent:', page.getTextContent());
-        console.log('Has textContent:', typeof page.textContent);
-        console.log('Has streamTextContent:', typeof page.streamTextContent);
-        // Log all available methods
-        for (const key of Object.keys(page)) {
-            if (typeof page[key] === 'function') {
-                console.log(`Method found: ${key}`);
-            }
-        }
-
-        console.log("v5 pdfparser @ processPage", page, pageNum);
+        if (this.enableLogging) console.log("v5 pdfparser @ processPage", page, pageNum);
         const initialViewport = page.getViewport({ scale: 1.5 });
-        console.log("v5 pdfparser @ initialViewport", initialViewport);
         const rotationCorrection = await this.detectTextRotation(page, initialViewport);
-        console.log("v5 pdfparser @ rotationCorrection", rotationCorrection);
         const isContentRotated = rotationCorrection !== null;
-        console.log("v5 pdfparser @ isContentRotated", isContentRotated);
         const viewport = page.getViewport({ scale: 1.5, rotation: rotationCorrection || 0 });
-        console.log("v5 pdfparser @ viewport", viewport);
 
         if (isContentRotated && this.enableLogging) {
             console.log(`pdfparser @ processPage: Page ${pageNum} - Content detected as rotated, applying ${rotationCorrection}° correction (original: ${initialViewport.width.toFixed(1)}x${initialViewport.height.toFixed(1)}, corrected: ${viewport.width.toFixed(1)}x${viewport.height.toFixed(1)})`);
@@ -182,22 +161,21 @@ class PdfParser {
 
         // PNG hochaufgeloest rendern (Print/Display schaerfer); Detector+Output bleiben in 1.5x-Raum
         const renderViewport = page.getViewport({ scale: 3, rotation: rotationCorrection || 0 });
-        console.log("v5 pdfparser @ renderViewport", renderViewport);
+        if (this.enableLogging) console.log("v5 pdfparser @ renderViewport", renderViewport);
         const imgSrc = await this.renderPageToCanvas(page, renderViewport);
-        console.log("v5 pdfparser @ imgSrc", imgSrc);
 
         // Two-pass: extract box geometry first so cloze detection can use it as context
         const [formFields, rawBoxFields] = await Promise.all([
             this.detectFormFields ? this.extractFormFields(page, viewport, pageNum) : Promise.resolve([]),
             this.detectBoxFields ? this.extractBoxFields(page, viewport) : Promise.resolve([])
         ]);
-        console.log("v5 pdfparser @ detectFormFields", formFields, "detectBoxFields", rawBoxFields);
+        if (this.enableLogging) console.log("v5 pdfparser @ detectFormFields", formFields, "detectBoxFields", rawBoxFields);
 
         // Detect vectorized/flattened PDFs: no extractable text and no AcroForm fields.
         // These are typically iLovePDF or similar exports where all content is vector paths.
         // Field detection is unreliable for such PDFs.
         let textContent = await page.getTextContent();
-        console.log("v5 pdfparser @ textContent", textContent);
+        if (this.enableLogging) console.log("v5 pdfparser @ textContent", textContent);
         const isVectorizedPage = formFields.length === 0 && textContent?.items?.length === 0 && rawBoxFields.length === 0;
 
         // Build a simple rect array from raw box fields for context lookup.
