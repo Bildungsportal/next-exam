@@ -764,25 +764,32 @@ export default {
             });
         },
 
+        /** Returns a multicast/manual server entry for a BiP exam, or null if not on the network. */
+        findNetworkServerForBipExam(exam: Exam) {
+            const examKey = exam.id ?? exam.examName;
+            return this.serverlist.find(s => {
+                if (!s.serverip || s.reachable === false) return false;
+                const serverKey = s.id ?? s.servername;
+                return serverKey === examKey || s.servername === exam.examName;
+            }) || null;
+        },
+
         /**
          * Checks if there are online exams and attempts to connect to them
          */
         bipAutoconnect() {
-            if (this.onlineExams.length > 0) {
-                this.onlineExams.forEach((exam: Exam) => {
-                    if (exam.examStatus == "open") {
-                        exam.examTeachers.forEach(teacher => {
-                            if (teacher.teacherIP) {
-                                //console.log(exam)
-                                this.serverip = teacher.teacherIP
-                                this.username = this.bipUsername
-                                this.pincode = exam.examPin.toString()     // Set the pin to the exam pin for auto connect
-                                console.log(`connecting to exam: ${exam.examName} with teacher: ${teacher.teacherID} and pin: ${exam.examPin}`)
-                                this.registerClient(teacher.teacherIP, exam.examName)
-                            }
-                        })
-                    }
-                })
+            if (!this.onlineExams.length || this.token) return;
+            for (const exam of this.onlineExams) {
+                if (exam.examStatus !== "open") continue;
+                const networkServer = this.findNetworkServerForBipExam(exam);
+                if (!networkServer) continue;
+                this.serverip = networkServer.serverip;
+                this.username = this.bipUsername;
+                this.pincode = exam.examPin.toString();
+                const servername = networkServer.servername || exam.examName;
+                console.log(`connecting to exam: ${servername} at ${networkServer.serverip} with pin: ${exam.examPin}`);
+                this.registerClient(networkServer.serverip, servername);
+                return;
             }
         },
 
