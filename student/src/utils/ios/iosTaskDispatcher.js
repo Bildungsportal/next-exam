@@ -24,7 +24,6 @@
 import i18n from "../../locales/locales.js";
 //import {Directory, Encoding, Filesystem as fs} from "@capacitor/filesystem";
 //import {Clipboard} from "@capacitor/clipboard";
-import path from "path";
 import mammoth from "mammoth";
 import config from "../config.js"
 import loggingBridge from "../loggingBridge.js";
@@ -552,22 +551,24 @@ class IosTaskDispatcher {
                 let files = []
                 filelist.forEach(file => {
                     let mod = fs.stat(workdir + "/" + file).mtime
-                    if (path.extname(file).toLowerCase() === ".pdf") {
+                    const i = file.lastIndexOf('.');
+                    const ext = (i < 0 ? '' : file.slice(i)).toLowerCase();
+                    if (ext === ".pdf") {
                         files.push({name: file, type: "pdf", mod: mod})
                     }         //pdf
-                    else if (path.extname(file).toLowerCase() === ".bak") {
+                    else if (ext === ".bak") {
                         files.push({name: file, type: "bak", mod: mod})
                     }   // editor| backup file to replace editor content
-                    else if (path.extname(file).toLowerCase() === ".docx") {
+                    else if (ext === ".docx") {
                         files.push({name: file, type: "docx", mod: mod})
                     }   // editor| content file (from teacher) to replace content and continue writing
-                    else if (path.extname(file).toLowerCase() === ".ggb") {
+                    else if (ext === ".ggb") {
                         files.push({name: file, type: "ggb", mod: mod})
                     }  // geogebra
-                    else if (path.extname(file).toLowerCase() === ".mp3" || path.extname(file).toLowerCase() === ".ogg" || path.extname(file).toLowerCase() === ".wav") {
+                    else if (ext === ".mp3" || ext === ".ogg" || ext === ".wav") {
                         files.push({name: file, type: "audio", mod: mod})
                     }  // audio
-                    else if (path.extname(file).toLowerCase() === ".jpg" || path.extname(file).toLowerCase() === ".png" || path.extname(file).toLowerCase() === ".gif") {
+                    else if (ext === ".jpg" || ext === ".png" || ext === ".gif") {
                         files.push({name: file, type: "image", mod: mod})
                     }  // images
                 })

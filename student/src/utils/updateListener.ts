@@ -1,7 +1,6 @@
 import {SignalBridge} from './signalBridge.js'
 import {useInfoStore} from "../stores/infoStore.js";
 import log from "electron-log";
-import path from "path";
 import {decryptExamFileAllLayers, encryptExamFileBytes, isExamFileEncryptedBytes} from "../../../shared/examFileCryptoCore.js";
 import {Directory, Filesystem, WriteFileResult} from "@capacitor/filesystem";
 
@@ -86,7 +85,9 @@ class UpdateListener {
                             .catch((err) => {
                                 console.error(`updateListener @ storeHTML: ${err.message}`);
 
-                                let alternatepath = this.resolveWritablePathUnderExamDir(this.infoStore.examdirectory, `${path.basename(htmlfile, '.htm')}-${this.infoStore.token}.htm`, ['.htm']);
+                                const htmlBase = String(htmlfile).split(/[/\\]/).pop() || '';
+                                const htmlStem = htmlBase.replace(/\.htm$/i, '');
+                                let alternatepath = this.resolveWritablePathUnderExamDir(this.infoStore.examdirectory, `${htmlStem}-${this.infoStore.token}.htm`, ['.htm']);
                                 if (!alternatepath) {
                                     console.error("updateListener @ storeHTML: alternate path rejected");
                                     event.reply("fileerror", { sender: "client", message: "invalid alternate path", status: "error" });
@@ -119,17 +120,16 @@ class UpdateListener {
         if (rootDir == null || typeof rootDir !== 'string' || name == null || typeof name !== 'string') return null;
         const n = name.trim();
         if (!n || n.includes('\0')) return null;
-        if (n !== path.basename(n)) return null;
-        if (n === '.' || n === '..') return null;
-        const ext = path.extname(n).toLowerCase();
+        // single path segment only — no separators / traversal
+        if (n.includes('/') || n.includes('\\') || n === '.' || n === '..') return null;
+        const dot = n.lastIndexOf('.');
+        const ext = (dot > 0 ? n.slice(dot) : '').toLowerCase();
         if (allowedLowerExtensions?.length && !allowedLowerExtensions.includes(ext)) return null;
-        const stem = path.parse(n).name;
+        const stem = dot > 0 ? n.slice(0, dot) : n;
         if (/^(CON|PRN|AUX|NUL|COM[0-9]|LPT[0-9])$/i.test(stem)) return null;
-        const rootResolved = path.resolve(rootDir);
-        const absTarget = path.resolve(path.join(rootResolved, n));
-        const rel = path.relative(rootResolved, absTarget);
-        if (rel.startsWith('..') || path.isAbsolute(rel)) return null;
-        return absTarget;
+        const rootResolved = rootDir.replace(/[/\\]+$/, '');
+        const sep = rootDir.includes('\\') && !rootDir.includes('/') ? '\\' : '/';
+        return `${rootResolved}${sep}${n}`;
     };
 
     /** Exam file key: serverstatus.encryptionPassword; local lockdown uses serverstatus.password only. */

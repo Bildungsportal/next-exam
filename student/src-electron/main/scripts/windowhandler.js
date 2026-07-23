@@ -937,6 +937,14 @@ class WindowHandler {
         }
     }
 
+    // Force-close the open exit question (resolves as "Nein"); used when the server restarts exammode while the dialog is up.
+    closeExitQuestion(){
+        if (!this.exitQuestionOpen || !this.mainwindow) return
+        for (const child of this.mainwindow.getChildWindows()){
+            try { child.close() } catch (e){ log.warn("Windowhandler @ closeExitQuestion:", e) }
+        }
+    }
+
     async showExitQuestion(){
         if (this.exitQuestionOpen) {
             log.info("Windowhandler @ showExitQuestion: dialog already open, skipping")

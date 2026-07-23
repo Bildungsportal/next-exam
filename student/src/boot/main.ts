@@ -10,10 +10,9 @@ import { ipcRenderer as capacitorIpcRenderer } from "../plugins/ipc-renderer.js"
 import IosUpdateListener from "../utils/ios/iosUpdateListener.ts";
 import PdfHelper from "../utils/pdfHelper.ts";
 
-// Electron-only: lazy-import to avoid Vite bundling Node modules into Capacitor builds.
+// Electron-only: lazy chunk (no @vite-ignore — packaged AppImage has no src-electron/ tree for renderer).
 const electron = {
-    get multicastclient() { return import(/* @vite-ignore */ '../../src-electron/main/scripts/multicastclient.js'); },
-    get UpdateListener() { return import(/* @vite-ignore */ '../utils/updateListener.ts'); },
+    get UpdateListener() { return import('../utils/updateListener.ts'); },
 };
 
 // "async" is optional;
@@ -65,9 +64,9 @@ export default defineBoot(async ( { app, router } ) => {
     }
 
     LoggingBridge.init(window);
-    // Electron-only modules: lazy-load outside Capacitor builds
+    // Electron: MulticastClient lives in main; renderer only needs a clientinfo stub for NavigationHandler.
     if (!isIOS()) {
-        const { default: mc } = await electron.multicastclient;
+        const mc = { clientinfo: {} };
         const { default: updateListener } = await electron.UpdateListener;
         NavigationHandler.init(LoggingBridge, mc, config, router);
         IosTaskDispatcher.init(LoggingBridge, mc, NavigationHandler);

@@ -49,6 +49,7 @@
     "rollup"
   ],
   "dependencies": {
+    "@capacitor/core": "^8.4.0",
     "@capacitor/device": "^8.0.2",
     "@capacitor/filesystem": "^8.1.2",
     "@capacitor/status-bar": "^8.0.2",
@@ -140,7 +141,6 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^8.4.0",
-    "@capacitor/core": "^8.4.0",
     "@intlify/unplugin-vue-i18n": "^5.0.0",
     "@quasar/app-vite": "^2.1.0",
     "@types/node": "^20.5.9",

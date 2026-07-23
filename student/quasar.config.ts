@@ -258,34 +258,27 @@ export default defineConfig(( ctx: any ) => {
           const publicOut = path.join(baseOut, 'public');
           viteConf.build.outDir = publicOut;
           viteConf.base = './';
+          // Assets live in public/ (Vite publicDir); absolute /img → ./img for file:// loadFile.
           viteConf.publicDir = path.resolve(__dirname, 'public');
-          const srcAssetsDir = path.resolve(__dirname, 'src', 'assets');
           viteConf.plugins = viteConf.plugins || [];
-          viteConf.plugins.push({
-            name: 'quasar-electron-public-folder',
-            closeBundle () {
-              fse.copySync(srcAssetsDir, path.join(publicOut, 'src', 'assets'));
-            }
-          });
           viteConf.plugins.push({
             name: 'quasar-electron-rewrite-assets',
             transformIndexHtml: (html) => {
-              let out = html.replace(/([`"'])\/src\/assets/g, '$1./src/assets');
+              let out = html.replace(/([`"'])\/img\//g, '$1./img/');
               out = out.replace(/href=["']public\//g, 'href="./');
               return out;
             },
             generateBundle (_, bundle) {
-              // Vue compiles template src to backticks; CSS url() is inlined — only JS literals need backtick rewrite.
+              // Vue templates keep absolute /img; file:// needs ./img (doc base = public/). CSS already uses ../img via base.
               const rewrite = (s) => s
-                .replace(/`\/src\/assets/g, '`./src/assets')
-                .replace(/\\"\/src\/assets/g, '\\"./src/assets')
-                .replace(/\\'\/src\/assets/g, "\\'./src/assets")
-                .replace(/"\/src\/assets/g, '"./src/assets')
-                .replace(/'\/src\/assets/g, "'./src/assets");
+                .replace(/`\/img\//g, '`./img/')
+                .replace(/\\"\/img\//g, '\\"./img/')
+                .replace(/\\'\/img\//g, "\\'./img/")
+                .replace(/"\/img\//g, '"./img/')
+                .replace(/'\/img\//g, "'./img/");
               for (const item of Object.values(bundle)) {
                 const entry = item as { type?: string; code?: string; source?: string | Buffer };
                 if (entry?.type === 'chunk' && entry.code) entry.code = rewrite(entry.code);
-                if (entry?.type === 'asset' && typeof entry.source === 'string') entry.source = rewrite(entry.source);
               }
             }
           });

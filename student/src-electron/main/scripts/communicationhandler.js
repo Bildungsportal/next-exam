@@ -624,6 +624,7 @@ import config from "../../../src/utils/config.js";
                 // wait for localvm-retry-start after a failed preflight (qemu/disk)
             } else {
                 log.info("communicationhandler @ processUpdatedServerstatus: exammode activated");
+                WindowHandler.closeExitQuestion();  // server decides state while connected: drop the post-exam quit dialog and restart immediately
                 this.killScreenlock();
                 this.startExam(serverstatus);
             }
@@ -1280,8 +1281,8 @@ import config from "../../../src/utils/config.js";
         if (languageToolServer.languageToolProcess){
             languageToolServer.stopServer(); // Kill LanguageTool server when exam window is closed
         }
-        // ask student to quit app after finishing exam
-        await WindowHandler.showExitQuestion()
+        // ask student to quit app after finishing exam (non-blocking: endExam must finish so a fresh server-pushed exammode can restart immediately)
+        WindowHandler.showExitQuestion()
         } finally {
             this._endExamRunning = false;
         }
