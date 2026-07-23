@@ -84,6 +84,7 @@
         "finalsubmit": "Final submit",
         "focusLockReason": "Reason",
         "focusLockReason_ltPort8088": "Port 8088 is in use by another service (not LanguageTool)",
+        "focusLockReason_ttySwitch": "Switch to another console detected (Ctrl+Alt+F…)",
         "getmaterials": "Update materials",
         "headercolumn": "headercolumn",
         "headerrow": "headerrow",

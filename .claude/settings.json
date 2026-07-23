@@ -22,7 +22,11 @@
       "Bash(git diff *)",
       "Bash(git log *)",
       "Bash(timeout 90 npx vitest run)",
-      "Bash(grep -nE \"return|battery|clientinfo:|serverstatus:|serverlist:|}\\\\s*$\")"
+      "Bash(grep -nE \"return|battery|clientinfo:|serverstatus:|serverlist:|}\\\\s*$\")",
+      "Bash(loginctl list-sessions *)",
+      "Bash(busctl get-property *)",
+      "Bash(node t3.mjs)",
+      "Bash(node t4.mjs)"
     ]
   }
 }

@@ -84,6 +84,7 @@
         "finalsubmit": "abgeben",
         "focusLockReason": "Grund",
         "focusLockReason_ltPort8088": "Port 8088 ist von einem anderen Dienst belegt (nicht LanguageTool)",
+        "focusLockReason_ttySwitch": "Wechsel auf eine andere Konsole erkannt (Strg+Alt+F…)",
         "getmaterials": "Materialien aktualisieren",
         "headercolumn": "Titelspalte",
         "headerrow": "Titelreihe",

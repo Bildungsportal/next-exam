@@ -32,6 +32,7 @@ import {SchedulerService} from './schedulerservice.ts'
 import platformDispatcher from './platformDispatcher.js';
 import { encryptExamFileBytes, isExamFileEncryptedBytes } from './examFileCrypto.js';
 import { updateRemoteAssistant } from './remoteAssistantScan.js'
+import { updateTtyWatch } from './ttyWatch.js'
 import { getVMFindings } from './vmDetection.js'
 import { examApiFetch } from '../../../../shared/examApiFetch.js'
 import languageToolServer from './lt-server.js';
@@ -314,6 +315,10 @@ import config from "../../../src/utils/config.js";
         this.multicastClient.clientinfo.isAssessmentMode = isAssessmentSessionActive();
 
         this.timer++   // we use timer to time loops with different intervals without introducing new unneccesary schedulers
+
+        updateTtyWatch(this.multicastClient.clientinfo, {
+            applySecurityFocusLost: (reason) => this.applySecurityFocusLost(reason),
+        });
 
         if (this.timer % 20 === 0 || this.timer === 1){  // run every 20*5 (updateloop) seconds
             await updateRemoteAssistant(this.multicastClient.clientinfo, {
