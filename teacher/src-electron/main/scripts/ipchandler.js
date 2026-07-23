@@ -815,9 +815,12 @@ class IpcHandler {
            
             try {
                 let data = fs.readFileSync(filepath, 'utf8')
-                
-                let serverlog = data.trim()
-                .split('\n')
+                // Dashboard only needs the newest lines — full parse/render freezes the UI
+                const maxLines = 400
+                const allLines = data.trim().split('\n')
+                const lines = allLines.length > maxLines ? allLines.slice(-maxLines) : allLines
+
+                let serverlog = lines
                 .map(line => {
                   const match = line.match(/^\[(.+?)\]\s+\[(.+?)\]\s+(.*)$/);
                   if (match) {

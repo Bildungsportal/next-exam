@@ -17,6 +17,13 @@ RULE^i18n^alphabetical^keep keys in teacher/src/locales/de.json+en.json alphabet
 RULE^i18n^intlifyPipe^vue-i18n/intlify treats | in messages as plural delimiter; literal pipe write {'|'}
 RULE^ui^colors^shared^btn-cyan+swal confirm=$cyan-600^shared/css/nxe-theme.scss; app.scss imports nxe-bootstrap-config+nxe-theme
 TECH^vue^api^Options API teacher/src; mirror sibling file; no script setup unless user migrates
+RULE^student^kioskMethod^applyElectronKioskMode lives ONLY on WindowHandler (windowhandler.js), NOT platformDispatcher (only has skipElectronKiosk flag); ios-merge wrongly called platformDispatcher.applyElectronKioskMode in communicationhandler applySecurityFocusLost→TypeError in focus-lost lockdown
+RULE^student^publicImg^student assets moved src/assets/img→public/img in ios-merge; ref as /img/... NOT /src/assets/img/... (src/assets/img now empty→404 dev+prod)
+RULE^student^switchSection^main path (electron): communicationhandler must call switchExamSection(this,serverstatus,section) from switchExamSection.js (does backup+shuffle+reroute via fs). switchExamSectionFiles() is RENDERER-only (switchExamSection.ts, @capacitor/filesystem, ExamHeader.vue, ios only)—NOT importable/callable in src-electron main
+BUG^student^sectionShuffleLost^RECURRING every ios-merge: switchExamSection.js STEP 3 (fs shuffle root→fromSection/, toSection/→root) gets deleted; renderer switchExamSectionFiles only runs on iOS(ExamHeader if(isIOS))→electron section-switch loses files. Symptom: comment steps jump 1,2,4,5 (no 3). Fix: restore step-3 fs block between step2 backup and step4 clientinfo. Fixed 3x already—re-check after each merge
+BUG^pdfparser^pdfjsBareImport^ios-branch keeps switching pdfjs imports from 'pdfjs-dist/legacy/build/pdf.mjs' to bare 'pdfjs-dist' (+worker legacy/build/pdf.worker.mjs→build/pdf.worker.min.mjs) in shared/pdfparser/{v5/index.js,v5/detectors.js,shared/filters.js}+teacher SystemPrintPdf.vue. Breaks electron+teacher: worker 404 'Failed to fetch pdf.worker.min.mjs' (quasar.config alias only maps legacy paths). main wins=legacy. Revert after every ios-merge
+RULE^agent^iosMergeMainWins^ios branch (external dev) introduces regressions to code validated in main; main ALWAYS wins on conflicts—do not accept ios-side rewrites of working main logic as intentional without verifying. Recurring: sectionShuffle, pdfjsBareImport, kioskMethod, publicImg, updateListenerCase
+RULE^student^updateListenerCase^student/src/utils/updateListener.ts is lowercase-u; boot/main.ts dynamic import must match exactly (Linux case-sensitive FS→wrong case = module-not-found at runtime)
 
 # Build pipeline
 TECH^quasar^vite^@quasar/app-vite bundles Vite 8; server.forwardConsole=false in student+teacher quasar.config.ts extendViteConf stops browser console mirroring to dev terminal
@@ -63,7 +70,7 @@ IPC^student^kioskShared^get-linux-kiosk-info + install-linux-cage-kiosk channel 
 
 # Security / API auth
 IPC^student^controlBearer^POST /server/control/update|updatescreenshot|submission/:srv|printjob/:srv require Authorization Bearer=registered student token; exempt GET pong+GET serverlist (pre-register); registerclient PIN; oauth+msauth
-TECH^exam^fileCrypto^NXE1 v1 AES-256-GCM+scrypt; key=serverstatus.encryptionPassword (64 hex auto); examPassword=human exit only
+TECH^exam^fileCrypto^NXE1 v1 AES-256-GCM+scrypt; key=serverstatus.encryptionPassword (64 hex auto); examPassword=human exit only; localLockdown=plaintext (resolveExamDecryptPassword→'')
 TECH^submissionSign^pades^auto always; PAdES detached CMS via ECDSA P-256 (NOT RSA/forge). deterministic key = noble @noble/curves p256 from secret+salt (bip=userprivateaccesskey; local=sha256(pin|token|timeMs)); X.509 cert+CMS via pkijs+asn1js on WebCrypto (globalThis.crypto, native Electron41/Node22 + WKWebView); @signpdf/signpdf(new SignPdf) + @signpdf/placeholder-pdf-lib(SUBFILTER_ETSI_CADES_DETACHED); salt/mode/bipUserId stored in cert OU (NXE-SALT:/NXE-MODE:/NXE-BIP-UID:); HIDDEN_SIG_WIDGET_RECT suppresses widget line; visible stamp last page center (logoPngBytes not path); sign+verify fns ASYNC (deriveSigningIdentity/signSubmissionPdf/verifySubmissionPdf*); printBackground:false on signed export^shared/submissionPdfSign.js
 TECH^submissionSign^deps^shared/submissionPdfSign.js needs pkijs+asn1js+@noble/curves+@signpdf/signpdf+@signpdf/placeholder-pdf-lib+pdf-lib in BOTH student+teacher (module loaded by both; teacher only calls verify). node-forge kept ONLY in teacher/src-electron/server/src/server.js (TLS), removed from student. iOS/Capacitor needs Buffer polyfill (@signpdf uses Buffer). student CommHandler cache field cachedSubmissionSigningP12 now holds {privateKey,cert,caCert,mode}; ensureSubmissionSigningP12/materialize/prewarm async; IPC channel name 'prewarmSubmissionSigningP12' unchanged
 BUG^print^swal2MultiPage^body.swal2-shown setzt im @media print "[aria-hidden=true] { display:none }" auf alle body-children → killt multi-page print bei activesheets previewSigned. Fix in activesheets.vue @media print: body.swal2-shown > [aria-hidden="true"] { display:block !important }
@@ -71,6 +78,7 @@ BUG^print^swal2MultiPage^body.swal2-shown setzt im @media print "[aria-hidden=tr
 # Exam schema
 RULE^exam^sectionSchema^mode config only group.examConfig.{editor|website|eduvidual|forms|rdp|localvm|activeSheets|microsoft365}; section has examtype+sectionname+timelimit+locked+startTs+groups only
 RULE^student^sectionSwitch^switchExamSection: awaitRendererBackup→shuffle examDir→lockedSection→reroute; isSectionSwitchRunning blocks stray examDir writes
+RULE^student^configImport^electron main must import src/utils/config.js (same as electron-main); src-electron/main/config.js is stale duplicate — empty examdirectory breaks shuffle
 RULE^student^examWin^listeners^close once on mainwindow; app-command once; blur idempotent; teardown clears route listeners only
 RULE^student^examWin^state: clientinfo.exammode+mainwindow via mainWin/inExamMode; examServerstatus for IPC cache
 PATH^shared^editorExamConfig^shared/editorExamConfig.js DEFAULT_EDITOR_EXAM_CONFIG+resolveEditorExamConfig+resolveGroupKey
@@ -137,4 +145,5 @@ PATH^student^odtTiptap^student/src/utils/odtToTiptapHtml.js+filehandler loadODT+
 TECH^teacherCli^overrides^applyCliOverrides.js consumes --exam-modes=csv (override config.exammodes) + --expose-students (GET connectedstudentips→text/plain); needs running examServerList[0]
 TECH^macRosetta^check^platformDispatcher._detectMacRosettaEmulation; nativeHost=arch -arm64 uname -m (not plain uname under Rosetta); runningUnderRosetta=nativeHost arm64+processArch x64; student.vue warnMacRosettaArch
 RULE^teacher^logViewerTruncate^loadTextFile truncateLogTextForViewer keeps tail (max 200k chars); scroll bottom on open+dashboard serverlog
+RULE^teacher^serverlogTail^getlog returns last 400 lines only; fetchLOG close clears serverlog[]; fetchInfo skips apply if !serverlogActive after await
 TECH^languagetool^studentToggle^editor.vue ltExternalHost+ltUseExternal default external; sidebar Lokal/Extern btns beside update; LThost/LTport via applyLtActiveEndpoint; isLanguageToolRunning IPC opts host+port

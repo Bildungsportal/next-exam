@@ -2,7 +2,8 @@ import log from 'electron-log';
 import fs from 'fs';
 import { webContents, ipcMain } from 'electron';
 import WindowHandler from './windowhandler.js';
-import config from '../config.js';
+// Must match electron-main.js — main/config.js is a stale duplicate (empty examdirectory).
+import config from '../../../src/utils/config.js';
 import multicastClient from './multicastclient.js';
 
 const SECTION_SAVE_TIMEOUT_MS = 10000;
@@ -59,12 +60,12 @@ export async function switchExamSection(CommunicationHandler, serverstatus, newS
         if (examWin?.webContents && !examWin.isDestroyed?.()) {
             examWin.webContents.send('switching-exam-section', toSection);
         }
-        log.warn(`switchExamSection: ${fromSection} → ${toSection} (${serverstatus.examSections[toSection].sectionname}, ${serverstatus.examSections[toSection].examtype})`);
+        log.warn(`switchExamSection @ switchExamSection: ${fromSection} → ${toSection} (${serverstatus.examSections[toSection].sectionname}, ${serverstatus.examSections[toSection].examtype})`);
 
         // --- 2) backup current section (renderer → disk, awaited) ---
         const backupOk = await awaitRendererBackup(examWin?.webContents, fromExamtype);
         if (!backupOk && NEEDS_BACKUP_SAVE.includes(fromExamtype)) {
-            log.error('switchExamSection: backup failed — abort');
+            log.error('switchExamSection @ switchExamSection: backup failed — abort');
             examWin?.webContents?.send('section-switch-aborted');
             return;
         }
@@ -95,7 +96,7 @@ export async function switchExamSection(CommunicationHandler, serverstatus, newS
 
         // --- 5) reroute to new exam view ---
         if (!examWin || examWin.isDestroyed?.()) {
-            log.warn('switchExamSection: no mainwindow for reroute');
+            log.warn('switchExamSection @ switchExamSection: no mainwindow for reroute');
             return;
         }
         if (fromExamtype === 'localvm' || multicastClient.clientinfo.localVMState === 'running') {
@@ -114,7 +115,7 @@ export async function switchExamSection(CommunicationHandler, serverstatus, newS
         WindowHandler.teardownExamChrome(WindowHandler.mainwindow);
         await CommunicationHandler.rerouteExamSection(serverstatus);
     } catch (error) {
-        log.error(`switchExamSection: ${error?.message || error}`, error?.stack);
+        log.error(`switchExamSection @ switchExamSection: ${error?.message || error}`, error?.stack);
         examWin?.webContents?.send('section-switch-aborted');
     } finally {
         switchExamSection._running = false;

@@ -109,7 +109,9 @@ class WindowHandler {
             await win.loadFile(getRendererIndexPath(), { hash })
         } else {
             const base = (process.env.APP_URL || '').replace(/\/$/, '')
+            log.info(`windowhandler @ navigateHashRoute: base - ${base} , hash - ${hash}`)
             await win.loadURL(`${base}/${hash}`)
+            // #/math/csrf-7555afa1-5828-46d0-9ee8-434a5c7e5851/1
         }
     }
 

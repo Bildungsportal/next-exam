@@ -90,6 +90,8 @@ export type ExamConfig = {
 export type ActiveSheetsConfig = {
   filename?: string,
   filecontent?: string,
+  filecontent?: string,
+  checksum?: string
 }
 
 export type WebsiteConfig = {
@@ -136,4 +138,9 @@ export type Url = {
   url: string,
   blockSubdomains: boolean,
   blockSubfolders: boolean,
+}
+
+export type GForms = {
+  url: string,
+  provider: boolean
 }

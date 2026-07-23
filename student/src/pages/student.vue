@@ -11,7 +11,7 @@
     <!-- Header START -->
     <div v-show="!isLoading" class="w-100 p-3 text-white bg-dark text-left" style="height: 66px; z-index: 1000;">
     <span class="text-white m-1 d-inline-flex align-items-center flex-wrap ms-1">
-        <img src='/src/assets/img/svg/speedometer.svg' class="white me-2" width="32" height="32">
+        <img src='/img/svg/speedometer.svg' class="white me-2" width="32" height="32">
         <span class="fs-4 align-middle me-2" @click="handleClick">Next-Exam</span>
         <span v-if="cageLauncherApps.length" class="d-inline-flex align-items-center flex-wrap gap-2 cage-launcher-group">
             <button v-for="app in cageLauncherApps" :key="app.path" type="button"
@@ -93,7 +93,7 @@
         <!-- SIDEBAR START -->
         <div class="p-3 text-white bg-dark h-100 student-sidebar" style="width: 240px; min-width: 240px;">
             <div class="btn btn-light ms-1 text-start infobutton nobutton">
-                <img src='/src/assets/img/svg/server.svg' class="me-2" width="16" height="16"> {{ $t('student.exams') }}
+                <img src='/img/svg/server.svg' class="me-2" width="16" height="16"> {{ $t('student.exams') }}
             </div>
             <br>
 
@@ -113,7 +113,7 @@
                      class="btn btn-success m-1 " :class="(token)? 'disabledexam':''" style="padding:0;">
                     <img id="biplogo"
                          style="filter: hue-rotate(140deg);  width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; "
-                         src="/src/assets/img/login_students.jpg">
+                         src="/img/login_students.jpg">
                     <span v-if="bipUsername" id="biploginbuttonlabel">{{ bipUsername }}</span>
                     <span v-else id="biploginbuttonlabel">Logout</span>
                 </div>
@@ -121,7 +121,7 @@
                      style="padding:0;" :class="(token)? 'disabledexam':''">
                     <img id="biplogo"
                          style="width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; "
-                         src="/src/assets/img/login_students.jpg">
+                         src="/img/login_students.jpg">
                     <span v-if="bipUsername" id="biploginbuttonlabel">{{ bipUsername }}</span><span v-else
                                                                                                     id="biploginbuttonlabel">Login</span>
                 </div>
@@ -242,7 +242,7 @@
 
                         <div
                             style="display:flex; flex-direction: row; justify-content: space-between; padding:0px; margin:0px;">
-                            <img v-if="!server.reachable" src="/src/assets/img/svg/emblem-warning.svg"
+                            <img v-if="!server.reachable" src="/img/svg/emblem-warning.svg"
                                  :title="$t('student.unreachable')"
                                  style="width:20px;height:20px;vertical-align:top;cursor: help;position: absolute; margin-top:8px; margin-left:8px; ">
 
@@ -301,10 +301,8 @@
 </template>
 
 <script lang="ts">
-import validator, {isEmpty} from 'validator'
+import validator from 'validator'
 import log from 'electron-log/renderer'
-import {SchedulerService} from '../utils/schedulerservice.js'
-import {isElectronWindow} from "../types/platform.ts";
 import {SignalBridge} from '../utils/signalBridge.js'
 import { initScreenshotScheduler, hasActiveScreenshotStream, isFullDesktopCaptureLikely, ensureDisplayStreamAsync, setCageWindowCaptureFallback, setLinuxKioskRunningInCage, isCageWindowCaptureFallback } from '../utils/screenshotCapture.js'
 import { getLinuxKioskInfo } from '../utils/linuxCageKiosk.js'
@@ -320,8 +318,13 @@ import { autoCleanupMixin } from "../mixins/autoCleanupMixin.ts";
 import { useConfigStore } from "stores/configStore.ts";
 import { ref } from 'vue';
 import { showLocalVmQemuIssueDialog } from 'next-exam-shared/qemuLocalVmDialogs.js'
+import loggingBridge from "../utils/loggingBridge.js";
+import { StatusBar } from "@capacitor/status-bar";
+import {isElectronWindow, isIOS} from "../types/platform.js";
+import {useInfoStore} from "../stores/infoStore.js";
+import {storeToRefs} from "pinia";
 
-function unhandledRejectionFunction(event: PromiseRejectionEvent) {
+function unhandledRejectionFunction(event: any) {
   const reason = event?.reason;
   const msg = typeof reason === 'string' ? reason : reason && reason.message;
   if (msg && (msg.includes('GUEST_VIEW_MANAGER_CALL') || msg.includes('ERR_FAILED'))) {
@@ -357,18 +360,18 @@ export default {
       let bipIntegration = ref(configStore.bipIntegration);
       let bipApiUrl = ref(configStore.bipApiUrl);
       let bipDemo = ref(configStore.bipDemo);
-      return { username, pincode, development, version, serverApiPort, electron, info, buildDate, hostip, bipIntegration, bipApiUrl, bipDemo };
+
+      let { token } = storeToRefs(useInfoStore());
+      return { username, pincode, development, version, serverApiPort, electron, info, buildDate, hostip, bipIntegration, bipApiUrl, bipDemo,
+          token};
     },
 
     data() {
         return {
-            token: "",
             clientinfo: {},
             serverstatus: null,
             serverlist: [],
             serverlistAdvanced: [],
-            fetchinterval: null as SchedulerService,
-            autoUpdateInterval: null as SchedulerService,
             startExamEvent: null,
             advanced: false,
             serverip: "" as string,
@@ -685,6 +688,7 @@ export default {
         },
 
         async selectPreferredInterface() {
+            loggingBridge.info('selectPreferredInterface');
             if (this.activeDialog || !this.hostip?.availableInterfaces?.length) return;
             this.activeDialog = true;
             this.$swal.fire({
@@ -732,7 +736,7 @@ export default {
 
             let IPCresponse = signalBridge.sendSync('loginBiP', this.biptest)
             if (IPCresponse && IPCresponse.status === "success") {
-                
+
             }
             console.log(IPCresponse)
         },
@@ -764,25 +768,32 @@ export default {
             });
         },
 
+        /** Returns a multicast/manual server entry for a BiP exam, or null if not on the network. */
+        findNetworkServerForBipExam(exam: Exam) {
+            const examKey = exam.id ?? exam.examName;
+            return this.serverlist.find(s => {
+                if (!s.serverip || s.reachable === false) return false;
+                const serverKey = s.id ?? s.servername;
+                return serverKey === examKey || s.servername === exam.examName;
+            }) || null;
+        },
+
         /**
          * Checks if there are online exams and attempts to connect to them
          */
         bipAutoconnect() {
-            if (this.onlineExams.length > 0) {
-                this.onlineExams.forEach((exam: Exam) => {
-                    if (exam.examStatus == "open") {
-                        exam.examTeachers.forEach(teacher => {
-                            if (teacher.teacherIP) {
-                                //console.log(exam)
-                                this.serverip = teacher.teacherIP
-                                this.username = this.bipUsername
-                                this.pincode = exam.examPin.toString()     // Set the pin to the exam pin for auto connect
-                                console.log(`connecting to exam: ${exam.examName} with teacher: ${teacher.teacherID} and pin: ${exam.examPin}`)
-                                this.registerClient(teacher.teacherIP, exam.examName)
-                            }
-                        })
-                    }
-                })
+            if (!this.onlineExams.length || this.token) return;
+            for (const exam of this.onlineExams) {
+                if (exam.examStatus !== "open") continue;
+                const networkServer = this.findNetworkServerForBipExam(exam);
+                if (!networkServer) continue;
+                this.serverip = networkServer.serverip;
+                this.username = this.bipUsername;
+                this.pincode = exam.examPin.toString();
+                const servername = networkServer.servername || exam.examName;
+                console.log(`connecting to exam: ${servername} at ${networkServer.serverip} with pin: ${exam.examPin}`);
+                this.registerClient(networkServer.serverip, servername);
+                return;
             }
         },
 
@@ -814,7 +825,7 @@ export default {
                 console.error("student.vue@fetchBipExams: cannot fetch from bip api without valid token")
                 return;
             }
-            
+
             const url = this.getBiPUrl() + '/webservice/rest/server.php?wstoken=' + token + '&wsfunction=local_dpu_get_exams_student&moodlewsrestformat=json';
            
             await this.autoFetch(url, { method: "GET" })
@@ -944,7 +955,7 @@ export default {
                 cancelButtonText: this.$t("editor.cancel"),
                 focusConfirm: false,
                 icon: false,
-                didOpen:() => {
+                didOpen: () => {
                     const localUserElement = document.getElementById("localuser");
                     const localPasswordElement = document.getElementById("localpassword");
                     const localPasswordConfirmElement = document.getElementById("localpasswordconfirm");
@@ -961,10 +972,14 @@ export default {
                         var lettersOnly = /^[a-zA-ZäöüÄÖÜß ]+$/;  //give some special chars for german a chance
                         var key = e.key || String.fromCharCode(e.which);
                         // Allow Enter key to pass through
-                        if (e.key === 'Enter') { return; }
-                        if (!lettersOnly.test(key)) { e.preventDefault(); }
+                        if (e.key === 'Enter') {
+                            return;
+                        }
+                        if (!lettersOnly.test(key)) {
+                            e.preventDefault();
+                        }
                     });
-                    
+
                     // Add Enter key listener to confirm dialog - attach to both input fields and document
                     const swalInstance = this.$swal;
                     const handleEnterKey = (e) => {
@@ -973,7 +988,7 @@ export default {
                             swalInstance.clickConfirm();
                         }
                     };
-                    
+
                     // Add listener to document for general Enter key handling
                     this.autoEventListener(document,"keydown", handleEnterKey);
                     // Add listener directly to input fields to catch Enter when focused
@@ -1399,7 +1414,7 @@ export default {
                                     this.safeAssign('networkerror', false);
                                 }
                             }).catch(err => {
-                            log.error(`student.vue @ fetchInfo (advanced): ${err.message}`);
+                            loggingBridge.error(`student.vue @ fetchInfo (advanced): ${err.message}`);
                             this.safeAssign('networkerror', true);
                         });
                     } else {
@@ -1440,7 +1455,7 @@ export default {
                 this.applyOnlineExamStatusToServerlist();
 
 
-            } 
+            }
             else {  // No multicast: still show manual IP servers and BiP exams from the portal
                 let newServerlist = this.serverlistAdvanced.length !== 0 ? [...this.serverlistAdvanced] : [];
                 newServerlist = this.mergeBipExamsIntoServerlist(newServerlist);
@@ -1484,48 +1499,47 @@ export default {
              * For manually added servers: remove after more than 2 failures
              */
             for (let server of this.serverlist) {
-                //log.info(`student.vue @ fetchinfo: checking server ${server.servername} (${server.serverip})`)
                 if (!server.serverip) continue;
                 const serverIdentifier = this.getServerIdentifier(server);
                 const isManual = this.isManuallyAddedServer(server);
                 signalBridge.invoke('pingexamserver', { serverip: server.serverip })
-                .then((result) => {
-                    if (!result?.ok) throw new Error('Response not OK');
-                    // Optimized: Only set if value changes
-                    if (server.reachable !== true) {
-                        server.reachable = true;
-                    }
-                    // Reset failure count if server is reachable again
-                    if (isManual && this.serverFailureCount[serverIdentifier] !== undefined) {
-                        this.serverFailureCount[serverIdentifier] = 0;
-                    }
-                })
-                .catch(err => {
-                    if (err.name === 'AbortError') {
-                        console.warn('student.vue @ fetchinfo (ping): Fetch request was aborted due to timeout');
-                    } else {
-                        console.warn(`student.vue @ fetchinfo: ${err.message} - Server unavailable `);
-                    }
-                    // Optimized: Only set if value changes
-                    if (server.reachable !== false) {
-                        server.reachable = false;
-                    }
-                    // Track failures for manually added servers
-                    if (isManual) {
-                        // Initialize counter if not exists
-                        if (this.serverFailureCount[serverIdentifier] === undefined) {
+                    .then((result) => {
+                        if (!result?.ok) throw new Error('Response not OK');
+                        // Optimized: Only set if value changes
+                        if (server.reachable !== true) {
+                            server.reachable = true;
+                        }
+                        // Reset failure count if server is reachable again
+                        if (isManual && this.serverFailureCount[serverIdentifier] !== undefined) {
                             this.serverFailureCount[serverIdentifier] = 0;
                         }
-                        // Increment failure count
-                        this.serverFailureCount[serverIdentifier]++;
-                        // Remove server if more than 2 failures
-                        if (this.serverFailureCount[serverIdentifier] > 2) {
-                            console.log(`student.vue @ fetchinfo: Removing manually added server ${serverIdentifier} after ${this.serverFailureCount[serverIdentifier]} failures`);
-                            this.removeFailedManualServer(serverIdentifier);
+                    })
+                    .catch(err => {
+                        if (err.name === 'AbortError') {
+                            console.warn('student.vue @ fetchinfo (ping): Fetch request was aborted due to timeout');
+                        } else {
+                            console.warn(`student.vue @ fetchinfo: ${err.message} - Server unavailable `);
                         }
-                    }
-                });
-            }   
+                        // Optimized: Only set if value changes
+                        if (server.reachable !== false) {
+                            server.reachable = false;
+                        }
+                        // Track failures for manually added servers
+                        if (isManual) {
+                            // Initialize counter if not exists
+                            if (this.serverFailureCount[serverIdentifier] === undefined) {
+                                this.serverFailureCount[serverIdentifier] = 0;
+                            }
+                            // Increment failure count
+                            this.serverFailureCount[serverIdentifier]++;
+                            // Remove server if more than 2 failures
+                            if (this.serverFailureCount[serverIdentifier] > 2) {
+                                console.log(`student.vue @ fetchinfo: Removing manually added server ${serverIdentifier} after ${this.serverFailureCount[serverIdentifier]} failures`);
+                                this.removeFailedManualServer(serverIdentifier);
+                            }
+                        }
+                    });
+            }
         },
 
         getLocalVmConfig() {
@@ -1690,8 +1704,8 @@ export default {
                 if (!hasActiveScreenshotStream()) {
                     const ok = await ensureDisplayStreamAsync();
                     if (!ok) {
-                        this.$swal.fire({ title: "Error", text: this.$t("student.screenshotpermission"), icon: 'error', showCancelButton: false });
-                        return;
+                        // this.$swal.fire({ title: "Error", text: this.$t("student.screenshotpermission"), icon: 'error', showCancelButton: false });
+                        // return;
                     }
                 }
                 // Win AA kiosk auto-grants sources[0]=screen via main-process handler, so the picker-misclick
@@ -1726,13 +1740,13 @@ export default {
 
 
                 //  console.log({clientname:this.username, servername:servername, serverip, serverip, pin:this.pincode, bipuserID:this.bipuserID })
-                let IPCresponse = signalBridge.sendSync('register', {
+                let IPCresponse = await signalBridge.sendSync('register', {
                     clientname: this.username,
                     servername: servername,
-                    serverip,
-                    serverip,
-                    pin: this.pincode,
-                    bipuserID: this.bipuserID
+                    serverip: serverip,
+                    //serverip,
+                    pin: this.pincode+"",
+                    bipuserID: this.bipuserID+""
                 })
                 if (IPCresponse) {
                     console.log(`student @ registerClient: ${IPCresponse.message}`)
@@ -1847,6 +1861,14 @@ export default {
         });
     },
     async mounted() {
+      if (isIOS()) {
+        try {
+          await StatusBar.hide();
+        } catch (error) {
+          console.warn('Status bar error:', error);
+        }
+      }
+
         document.querySelector("#statusdiv").style.visibility = "hidden";
         this.isLoading = false;
 
@@ -1875,12 +1897,13 @@ export default {
             if (!el || this.bipToken || this.token) return;
             el.focus();
         });
+       // Fetch info asynchronously without blocking
+        this.fetchInfo();
 
-        this.fetchinterval = this.autoSchedulerService(this.fetchInfo, 4000)
+        this.autoSchedulerService(this.fetchInfo, 4000);
+        this.autoSchedulerService(this.bipAutoUpdate, 10000);
 
-        this.autoUpdateInterval = this.autoSchedulerService(this.bipAutoUpdate, 10000)
-
-        // add event listener to user input field to supress all special chars
+      // add event listener to user input field to supress all special 1chars
         this.autoEventListener(document.getElementById("user"), "keypress", function (e) {
           // var lettersOnly = /^[a-zA-Z ]+$/;
           var lettersOnly = /^[a-zA-ZäöüÄÖÜß ]+$/;  //give some special chars for german a chance
@@ -1890,6 +1913,7 @@ export default {
           }
         });
 
+        // TODO: Modify windowhandling and token saving
         signalBridge.on('entering-exam-mode', () => {
             this.enteringExamModeOverlay = true;
         });

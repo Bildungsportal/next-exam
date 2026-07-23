@@ -20,7 +20,7 @@ export const useInfoStore = defineStore("info", {
         groups: [] as string[],
         group: "" as string,
         online: true as boolean,
-        battery: 100 as number,
+        battery: {level: 1} as any,
         entryTime: 0 as number,
         componentName: "" as string,
         wlanInfo: null as any,
@@ -28,6 +28,9 @@ export const useInfoStore = defineStore("info", {
         lockedSection: 1 as number,
         switchingToSection: null as number | null,
         switchingStartedAt: 0 as number,
+        encryptionPassword: "" as string,
+        password: "" as string,
+        lastExamWriteSaveReason: "" as string,
     }),
     actions: {
         // Poll wlan + host IP for ExamHeader network icons.
@@ -47,10 +50,9 @@ export const useInfoStore = defineStore("info", {
         async updateInfo(): Promise<boolean> {
             let response = await signalBridge.invoke('getinfoasync')
             if (response) {
-                let clientinfo = response.clientinfo
-
+                let clientinfo = response.clientinfo;
                 this.serverstatus = response.serverstatus;
-                this.examtype = clientinfo.examtype;
+                this.examtype = clientinfo.examtype === null ? this.examtype : clientinfo.examtype;
                 this.serverip = clientinfo.serverip;
                 this.servername = clientinfo.servername;
                 this.servertoken = clientinfo.servertoken;
@@ -63,9 +65,14 @@ export const useInfoStore = defineStore("info", {
                 this.exammode = !!clientinfo.exammode;
                 this.lockedSection = clientinfo.lockedSection ?? 1;
                 this.online = !!clientinfo?.token;
+                this.token = clientinfo?.token;
+                this.encryptionPassword = response.serverstatus.encryptionPassword;
+                this.password = response.serverstatus?.password;
+
+                this.battery = { level: (response.battery ? response.battery : this.battery.level)};
             }
             await this.refreshNetworkInfo();
-            return true
+            return true;
         },
         // Brief section-switch overlay until target lockedSection is active.
         beginSectionSwitch(sectionNumber: number): void {

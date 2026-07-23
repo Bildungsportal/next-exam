@@ -24,8 +24,8 @@ import { getLinuxCageDetectionLogLines } from './main/scripts/cageDetect.js';
 import { getWindowsKioskDetectionLogLines, syncAllowedKioskAppsClientinfo } from './main/scripts/win/windowsKioskSetup.js';
 import chalk from 'chalk';
 import log from 'electron-log';
-import { app, BrowserWindow, powerSaveBlocker, nativeTheme, globalShortcut, Menu, dialog, session, desktopCapturer } from 'electron'
-import config from './main/config.js';
+import { app, BrowserWindow, powerSaveBlocker, nativeTheme, globalShortcut, Tray, Menu, dialog, session, desktopCapturer } from 'electron'
+import config from '../src/utils/config.js';
 import multicastClient from './main/scripts/multicastclient.js'
 import path from 'path'
 import fs from 'fs'
@@ -375,7 +375,17 @@ app.whenReady()
     }
     if (config.development){
         globalShortcut.register('CommandOrControl+Shift+G', () => {  if (global && global.gc){ global.gc({type:'mayor',execution: 'async'}); global.gc({type:'minor',execution: 'async'});  }});
-        globalShortcut.register('CommandOrControl+Shift+T', () => {  const win = BrowserWindow.getFocusedWindow(); if (win) { win.webContents.toggleDevTools() }});
+        // Window-scoped (Wayland-safe); only in development — no DevTools shortcut otherwise
+        const mainWin = WindowHandler.mainwindow
+        if (mainWin) {
+            mainWin.webContents.on('before-input-event', (event, input) => {
+                const mod = process.platform === 'darwin' ? input.meta : input.control
+                if (input.type === 'keyDown' && mod && input.shift && input.key.toLowerCase() === 't') {
+                    event.preventDefault()
+                    mainWin.webContents.toggleDevTools()
+                }
+            })
+        }
     }
 
     //these are some shortcuts we try to capture

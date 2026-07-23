@@ -2,9 +2,24 @@
 // ES module: import { gracefullyExit } from 'commonMethods.js'
 import {SignalBridge} from './signalBridge.js'
 import { useInfoStore } from '../stores/infoStore.ts'
+import {isIOS} from "../types/platform.ts";
 
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
+
+
+export async function getBatteryStatus(initialBatteryStatus) {
+    let batteryStatus = initialBatteryStatus;
+    if (!isIOS()) {
+        batteryStatus = await navigator.getBattery().then(battery => battery)
+            .catch(error => { console.error("Error accessing the Battery API:", error); });
+        // ExamHeader reads battery from the store; push the real level so it is not stuck at the default.
+        if (batteryStatus && typeof batteryStatus.level === 'number') {
+            useInfoStore().battery = { level: batteryStatus.level };
+        }
+    }
+    return batteryStatus;
+}
 
 export function gracefullyExit() {
     if (this.examtype == 'microsoft365'){

@@ -50,6 +50,7 @@ import {
     SUBMISSION_SIGN_MODE_BIP,
     SUBMISSION_SIGN_MODE_LOCAL,
 } from '../../../../shared/submissionPdfSign.js';
+import config from "../../../src/utils/config.js";
 
 
 
@@ -75,6 +76,7 @@ import {
         this.localVmStartState = 'idle' // idle|starting|blocked
         this._startExamRunning = false
         this._endExamRunning = false
+        this._groupPushedInStudentStatus = false
         this.updateScheduler = new SchedulerService(this.requestUpdate.bind(this), 5000)
         this.updateScheduler.start()
     }
@@ -87,7 +89,7 @@ import {
         log.warn(`communicationhandler @ applySecurityFocusLost: forcing lockdown (reason=${reason})`);
         const ci = this.multicastClient?.clientinfo;
         if (ci) setClientFocusLock(ci, reason, message);
-        const examWin = WindowHandler.inExamMode() ? WindowHandler.mainWin() : null;
+        const examWin = WindowHandler?.inExamMode() ? WindowHandler?.mainWin() : null;
         if (examWin && !this.config?.development) {
             examWin.moveTop();
             WindowHandler.applyElectronKioskMode(examWin);
@@ -320,7 +322,7 @@ import {
             });
         }
 
-       
+
         if (this.multicastClient.clientinfo.localLockdown
             && (this.multicastClient.clientinfo.serverip === '127.0.0.1' || this.multicastClient.clientinfo.servername === 'localhost')) {
             return;
@@ -532,6 +534,7 @@ import {
         if (studentstatus.group){
             if (this.multicastClient.clientinfo.group !== studentstatus.group){
                 this.multicastClient.clientinfo.group = studentstatus.group;
+                this._groupPushedInStudentStatus = true;
                 if (this.multicastClient.clientinfo.exammode) {
                 WindowHandler.mainWin()?.webContents?.send('getmaterials');
             }
@@ -565,17 +568,21 @@ import {
         const section = serverstatus.examSections[sectionForSync];
         if (section?.groups) {
             this.multicastClient.clientinfo.groups = true;
-            const clientname = this.multicastClient.clientinfo.name;
-            const groupA = section.groupA?.users ?? [];
-            const groupB = section.groupB?.users ?? [];
-            const prevGroup = this.multicastClient.clientinfo.group;
-            if (groupB.includes(clientname)) this.multicastClient.clientinfo.group = 'b';
-            else if (groupA.includes(clientname)) this.multicastClient.clientinfo.group = 'a';
-            else this.multicastClient.clientinfo.group = 'a';
-            if (this.multicastClient.clientinfo.group !== prevGroup) {
-                if (this.multicastClient.clientinfo.exammode) {
-                WindowHandler.mainWin()?.webContents?.send('getmaterials');
-            }
+            const skipUserGroupSync = this._groupPushedInStudentStatus;
+            this._groupPushedInStudentStatus = false;
+            if (!skipUserGroupSync) {
+                const clientname = this.multicastClient.clientinfo.name;
+                const groupA = section.groupA?.users ?? [];
+                const groupB = section.groupB?.users ?? [];
+                const prevGroup = this.multicastClient.clientinfo.group;
+                if (groupB.includes(clientname)) this.multicastClient.clientinfo.group = 'b';
+                else if (groupA.includes(clientname)) this.multicastClient.clientinfo.group = 'a';
+                else this.multicastClient.clientinfo.group = 'a';
+                if (this.multicastClient.clientinfo.group !== prevGroup) {
+                    if (this.multicastClient.clientinfo.exammode) {
+                    WindowHandler.mainWin()?.webContents?.send('getmaterials');
+                }
+                }
             }
         } else {
             this.multicastClient.clientinfo.groups = false;
@@ -900,27 +907,27 @@ import {
         });
     }
 
-    /** Stop LocalVM + VNC proxy when leaving a localvm section (section switch, not full endExam). */
-    async stopLocalVmIfActive() {
-        const localVmActive = this.multicastClient.clientinfo.examtype === 'localvm'
-            || this.multicastClient.clientinfo.localVMState === 'running';
-        if (!localVmActive) return;
-        stopProxy();
-        try {
-            log.info('communicationhandler @ stopLocalVmIfActive: requesting VM shutdown');
-            await qemuService.stopVmAsync({ graceful: true, shutdownTimeoutMs: 8000, killTimeoutMs: 8000 });
-        } catch (e) {
-            log.warn('communicationhandler @ stopLocalVmIfActive: graceful shutdown failed, killing VM');
-            await qemuService.stopVmAsync({ graceful: false, killTimeoutMs: 8000 });
-        }
-        try {
-            await qemuService.killAllLocalQemu(this.config.workdirectory);
-        } catch (e) {
-            log.warn('communicationhandler @ stopLocalVmIfActive: killAllLocalQemu sweep', e);
-        }
-        this.multicastClient.clientinfo.localVMHost = null;
-        this.multicastClient.clientinfo.localVMState = null;
-    }
+     /** Stop LocalVM + VNC proxy when leaving a localvm section (section switch, not full endExam). */
+     async stopLocalVmIfActive() {
+         const localVmActive = this.multicastClient.clientinfo.examtype === 'localvm'
+             || this.multicastClient.clientinfo.localVMState === 'running';
+         if (!localVmActive) return;
+         stopProxy();
+         try {
+             log.info('communicationhandler @ stopLocalVmIfActive: requesting VM shutdown');
+             await qemuService.stopVmAsync({ graceful: true, shutdownTimeoutMs: 8000, killTimeoutMs: 8000 });
+         } catch (e) {
+             log.warn('communicationhandler @ stopLocalVmIfActive: graceful shutdown failed, killing VM');
+             await qemuService.stopVmAsync({ graceful: false, killTimeoutMs: 8000 });
+         }
+         try {
+             await qemuService.killAllLocalQemu(this.config.workdirectory);
+         } catch (e) {
+             log.warn('communicationhandler @ stopLocalVmIfActive: killAllLocalQemu sweep', e);
+         }
+         this.multicastClient.clientinfo.localVMHost = null;
+         this.multicastClient.clientinfo.localVMState = null;
+     }
 
     /** QEMU preflight + start for LocalVM; sectionSwitch keeps exammode on recoverable failures. */
     async bootLocalVmExamSection(serverstatus, effectiveSection, { sectionSwitch = false } = {}) {
@@ -1033,6 +1040,7 @@ import {
      * @param serverstatus contains information about exammode, examtype, and other settings from the teacher instance
      */
     async startExam(serverstatus){
+        log.info('communicationhandler @ startExam: start');
         if (this._endExamRunning) {
             log.debug('communicationhandler @ startExam: endExam still running, defer');
             return;
@@ -1046,11 +1054,11 @@ import {
             if (WindowHandler.exitWarningOpen || WindowHandler.exitQuestionOpen || WindowHandler.minimizeWarningOpen) {
                 log.warn("communicationhandler @ startExam: Dialog is still open - exam will start anyway")
             }
-    
+
             let displays = screen.getAllDisplays()
             let primary = screen.getPrimaryDisplay()
-        
-            if (!primary || primary === "" || !primary.id){ primary = displays[0] }       
+
+            if (!primary || primary === "" || !primary.id){ primary = displays[0] }
 
             // when allowSectionSwitch: client chooses section, clientinfo.lockedSection is authoritative; do not overwrite with server
             if (!serverstatus.allowSectionSwitch || !this.multicastClient.clientinfo.lockedSection) {
@@ -1083,7 +1091,7 @@ import {
             log.info("communicationhandler @ startExam: initializing exam")
             this._snapshotExamStartIp()
             await WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus);  // does not create a new window, but loads the exam route into the existing main window
-        } 
+        }
         finally {
             this._startExamRunning = false;
         }
@@ -1226,7 +1234,7 @@ import {
 
         WindowHandler.removeBlurListener();
         // WindowHandler.logWindowListenerCounts('after endExam');
-      
+
         if (this.multicastClient.clientinfo.exammode){
             this.multicastClient.clientinfo.exammode = false
             this.multicastClient.clientinfo.examStartIp = false

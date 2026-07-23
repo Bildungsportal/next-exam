@@ -10,7 +10,7 @@
 
         <div class="header-left">
             <div v-if="online && !localLockdown" class="header-item">
-                <img src="/src/assets/img/svg/speedometer.svg" class="white me-2" width="32" height="32" style="float: left;" />
+                <img src="/img/svg/speedometer.svg" class="white me-2" width="32" height="32" style="float: left;" />
                 <button v-if="groups  && group === 'a'" type="button" class="header-item btn btn-info btn-sm ms-2 me-2" style="cursor: unset; width: 32px; justify-content:center; "> A  </button>
                 <button v-if="groups  && group === 'b'" type="button" class="header-item btn btn-warning btn-sm ms-2 me-2" style="cursor: unset; width: 32px; justify-content:center; "> B  </button>
                 <span class="fs-5 align-middle me-4 header-meta" style="float: left;">
@@ -27,7 +27,7 @@
                 </span>
             </div>
             <div v-if="!online && !localLockdown" class="header-item">
-                <img src="/src/assets/img/svg/speedometer.svg" class="white me-2" width="32" height="32" style=" float: left;" />
+                <img src="/img/svg/speedometer.svg" class="white me-2" width="32" height="32" style=" float: left;" />
                 <span class="fs-5 align-middle me-4 header-meta" style="float: left;">
                     {{clientname}}
                     <span class="header-sep" aria-hidden="true">·</span>
@@ -35,7 +35,7 @@
                 </span>
             </div>
             <div v-if="localLockdown" class="header-item">
-                <img src="/src/assets/img/svg/speedometer.svg" class="white me-2" width="32" height="32" style="float: left;" />
+                <img src="/img/svg/speedometer.svg" class="white me-2" width="32" height="32" style="float: left;" />
                 <span class="fs-5 align-middle me-4 header-meta" style="float: left;">
                     {{clientname}}
                     <span class="header-sep" aria-hidden="true">·</span>
@@ -43,9 +43,9 @@
                     <span v-if="localLockdown && !exammode" class="red">nicht abgesichert</span>
                 </span>
             </div>
-            <div v-if="!online && !localLockdown && exammode" class="header-item btn btn-success p-1 me-1 btn-sm" @click="reconnect()"><img src="/src/assets/img/svg/gtk-convert.svg" class="" width="22" height="20"> {{ $t("editor.reconnect")}}</div>
-            <div v-if="!online && !localLockdown && exammode" class="header-item btn btn-danger p-1 me-1 btn-sm"  @click="gracefullyExit()"><img src="/src/assets/img/svg/dialog-cancel.svg" class="" width="22" height="20"> {{ $t("editor.endexam")}} </div>
-            <div v-if="localLockdown && exammode" class="header-item btn btn-danger p-1 pe-2 me-1 btn-sm"  @click="gracefullyExit()"><img src="/src/assets/img/svg/dialog-cancel.svg" class="" width="22" height="20"> {{ $t("editor.endexam") }}  </div>
+            <div v-if="!online && !localLockdown && exammode" class="header-item btn btn-success p-1 me-1 btn-sm" @click="reconnect()"><img src="/img/svg/gtk-convert.svg" class="" width="22" height="20"> {{ $t("editor.reconnect")}}</div>
+            <div v-if="!online && !localLockdown && exammode" class="header-item btn btn-danger p-1 me-1 btn-sm"  @click="gracefullyExit()"><img src="/img/svg/dialog-cancel.svg" class="" width="22" height="20"> {{ $t("editor.endexam")}} </div>
+            <div v-if="localLockdown && exammode" class="header-item btn btn-danger p-1 pe-2 me-1 btn-sm"  @click="gracefullyExit()"><img src="/img/svg/dialog-cancel.svg" class="" width="22" height="20"> {{ $t("editor.endexam") }}  </div>
         </div>
 
         <!-- Exam sections: sibling of left/right so narrow viewports can drop them to a full second row -->
@@ -68,37 +68,37 @@
             <!-- WiFi icon (mutually exclusive states: never show 2 WiFi icons at once) -->
             <!-- Show WLAN quality -->
             <div v-if="showWlanQuality" class="me-2">
-                <img v-if="wlanInfo.quality > 80" src="/src/assets/img/svg/network-wireless-connected-100.svg"  :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostipDisplay" class="" width="24" height="24" style="vertical-align: bottom;" />
-                <img v-else-if="wlanInfo.quality > 50" src="/src/assets/img/svg/network-wireless-connected-80.svg" :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostipDisplay" :alt="wlanInfo.quality+'%'" class="" width="24" height="24" style="vertical-align: bottom;"/>
-                <img v-else-if="wlanInfo.quality > 30" src="/src/assets/img/svg/network-wireless-connected-60.svg" :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostipDisplay" :alt="wlanInfo.quality+'%'" class="" width="24" height="24" style="vertical-align: bottom;"/>
-                <img v-else-if="wlanInfo.quality > 10" src="/src/assets/img/svg/network-wireless-connected-40.svg" :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostipDisplay" :alt="wlanInfo.quality+'%'" class="" width="24" height="24" style="vertical-align: bottom;"/>
-                <img v-else-if="wlanInfo.quality > 5" src="/src/assets/img/svg/network-wireless-connected-20.svg" :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostipDisplay" :alt="wlanInfo.quality+'%'" class="" width="24" height="24" style="vertical-align: bottom;"/>
-                <img v-else :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostipDisplay" :alt="wlanInfo.quality+'%'" src="/src/assets/img/svg/network-wireless-connected-00.svg" width="24" height="24" style="vertical-align: bottom;" />
+                <img v-if="wlanInfo.quality > 80" src="/img/svg/network-wireless-connected-100.svg"  :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostipDisplay" class="" width="24" height="24" style="vertical-align: bottom;" />
+                <img v-else-if="wlanInfo.quality > 50" src="/img/svg/network-wireless-connected-80.svg" :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostipDisplay" :alt="wlanInfo.quality+'%'" class="" width="24" height="24" style="vertical-align: bottom;"/>
+                <img v-else-if="wlanInfo.quality > 30" src="/img/svg/network-wireless-connected-60.svg" :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostipDisplay" :alt="wlanInfo.quality+'%'" class="" width="24" height="24" style="vertical-align: bottom;"/>
+                <img v-else-if="wlanInfo.quality > 10" src="/img/svg/network-wireless-connected-40.svg" :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostipDisplay" :alt="wlanInfo.quality+'%'" class="" width="24" height="24" style="vertical-align: bottom;"/>
+                <img v-else-if="wlanInfo.quality > 5" src="/img/svg/network-wireless-connected-20.svg" :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostipDisplay" :alt="wlanInfo.quality+'%'" class="" width="24" height="24" style="vertical-align: bottom;"/>
+                <img v-else :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostipDisplay" :alt="wlanInfo.quality+'%'" src="/img/svg/network-wireless-connected-00.svg" width="24" height="24" style="vertical-align: bottom;" />
             </div>
 
             <!-- WLAN permission not available -->
             <div v-else-if="showWlanNoPermissions" class="me-2">
-                <img :title="$t('student.wlanNopermissionsText')" :alt="$t('student.wlanNopermissionsText')" src="/src/assets/img/svg/network-wireless-disconnected.svg" width="24" height="24" >
+                <img :title="$t('student.wlanNopermissionsText')" :alt="$t('student.wlanNopermissionsText')" src="/img/svg/network-wireless-disconnected.svg" width="24" height="24" >
             </div>
 
             <!-- WLAN not connected (no interface, givingup, or idle adapter) -->
             <div v-else-if="showWlanDisconnected" class="me-2">
-                <img title="WLAN disconnected" alt="WLAN disconnected" src="/src/assets/img/svg/network-wireless-disconnected.svg" width="24" height="24" >
+                <img title="WLAN disconnected" alt="WLAN disconnected" src="/img/svg/network-wireless-disconnected.svg" width="24" height="24" >
             </div>
 
             <!-- Redacted SSID on WiFi (e.g. macOS privacy) while IP is known -->
             <div v-else-if="showWlanRedactedHint" class="me-2">
-              <img :title="'WiFi Information not available \nIP: '+hostipDisplay" :alt="'WiFi Information not available'" src="/src/assets/img/svg/network-wireless-connected-20.svg" width="24" height="24" style="vertical-align: bottom;" />
+              <img :title="'WiFi Information not available \nIP: '+hostipDisplay" :alt="'WiFi Information not available'" src="/img/svg/network-wireless-connected-20.svg" width="24" height="24" style="vertical-align: bottom;" />
             </div>
 
             <!-- LAN connected whenever host IP is known (independent of WiFi state) -->
             <div v-if="showLanConnected" class="me-2">
-                <img :title="'Connected: '+hostipDisplay" alt="Connected" src="/src/assets/img/svg/network-wired-available.svg" width="24" height="24" >
+                <img :title="'Connected: '+hostipDisplay" alt="Connected" src="/img/svg/network-wired-available.svg" width="24" height="24" >
             </div>
 
             <!-- LAN disconnected only after network poll, when no host IP -->
             <div v-else-if="showLanDisconnected" class="me-2">
-                <img title="Disconnected" alt="Disconnected" src="/src/assets/img/svg/network-wired-unavailable.svg" width="24" height="24" >
+                <img title="Disconnected" alt="Disconnected" src="/img/svg/network-wired-unavailable.svg" width="24" height="24" >
             </div>
 
 
@@ -108,16 +108,16 @@
             
             <div v-if="battery && battery.level" style="font-size: 0.8rem;"> {{ Math.round(battery.level*100)}}%  </div>
             <div v-if="battery && battery.level" class="me-2">
-                <img v-if="battery && battery.level > 0.9" src="/src/assets/img/svg/battery-100.svg"  :title="battery.level*100+'%'" class="white" width="32" height="32" />
-                <img v-if="battery && battery.level > 0.8 && battery.level <= 0.9 " src="/src/assets/img/svg/battery-090.svg" :title="battery.level*100+'%'" :alt="battery.level*100+'%'" class="white" width="32" height="32" />
-                <img v-if="battery && battery.level > 0.7 && battery.level <= 0.8 " src="/src/assets/img/svg/battery-080.svg" :title="battery.level*100+'%'" :alt="battery.level*100+'%'" class="white" width="32" height="32" />
-                <img v-if="battery && battery.level > 0.6 && battery.level <= 0.7 " src="/src/assets/img/svg/battery-070.svg" :title="battery.level*100+'%'" :alt="battery.level*100+'%'" class="white" width="32" height="32" />
-                <img v-if="battery && battery.level > 0.5 && battery.level <= 0.6 " src="/src/assets/img/svg/battery-060.svg" :title="battery.level*100+'%'" :alt="battery.level*100+'%'" class="white" width="32" height="32" />
-                <img v-if="battery && battery.level > 0.4 && battery.level <= 0.5 " src="/src/assets/img/svg/battery-050.svg" :title="battery.level*100+'%'" :alt="battery.level*100+'%'" class="white" width="32" height="32" />
-                <img v-if="battery && battery.level > 0.3 && battery.level <= 0.4 " src="/src/assets/img/svg/battery-040.svg" :title="battery.level*100+'%'" :alt="battery.level*100+'%'" class="white" width="32" height="32" />
-                <img v-if="battery && battery.level > 0.2 && battery.level <= 0.3 " src="/src/assets/img/svg/battery-030.svg" :title="battery.level*100+'%'" :alt="battery.level*100+'%'" class="white" width="32" height="32" />
-                <img v-if="battery && battery.level > 0.1 && battery.level <= 0.2 " src="/src/assets/img/svg/battery-020.svg" :title="battery.level*100+'%'" :alt="battery.level*100+'%'" class="white" width="32" height="32" />
-                <img v-if="battery && battery.level <= 0.1" :title="battery.level*100+'%'" :alt="battery.level*100+'%'" src="/src/assets/img/svg/battery-010.svg" width="32" height="32" >
+                <img v-if="battery && battery.level > 0.9" src="/img/svg/battery-100.svg"  :title="battery.level*100+'%'" class="white" width="32" height="32" />
+                <img v-if="battery && battery.level > 0.8 && battery.level <= 0.9 " src="/img/svg/battery-090.svg" :title="battery.level*100+'%'" :alt="battery.level*100+'%'" class="white" width="32" height="32" />
+                <img v-if="battery && battery.level > 0.7 && battery.level <= 0.8 " src="/img/svg/battery-080.svg" :title="battery.level*100+'%'" :alt="battery.level*100+'%'" class="white" width="32" height="32" />
+                <img v-if="battery && battery.level > 0.6 && battery.level <= 0.7 " src="/img/svg/battery-070.svg" :title="battery.level*100+'%'" :alt="battery.level*100+'%'" class="white" width="32" height="32" />
+                <img v-if="battery && battery.level > 0.5 && battery.level <= 0.6 " src="/img/svg/battery-060.svg" :title="battery.level*100+'%'" :alt="battery.level*100+'%'" class="white" width="32" height="32" />
+                <img v-if="battery && battery.level > 0.4 && battery.level <= 0.5 " src="/img/svg/battery-050.svg" :title="battery.level*100+'%'" :alt="battery.level*100+'%'" class="white" width="32" height="32" />
+                <img v-if="battery && battery.level > 0.3 && battery.level <= 0.4 " src="/img/svg/battery-040.svg" :title="battery.level*100+'%'" :alt="battery.level*100+'%'" class="white" width="32" height="32" />
+                <img v-if="battery && battery.level > 0.2 && battery.level <= 0.3 " src="/img/svg/battery-030.svg" :title="battery.level*100+'%'" :alt="battery.level*100+'%'" class="white" width="32" height="32" />
+                <img v-if="battery && battery.level > 0.1 && battery.level <= 0.2 " src="/img/svg/battery-020.svg" :title="battery.level*100+'%'" :alt="battery.level*100+'%'" class="white" width="32" height="32" />
+                <img v-if="battery && battery.level <= 0.1" :title="battery.level*100+'%'" :alt="battery.level*100+'%'" src="/img/svg/battery-010.svg" width="32" height="32" >
             </div>
             <span ref="headerClock" class="fs-5 d-inline-block" style="width:90px;"></span>
             <div class="fs-5" >{{componentName}}</div>
@@ -136,6 +136,9 @@
   import {useInfoStore} from "../stores/infoStore.ts";
   import {useConfigStore} from "../stores/configStore.ts";
   import { loadWinKioskLauncherApps } from '../utils/kioskLauncher.js'
+  import { switchExamSectionFiles } from '../utils/switchExamSection.ts'
+  import {isIOS} from "../types/platform.ts";
+  import iosUpdateListener from "../utils/ios/iosUpdateListener.ts";
 
   // signalBridge instance centralizes ipc calls with platform checks
   const signalBridge = new SignalBridge(window);
@@ -155,7 +158,7 @@
     setup() {
       const configStore = useConfigStore();
       const infoStore = useInfoStore();
-      const { hostip } = storeToRefs(configStore);
+      const { hostip, examdirectory } = storeToRefs(configStore);
       const {
         groups, group, examtype, servername, clientname, serverstatus, pincode,
         localLockdown, online, battery, entryTime, componentName, wlanInfo,
@@ -163,7 +166,7 @@
       } = storeToRefs(infoStore);
 
       return {
-        hostip, groups, group, examtype, servername, clientname, serverstatus, pincode,
+        hostip, examdirectory, groups, group, examtype, servername, clientname, serverstatus, pincode,
         localLockdown, online, battery, entryTime, componentName, wlanInfo, exammode, lockedSection,
         switchingToSection,
       };
@@ -367,14 +370,22 @@
           showCancelButton: true,
           confirmButtonText: 'Ok',
           cancelButtonText: this.$t('editor.cancel'),
-        }).then( (result) => {
+        }).then( async (result) => {
           if (result.isConfirmed) {
             console.log(`switchExamSection: calling switch-exam-section`)
             const infoStore = useInfoStore();
             infoStore.beginSectionSwitch(sectionNumber);
+            // iOS: Capacitor FS shuffle in renderer; Electron: main switchExamSection does disk ops
+            if (isIOS()) {
+              await switchExamSectionFiles(this.examdirectory, this.lockedSection, sectionNumber);
+            }
             signalBridge.invoke('switch-exam-section', sectionNumber)
               .finally(() => {
+
                 this._scheduleEndSectionSwitchOverlay();
+                if (isIOS()) {
+                    iosUpdateListener.handleUpdateReceived(sectionNumber);
+                }
                 setTimeout(() => {
                   if (infoStore.switchingToSection === sectionNumber) infoStore.endSectionSwitchOverlay();
                 }, 12000);

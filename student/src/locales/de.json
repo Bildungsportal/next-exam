@@ -224,7 +224,7 @@
         "cageExitWarnLinux": "Du verlässt die abgesicherte Prüfungsumgebung. Die Linux-Kiosk-Sitzung wird beendet (Abmeldung). Ein erneuter Start ist nur über den Login-Manager („Next Exam Kiosk“) möglich — ohne Neuanmeldung kannst du <strong>nicht</strong> weiterarbeiten.",
         "cageExitWarnTitle": "Abgesicherten Modus verlassen?",
         "cageExitWarnWindows": "Du beendest Next-Exam in der Kiosk-Sitzung. Danach kannst du weder erlaubte Apps öffnen noch Next-Exam neu starten. Die Prüfung wird dadurch beendet, bis du dich erneut einloggst.",
-        "cageSetupButton": "Cage einrichten",
+        "cageSetupButton": "Kiosk-Modus einrichten",
         "cageSetupDontShow": "Vorerst nicht mehr anzeigen",
         "cageSetupFailed": "Einrichtung fehlgeschlagen",
         "cageSetupInstall": "Einrichten",

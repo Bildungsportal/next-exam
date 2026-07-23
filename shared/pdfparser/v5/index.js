@@ -112,24 +112,45 @@ class PdfParser {
                 import.meta.url
             ).toString();
         }
+
+        /* ReadableStream async iterator is not supported even on quite recent Safari */
+        if (typeof ReadableStream !== 'undefined' &&
+            !ReadableStream.prototype[Symbol.asyncIterator]) {
+            ReadableStream.prototype[Symbol.asyncIterator] = async function*() {
+                const reader = this.getReader();
+                try {
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) return;
+                        yield value;
+                    }
+                } finally {
+                    reader.releaseLock();
+                }
+            };
+        }
     }
 
     async renderPageToCanvas(page, viewport) {
+        if (this.enableLogging) console.log("v5 pdfparser @ renderPageToCanvas", page, viewport);
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
         canvas.width = viewport.width;
         canvas.height = viewport.height;
-        
+
         await page.render({
             canvasContext: context,
             viewport: viewport
         }).promise;
-        
+
+        if (this.enableLogging) console.log("v5 pdfparser @ renderPageToCanvas - after render");
+
         return canvas.toDataURL('image/png');
     }
 
     async processPage(page, pageNum) {
-const initialViewport = page.getViewport({ scale: 1.5 });
+        if (this.enableLogging) console.log("v5 pdfparser @ processPage", page, pageNum);
+        const initialViewport = page.getViewport({ scale: 1.5 });
         const rotationCorrection = await this.detectTextRotation(page, initialViewport);
         const isContentRotated = rotationCorrection !== null;
         const viewport = page.getViewport({ scale: 1.5, rotation: rotationCorrection || 0 });
@@ -140,6 +161,7 @@ const initialViewport = page.getViewport({ scale: 1.5 });
 
         // PNG hochaufgeloest rendern (Print/Display schaerfer); Detector+Output bleiben in 1.5x-Raum
         const renderViewport = page.getViewport({ scale: 3, rotation: rotationCorrection || 0 });
+        if (this.enableLogging) console.log("v5 pdfparser @ renderViewport", renderViewport);
         const imgSrc = await this.renderPageToCanvas(page, renderViewport);
 
         // Two-pass: extract box geometry first so cloze detection can use it as context
@@ -147,12 +169,14 @@ const initialViewport = page.getViewport({ scale: 1.5 });
             this.detectFormFields ? this.extractFormFields(page, viewport, pageNum) : Promise.resolve([]),
             this.detectBoxFields ? this.extractBoxFields(page, viewport) : Promise.resolve([])
         ]);
+        if (this.enableLogging) console.log("v5 pdfparser @ detectFormFields", formFields, "detectBoxFields", rawBoxFields);
 
         // Detect vectorized/flattened PDFs: no extractable text and no AcroForm fields.
         // These are typically iLovePDF or similar exports where all content is vector paths.
         // Field detection is unreliable for such PDFs.
-        const textContent = await page.getTextContent();
-        const isVectorizedPage = formFields.length === 0 && textContent.items.length === 0 && rawBoxFields.length === 0;
+        let textContent = await page.getTextContent();
+        if (this.enableLogging) console.log("v5 pdfparser @ textContent", textContent);
+        const isVectorizedPage = formFields.length === 0 && textContent?.items?.length === 0 && rawBoxFields.length === 0;
 
         // Build a simple rect array from raw box fields for context lookup.
         // Scoped isolated-line suppression: reject isolated lines only when they sit inside

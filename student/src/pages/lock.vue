@@ -5,7 +5,7 @@
         <div class="position-absolute start-50 translate-middle text-center " style="top: 50vh; width: 100% ">
         
                 <div class="w-100 p-3 text-white  text-right">
-                    <img src="/src/assets/img/svg/shield-lock.svg" class="white me-2  " width="128" height="128" ><br><br>
+                    <img src="/img/svg/shield-lock.svg" class="white me-2  " width="128" height="128" ><br><br>
                     <span class="fs-4 align-middle">Next-Exam </span>
                 </div>
         

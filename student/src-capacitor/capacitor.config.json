@@ -1,0 +1,8 @@
+{
+  "appId": "at.bip.nextexam",
+  "appName": "next-exam-student",
+  "webDir": "www",
+  "ios": {
+    "loggingBehavior": "none"
+  }
+}
