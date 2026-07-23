@@ -1946,7 +1946,6 @@ export default {
         signalBridge.removeAllListeners('localvm-compat-check-start');
         signalBridge.removeAllListeners('localvm-compat-check-end');
         signalBridge.removeAllListeners('qemu-not-available');
-        signalBridge.removeAllListeners('updateReceived');
     }
 }
 </script>

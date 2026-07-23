@@ -20,7 +20,7 @@ export const useInfoStore = defineStore("info", {
         groups: [] as string[],
         group: "" as string,
         online: true as boolean,
-        battery: 100 as number,
+        battery: {level: 1} as any,
         entryTime: 0 as number,
         componentName: "" as string,
         wlanInfo: null as any,
@@ -68,6 +68,8 @@ export const useInfoStore = defineStore("info", {
                 this.token = clientinfo?.token;
                 this.encryptionPassword = response.serverstatus.encryptionPassword;
                 this.password = response.serverstatus?.password;
+
+                this.battery = { level: (response.battery ? response.battery : this.battery.level)};
             }
             await this.refreshNetworkInfo();
             return true;

@@ -784,7 +784,7 @@ import {
     LTfindByOffsetMap,
 } from '../utils/languagetool.js'
 import {getExamMaterials, loadDOCX, loadHTML, loadImage, loadODT, loadPDF, playAudio, resetPdfPreviewToolbar} from '../utils/filehandler.js'
-import {gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js'
+import {getBatteryStatus, gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js'
 
 import {SignalBridge} from '../utils/signalBridge.js'
 import {
@@ -1398,11 +1398,7 @@ export default {
                 this.localLockdown = false
             }  // pingcode is 0000 only in localmode
 
-            this.battery = await navigator.getBattery().then(battery => {
-                return battery
-            }).catch(error => {
-                console.error("Error accessing the Battery API:", error);
-            });
+            this.battery = await getBatteryStatus(this.battery);
 
             //handle individual spellcheck (only if not globally activated anyways)
             if (

@@ -117,6 +117,7 @@ public final class MulticastClient: CAPPlugin, CAPBridgedPlugin {
         startMulticast()
         IPCBridge.shared.handle("getinfoasync") { [weak self] _ throws -> Any? in
             guard let self else { throw PluginError.notInitialized }
+
             return await self.getinfoasync().asDictionary
         }
         
@@ -191,8 +192,17 @@ public final class MulticastClient: CAPPlugin, CAPBridgedPlugin {
         return GetInfoAsync(
             serverlist: _examServerList,
             clientinfo: clientinfo,
-            serverstatus: serverstatus
+            serverstatus: serverstatus,
+            battery: getBatteryLevel()
         )
+    }
+
+    private func getBatteryLevel() -> Float {
+        var batteryLevel = UIDevice.current.batteryLevel
+        if (batteryLevel == -1) {
+            batteryLevel = 1
+        }
+        return batteryLevel
     }
     
     private func register(args: [String: Any]) async throws -> [String: Any] {

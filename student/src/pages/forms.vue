@@ -142,7 +142,7 @@
 
 <script>
 import ExamHeader from '../components/ExamHeader.vue';
-import {gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js'
+import {getBatteryStatus, gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js'
 import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue'
 import WebviewPane from '../components/WebviewPane.vue'
 import {getExamMaterials, loadImage, loadPDF, resetPdfPreviewToolbar} from '../utils/filehandler.js'
@@ -553,8 +553,7 @@ export default {
                 }
             }
 
-            this.battery = await navigator.getBattery().then(battery => battery)
-                .catch(error => { console.error('Error accessing the Battery API:', error); });
+            this.battery = await getBatteryStatus(this.battery);
 
             this.internetCheckCounter++;
             if (this.internetCheckCounter % 5 === 0) {

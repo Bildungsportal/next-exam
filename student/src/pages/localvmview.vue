@@ -99,7 +99,7 @@
 <script>
 import ExamHeader from '../components/ExamHeader.vue';
 import {SchedulerService} from '../utils/schedulerservice.js';
-import {gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js';
+import {getBatteryStatus, gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js';
 import {attachExamMouseleaveGuardBoolean, shouldSkipEdgeFocusLost} from '../utils/linuxCageKiosk.js';
 import {getExamMaterials, loadPDF, loadImage, resetPdfPreviewToolbar} from '../utils/filehandler.js';
 import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue';
@@ -560,11 +560,7 @@ export default {
                 this.ensureConnectLoopRunning();
             }
 
-            try {
-                this.battery = await navigator.getBattery().then(battery => battery);
-            } catch (error) {
-                console.error("localvmview @ fetchInfo: Battery API error", error);
-            }
+            this.battery = await getBatteryStatus(this.battery);
 
             this.internetCheckCounter++;
             if (this.internetCheckCounter % 5 === 0) {

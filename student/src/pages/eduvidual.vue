@@ -92,7 +92,7 @@
 <script>
 import ExamHeader from '../components/ExamHeader.vue';
 import {isElectronWindow} from "../types/platform.js";
-import { gracefullyExit, reconnect, showUrl } from '../utils/commonMethods.js'
+import {getBatteryStatus, gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js'
 import {SignalBridge} from '../utils/signalBridge.js'
 import {
     attachExamMouseleaveGuardBoolean,
@@ -400,8 +400,7 @@ export default {
                 });
             }
 
-            this.battery = await navigator.getBattery().then(battery => battery)
-                .catch(error => { console.error('Error accessing the Battery API:', error); });
+            this.battery = await getBatteryStatus(this.battery);
 
             this.internetCheckCounter++;
             if (this.internetCheckCounter % 5 === 0) {

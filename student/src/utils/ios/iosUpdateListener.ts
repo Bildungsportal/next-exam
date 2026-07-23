@@ -26,12 +26,6 @@ class IosUpdateListener {
             this.handleUpdateReceived();
         });
 
-        signalBridge.on('updateReceived', (update) => {
-            loggingBridge.debug("iosUpdateListener @ updateReceived: message received: ", update);
-            this.lastServerStatus = update.serverstatus;
-            this.handleUpdateReceived();
-        });
-
         signalBridge.on('endExam', () => {
             loggingBridge.debug("iosUpdateListener @ endExam: received signal");
             router.push("/student");
