@@ -339,7 +339,7 @@
         "networkError": "Es gibt ein Problem mit dem Netzwerk, der Firewall oder den Netzwerkberechtigungen! Bitte behebe das Problem und starte Next-Exam neu!",
         "winKioskSessionInfoText": "Du befindest dich in der abgesicherten Prüfungsumgebung (Windows Assigned Access). Mit <strong>Alt+Tab</strong> wechselst du zwischen Next-Exam und den anderen erlaubten Anwendungen.",
         "winKioskSessionInfoTitle": "Kiosk-Modus aktiv",
-        "winKioskSetupButton": "Kiosk einrichten",
+        "winKioskSetupButton": "Kiosk-Modus einrichten",
         "winKioskSetupDontShow": "Vorerst nicht mehr anzeigen",
         "winKioskSetupEditionFailed": "Windows Edition wird nicht unterstützt",
         "winKioskSetupEditionHint": "Multi-App Assigned Access benötigt Windows Pro, Education oder Enterprise. Auf Windows Home ist diese Kiosk-Variante nicht verfügbar.",
