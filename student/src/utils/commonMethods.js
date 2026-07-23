@@ -13,6 +13,10 @@ export async function getBatteryStatus(initialBatteryStatus) {
     if (!isIOS()) {
         batteryStatus = await navigator.getBattery().then(battery => battery)
             .catch(error => { console.error("Error accessing the Battery API:", error); });
+        // ExamHeader reads battery from the store; push the real level so it is not stuck at the default.
+        if (batteryStatus && typeof batteryStatus.level === 'number') {
+            useInfoStore().battery = { level: batteryStatus.level };
+        }
     }
     return batteryStatus;
 }

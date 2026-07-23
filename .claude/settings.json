@@ -20,7 +20,9 @@
       "Bash(node --check src/utils/screenshotCapture.js)",
       "Bash(node --check src-electron/main/scripts/ipchandler.js)",
       "Bash(git diff *)",
-      "Bash(git log *)"
+      "Bash(git log *)",
+      "Bash(timeout 90 npx vitest run)",
+      "Bash(grep -nE \"return|battery|clientinfo:|serverstatus:|serverlist:|}\\\\s*$\")"
     ]
   }
 }
