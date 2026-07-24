@@ -807,7 +807,7 @@ class WindowHandler {
             minHeight: 600,
            // resizable: false, // prevents resizing
             fullscreenable: platformDispatcher.platform !== 'darwin', // macOS kiosk bug if true; Linux/Win need it for exam fullscreen
-            show: true,
+            show: false, // wait for did-finish-load — Vite cold compile can take 20s+ with a blank window
             //visibleOnAllWorkspaces: true,
             
            
@@ -864,11 +864,19 @@ class WindowHandler {
 
         // Set window properties immediately after creation
         this.mainwindow.removeMenu()
-        this.mainwindow.focus()
-        this.mainwindow.moveTop()
         //this.mainwindow.setHiddenInMissionControl(true)
 
         if (this.config.showdevtools) { this.mainwindow.webContents.openDevTools()  }
+
+        // Electron 39: ready-to-show can fire after show(); reveal only when content is ready.
+        const revealMainWindow = () => {
+            if (!this.mainwindow || this.mainwindow.isDestroyed()) return;
+            this.mainwindow.show();
+            this.mainwindow.focus();
+            this.mainwindow.moveTop();
+        };
+        this.mainwindow.webContents.once('did-finish-load', revealMainWindow);
+        this.mainwindow.webContents.once('did-fail-load', () => { revealMainWindow(); });
 
         if (app.isPackaged || process.env["DEBUG"]) {
             const filePath = getRendererIndexPath();

@@ -374,7 +374,7 @@ app.whenReady()
         else { log.info('main @ tray: GNOME detected, skipping system tray'); }
         
         if (!platformDispatcher.runningInCage) {  // Skip in Win/Linux kiosk
-           runParentProcessCheck();  // check if the app was started from within a browser and quit if detected
+            runParentProcessCheck();  // check if the app was started from within a browser and quit if detected
         }
     }
     if (config.development){

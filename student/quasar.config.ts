@@ -307,7 +307,7 @@ export default defineConfig(( ctx: any ) => {
     // Full list of options: https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#devserver
     devServer: {
       // https: true,
-      open: true, // opens browser window automatically
+      open: false, // Electron loads APP_URL itself; opening a browser doubles Vite cold-compile work
       host: 'localhost',
       port: 9300,
       vueDevtools: false

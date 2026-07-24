@@ -7,12 +7,15 @@
  *
  * Shares public field names with cage (runningInCage etc.) so renderer logic is unchanged.
  */
-import { execFileSync, execSync, spawn } from 'child_process';
+import { execFile, execFileSync, execSync, spawn } from 'child_process';
 import { existsSync, readFileSync, readdirSync, rmSync, unlinkSync } from 'fs';
 import path from 'path';
 import os from 'os';
+import { promisify } from 'util';
 import { app } from 'electron';
 import log from 'electron-log';
+
+const execFileAsync = promisify(execFile);
 
 export const KIOSK_USERNAME = 'next-exam-kiosk';
 export const KIOSK_INSTALL_DIR = 'C:\\NextExam';
@@ -176,21 +179,36 @@ function winSystem32ExecFile(exeName, args, timeoutMs = 8000) {
     });
 }
 
-/** PowerShell from its real path (same as install-windows-kiosk.ps1 AllowedApps entry). */
-function winPowerShellExecFile(args, timeoutMs = 15000) {
-    const exePath = path.join(
+/** Absolute path to Windows PowerShell (AllowedApps entry in install-windows-kiosk.ps1). */
+function winPowerShellExePath() {
+    return path.join(
         process.env.windir || 'C:\\Windows',
         'System32',
         'WindowsPowerShell',
         'v1.0',
         'powershell.exe',
     );
-    return execFileSync(exePath, args, {
+}
+
+/** PowerShell from its real path (same as install-windows-kiosk.ps1 AllowedApps entry). */
+function winPowerShellExecFile(args, timeoutMs = 15000) {
+    return execFileSync(winPowerShellExePath(), args, {
         encoding: 'utf8',
         stdio: ['ignore', 'pipe', 'ignore'],
         timeout: timeoutMs,
         windowsHide: true,
     });
+}
+
+/** Non-blocking PowerShell (startup must not use sync CIM — MDM query often ETIMEDOUT ~8s). */
+async function winPowerShellExecFileAsync(args, timeoutMs = 15000) {
+    const { stdout } = await execFileAsync(winPowerShellExePath(), args, {
+        encoding: 'utf8',
+        timeout: timeoutMs,
+        windowsHide: true,
+        maxBuffer: 1024 * 1024,
+    });
+    return stdout;
 }
 
 /**
@@ -286,8 +304,7 @@ function parseAssignedAccessExeNamesFromReg(regOut) {
 }
 
 // MDM_AssignedAccess CSP only (needs System.Web + CIM; separate from RestrictRun reg reads).
-function readMdmConfigurationFromPs() {
-    const ps = `
+const MDM_ASSIGNED_ACCESS_PS = `
 $ErrorActionPreference = 'SilentlyContinue'
 $cfg = ''
 $mdmOk = $false
@@ -307,9 +324,11 @@ try {
 @{ mdmOk = $mdmOk; configuration = $cfg; error = $err } | ConvertTo-Json -Compress
 exit 0
 `;
-    const data = runPowerShellJson(ps, 8000);
+
+/** Parse MDM PS JSON into the shared result shape. */
+function mdmResultFromPsData(data, fallbackPsError) {
     if (!data) {
-        return { mdmOk: false, configuration: '', psError: 'powershell spawn or JSON parse failed (see runPowerShellJson)' };
+        return { mdmOk: false, configuration: '', psError: fallbackPsError };
     }
     const psError = String(data.error || '').trim();
     if (psError) {
@@ -322,7 +341,36 @@ exit 0
     };
 }
 
+/** Async MDM read — must not run via execFileSync on the startup path. */
+async function readMdmConfigurationFromPsAsync() {
+    const data = await runPowerShellJsonAsync(MDM_ASSIGNED_ACCESS_PS, 8000);
+    return mdmResultFromPsData(
+        data,
+        'powershell spawn or JSON parse failed (see runPowerShellJsonAsync)',
+    );
+}
+
 let aaSessionSignalsCache = null;
+let mdmAaHydrateStarted = false;
+
+/** Fill MDM fields in the background; startup aaProof uses RestrictRun/cmd/shell only. */
+async function hydrateMdmIntoAaSessionSignals() {
+    try {
+        const mdm = await readMdmConfigurationFromPsAsync();
+        if (!aaSessionSignalsCache) return;
+        aaSessionSignalsCache.mdmOk = mdm.mdmOk;
+        aaSessionSignalsCache.configuration = mdm.configuration;
+        aaSessionSignalsCache.mdmPsError = mdm.psError;
+        detectionCache = null;
+        log.debug(`windowsKioskSetup: MDM AA async done mdmOk=${mdm.mdmOk}`);
+    } catch (err) {
+        if (aaSessionSignalsCache) {
+            aaSessionSignalsCache.mdmPsError = err?.message || String(err);
+        }
+        log.warn(`windowsKioskSetup: MDM AA async failed: ${err?.message || err}`);
+    }
+}
+
 function readWindowsAaSessionSignals() {
     if (process.platform !== 'win32') {
         return {
@@ -333,14 +381,13 @@ function readWindowsAaSessionSignals() {
     }
     if (aaSessionSignalsCache) return aaSessionSignalsCache;
     const regAa = readRestrictRunAaFromReg();
-    const mdm = readMdmConfigurationFromPs();
     aaSessionSignalsCache = {
         restrictRunKeyHasAssignedAccess: regAa.restrictRunKeyHasAssignedAccess,
         explorerRestrictRunDwordIs1: regAa.explorerRestrictRunDwordIs1,
         explorerKeyHasAssignedAccess: regAa.explorerKeyHasAssignedAccess,
-        mdmOk: mdm.mdmOk,
-        configuration: mdm.configuration,
-        mdmPsError: mdm.psError,
+        mdmOk: false,
+        configuration: '',
+        mdmPsError: 'deferred',
         regSnippets: {
             restrictRunOut: regSnippet(regAa.restrictRunOut),
             explorerRestrictRunValueOut: regSnippet(regAa.explorerRestrictRunValueOut),
@@ -400,6 +447,11 @@ function evaluateWindowsKioskDetectionUncached() {
     const sid = getCurrentUserSid();
 
     const aaSig = readWindowsAaSessionSignals();
+    // MDM CIM contends with Chromium first paint — only on kiosk account, and only after UI is up.
+    if (kioskOsUser && !mdmAaHydrateStarted) {
+        mdmAaHydrateStarted = true;
+        setTimeout(() => { void hydrateMdmIntoAaSessionSignals(); }, 5000);
+    }
     const aaCheck = {
         restrictRunKeyHasAssignedAccess: aaSig.restrictRunKeyHasAssignedAccess,
         explorerRestrictRunDwordIs1: aaSig.explorerRestrictRunDwordIs1,
@@ -636,6 +688,29 @@ function runPowerShellJson(script, timeoutMs = 15000) {
         const detail = [err && err.message, err && err.stderr != null ? String(err.stderr).trim() : '']
             .filter(Boolean).join(' | ');
         log.warn(`runPowerShellJson: ${detail || err}`);
+        return null;
+    }
+}
+
+/** Same as runPowerShellJson but async — use for startup-adjacent CIM (no main-thread freeze). */
+async function runPowerShellJsonAsync(script, timeoutMs = 15000) {
+    if (process.platform !== 'win32') return null;
+    try {
+        const b64 = Buffer.from(String(script), 'utf16le').toString('base64');
+        const out = await winPowerShellExecFileAsync([
+            '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', b64,
+        ], timeoutMs);
+        const text = String(out || '').trim();
+        if (!text) return null;
+        return JSON.parse(text);
+    } catch (err) {
+        const stdout = err && err.stdout != null ? String(err.stdout).trim() : '';
+        if (stdout) {
+            try { return JSON.parse(stdout); } catch { /* fall through */ }
+        }
+        const detail = [err && err.message, err && err.stderr != null ? String(err.stderr).trim() : '']
+            .filter(Boolean).join(' | ');
+        log.warn(`runPowerShellJsonAsync: ${detail || err}`);
         return null;
     }
 }
