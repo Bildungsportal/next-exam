@@ -133,6 +133,8 @@ BUG^localvm^firstBootRegistry^autounattend SPI+UserPreferencesMask at FirstLogon
 
 # Misc utilities
 PATH^print^pdf^teacher/src-electron/main/scripts/printjobhandler.js+teacher/src/pages/SystemPrintPdf.vue
+RULE^print^hashRouter^teacher router MUST createWebHashHistory (not MemoryHistory); printjobhandler loadURL(...#/system-print) needs hash; Memory=#567 broke print (startserver mount, timeout, no CUPS)
+RULE^print^noDoublePrint^printjobhandler: one webContents.print per document job; startup warmUpPrintBackend (empty 1x1 window) OK — never warmup via 2nd print on the document window (#427)
 PATH^teacher^showPDFPreview^teacher/src/utils/filemanager.js: single entry for PDF preview ({filepath?, filename, base64?}); filepath=>readWorkdir+isValidPdf+loadActivesheetsCorrectionContext; base64=>direct bytes; replaced loadPDF+showBase64FilePreview
 PATH^pdfAnnotations^mixin^shared/pdfPageAnnotationsMixin.js (both student+teacher import via next-exam-shared); state+draw+undo+resetAnnotations+cancelDraw. Tools: highlight-yellow/green/blue (kind:highlight box), underline-red (kind:underline line), pen-red (kind:pen freehand polyline via draftPenPath.points). Hooks: onAnnotationsChange() (student=>queueSave; teacher=>queueSaveAnnotations sidecar) + onAnnotationUndoRestore(prev). Toolbar+render+mouse-events bleiben inline in jeweiligem PdfviewPaneRendered.vue
 IPC^teacher^abgabeAnnotationsSidecar^ABGABE/foo.pdf↔foo.annotations.json; readTeacherWorkdirFile+writeTeacherAbgabeAnnotations; teacher PdfviewPaneRendered debounced save
