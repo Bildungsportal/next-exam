@@ -44,14 +44,6 @@ const rdpview = () => import('/src/pages/rdpview.vue')
 const localvmview = () => import('/src/pages/localvmview.vue')
 
 
-import {isElectronWindow} from '../types/platform.js';
-import {SignalBridge} from '../utils/signalBridge.js';
-import config from "../utils/config.js";
-
-// signalBridge instance centralizes ipc calls with platform checks
-const signalBridge = new SignalBridge(window);
-
-
 
 //console.log(config)  // config is exposed to the renderer (frontend) in preload.js (it's readonly here!)
 

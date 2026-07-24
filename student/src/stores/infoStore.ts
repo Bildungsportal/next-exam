@@ -1,8 +1,5 @@
 import {defineStore} from 'pinia'
-import {SignalBridge} from "../utils/signalBridge.js";
 import {useConfigStore} from "./configStore.ts";
-
-const signalBridge = new SignalBridge(window);
 
 export const useInfoStore = defineStore("info", {
     state: () => ({
@@ -36,19 +33,19 @@ export const useInfoStore = defineStore("info", {
         // Poll wlan + host IP for ExamHeader network icons.
         async refreshNetworkInfo(): Promise<void> {
             try {
-                this.wlanInfo = await signalBridge.invoke('get-wlan-info');
+                this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info');
             } catch {
                 // keep previous wlanInfo
             }
             try {
-                const ipResult = await signalBridge.invoke('checkhostip');
+                const ipResult = await window.ipcRenderer.invoke('checkhostip');
                 if (ipResult) useConfigStore().hostip = ipResult;
             } catch {
                 // keep previous hostip
             }
         },
         async updateInfo(): Promise<boolean> {
-            let response = await signalBridge.invoke('getinfoasync')
+            let response = await window.ipcRenderer.invoke('getinfoasync')
             if (response) {
                 let clientinfo = response.clientinfo;
                 this.serverstatus = response.serverstatus;

@@ -119,7 +119,6 @@ import {getBatteryStatus, gracefullyExit, reconnect, showUrl} from '../utils/com
 import { getExamMaterials, loadPDF, loadImage, resetPdfPreviewToolbar} from '../utils/filehandler.js'
 import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue'
 import WebviewPane from '../components/WebviewPane.vue';
-import {SignalBridge} from '../utils/signalBridge.js'
 import { attachExamMouseleaveGuardBoolean, shouldSkipEdgeFocusLost } from '../utils/linuxCageKiosk.js'
 import {
     applyClientinfoFromFetch,
@@ -132,9 +131,6 @@ import {ref} from "vue";
 import {useConfigStore} from "../stores/configStore.ts";
 import {useInfoStore} from "../stores/infoStore.ts";
 import {autoCleanupMixin} from "../mixins/autoCleanupMixin.ts";
-
-// signalBridge instance centralizes ipc calls with platform checks
-const signalBridge = new SignalBridge(window);
 
 
 export default {
@@ -265,7 +261,7 @@ export default {
             const webview = document.getElementById('webviewmain');
             const guestId = webview?.getWebContentsId?.();
             if (!guestId) return;
-            const loadResult = await signalBridge.invoke('load-scratch-into-webview', { guestId, filename });
+            const loadResult = await window.ipcRenderer.invoke('load-scratch-into-webview', { guestId, filename });
             if (!loadResult?.ok) console.error('website @ loadScratchProject:', loadResult?.reason || 'failed');
         },
 
@@ -276,7 +272,7 @@ export default {
             const webview = document.getElementById('webviewmain');
             const guestId = webview?.getWebContentsId?.();
             if (!guestId) return;
-            await signalBridge.invoke('save-scratch-from-webview', {
+            await window.ipcRenderer.invoke('save-scratch-from-webview', {
                 guestId,
                 filename: `${this.clientname}.sb3`,
                 reason,
@@ -284,8 +280,8 @@ export default {
         },
 
         async sendFocuslost(){
-            if (await shouldSkipEdgeFocusLost(signalBridge, this.development)) return;
-            let response = await signalBridge.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
+            if (await shouldSkipEdgeFocusLost(this.development)) return;
+            let response = await window.ipcRenderer.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
             applyFocusLostFromIpc(this, response, this.development);
         },
         async tryUnlockLocalLockdown() {
@@ -300,7 +296,7 @@ export default {
 
             this.localUnlockBusy = true;
             try {
-                const result = await signalBridge.invoke('restorefocusstateLocal');
+                const result = await window.ipcRenderer.invoke('restorefocusstateLocal');
                 if (result?.ok) {
                     this.localUnlockPassword = '';
                     this.localUnlockError = false;
@@ -313,7 +309,7 @@ export default {
             }
         },
         async loadFilelist(){
-            let filelist = await signalBridge.invoke('getfilesasync', null)
+            let filelist = await window.ipcRenderer.invoke('getfilesasync', null)
             this.localfiles = filelist;
         },
         formatTime: formatFocusLostTime,
@@ -342,7 +338,7 @@ export default {
         },
 
         async fetchInfo() {
-            const getinfo = await signalBridge.invoke('getinfoasync');
+            const getinfo = await window.ipcRenderer.invoke('getinfoasync');
 
             applyClientinfoFromFetch(this, getinfo.clientinfo);
             if (getinfo.serverstatus) {
@@ -361,8 +357,8 @@ export default {
 
             this.internetCheckCounter++;
             if (this.internetCheckCounter % 5 === 0) {
-                this.wlanInfo = await signalBridge.invoke('get-wlan-info');
-                this.hostip = await signalBridge.invoke('checkhostip');
+                this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info');
+                this.hostip = await window.ipcRenderer.invoke('checkhostip');
                 this.internetCheckCounter = 0;
             }
         },
@@ -380,8 +376,8 @@ export default {
             await this.fetchInfo(); // initial sync for clientinfo, serverstatus and url
 
             try {
-                this.wlanInfo = await signalBridge.invoke('get-wlan-info')
-                this.hostip = await signalBridge.invoke('checkhostip')
+                this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
+                this.hostip = await window.ipcRenderer.invoke('checkhostip')
                 this.internetCheckCounter = 0
             } catch (err) {
                 console.error('website @ mounted: initial wlan/host ip error', err)
@@ -391,14 +387,14 @@ export default {
             this.saveScratchAuto = () => this.saveScratchContent('auto');
             this.autoSchedulerService(this.saveScratchAuto, 20000);
 
-            attachExamMouseleaveGuardBoolean(signalBridge, this.development, this.sendFocuslost);
+            attachExamMouseleaveGuardBoolean(this.development, this.sendFocuslost);
 
-            signalBridge.on('getmaterials', (event) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
+            window.ipcRenderer.on('getmaterials', (event) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
                 console.log("website @ getmaterials: get materials request received")
                 this.getExamMaterials();
             });
 
-            signalBridge.on('exam-download-complete', () => { this.loadFilelist(); });
+            window.ipcRenderer.on('exam-download-complete', () => { this.loadFilelist(); });
 
 
             this.loadFilelist();
@@ -416,7 +412,7 @@ export default {
                         const guestId = webview.getWebContentsId();
                         if (guestId) {
                             try {
-                                await signalBridge.invoke('start-blocking-for-webview', {
+                                await window.ipcRenderer.invoke('start-blocking-for-webview', {
                                     guestId,
                                     allowedUrls: [{
                                         url: this.url,
@@ -562,8 +558,8 @@ export default {
             // loading events to hide css manipulation
             this.autoEventListener(webview, 'did-stop-loading', () => {   this.isLoading = false;  });
 
-            this.wlanInfo = await signalBridge.invoke('get-wlan-info')
-            this.hostip = await signalBridge.invoke('checkhostip')
+            this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
+            this.hostip = await window.ipcRenderer.invoke('checkhostip')
 
 
         });
@@ -571,8 +567,8 @@ export default {
     beforeUnmount() {
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
 
-        signalBridge.removeAllListeners('getmaterials')
-        signalBridge.removeAllListeners('exam-download-complete')
+        window.ipcRenderer.removeAllListeners('getmaterials')
+        window.ipcRenderer.removeAllListeners('exam-download-complete')
 
         // Clean up preview click listener
         const preview = document.querySelector("#preview");

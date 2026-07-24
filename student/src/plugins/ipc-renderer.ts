@@ -1,11 +1,10 @@
 import {IPC} from './index';
-import type {PluginListenerHandle} from '@capacitor/core';
 import loggingBridge from "../utils/loggingBridge.js";
 
 type Callback = (payload: unknown) => void;
 
 class IpcRenderer {
-    private handles = new Map<string, PluginListenerHandle[]>();
+    private eventCleanups = new Map<string, Array<() => void>>();
 
     /**
      * Resolves with the response from the main process.
@@ -49,7 +48,7 @@ class IpcRenderer {
                 return undefined;
             }
         } catch (error) {
-            loggingBridge.error(`IpcRenderer ${channel} failed to invoke result:`, error);
+            loggingBridge.error(`IpcRenderer ${channel} failed to invoke, error:`, error);
             return undefined;
         }
     }
@@ -65,24 +64,34 @@ class IpcRenderer {
      * dangerous Electron APIs to the renderer process. See the security guide for more
      * info. :::
      */
-    async on(channel: string, callback: Callback): Promise<() => void> {
-        const handle = await IPC.addListener(
-            channel,
-            (data: { payload?: unknown }) => callback(data.payload)
-        );
+    on(channel: string, callback: Callback): () => void {
+        const handler = (event: Event) => {
+            const detail = (event as CustomEvent).detail;
+            if (detail?.channel === channel) {
+                callback(detail.args);
+            }
+        };
+        window.addEventListener('ipc-message', handler);
 
-        if (!this.handles.has(channel)) this.handles.set(channel, []);
-        this.handles.get(channel)!.push(handle);
+        const cleanup = () => window.removeEventListener('ipc-message', handler);
+        if (!this.eventCleanups.has(channel)) this.eventCleanups.set(channel, []);
+        this.eventCleanups.get(channel)!.push(cleanup);
 
-        return () => handle.remove();
+        return cleanup;
     }
 
     /**
      * Removes all listeners from the specified `channel`. Removes all listeners from
      * all channels if no channel is specified.
      */
-    removeAllListeners(channel?: string): this {
-        IPC.removeAllListeners(channel)
+    removeAllListeners(channel?: string): void {
+        if (channel) {
+            this.eventCleanups.get(channel)?.forEach(fn => fn());
+            this.eventCleanups.delete(channel);
+        } else {
+            this.eventCleanups.forEach(cleanups => cleanups.forEach(fn => fn()));
+            this.eventCleanups.clear();
+        }
     }
 
     /**
@@ -110,7 +119,11 @@ class IpcRenderer {
      * of a method call, consider using `ipcRenderer.invoke`.
      */
     send(channel: string, ...args: any[]): void {
-        void IPC.send({ channel, payload: args });
+        try {
+            void IPC.send({ channel, payload: args });
+        } catch (error) {
+            loggingBridge.error(`IpcRenderer ${channel} failed to send, error:`, error);
+        }
     }
 
     /**
@@ -140,8 +153,13 @@ class IpcRenderer {
 
     /** Goes through window.prompt() — NOT through Capacitor (sync) */
     sendSync(channel: string, ...args: any[]): any {
-        // This function was injected by injectSendSyncScript()
-        return (window as any).ipcRendererSendSync(channel, ...args);
+        try {
+            // This function was injected by injectSendSyncScript()
+            return (window as any).ipcRendererSendSync(channel, ...args);
+        } catch (error) {
+            loggingBridge.error(`IpcRenderer ${channel} failed to sendSync, error:`, error);
+            return undefined;
+        }
     }
 }
 

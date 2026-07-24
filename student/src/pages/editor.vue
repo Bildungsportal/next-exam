@@ -786,7 +786,6 @@ import {
 import {getExamMaterials, loadDOCX, loadHTML, loadImage, loadODT, loadPDF, playAudio, resetPdfPreviewToolbar} from '../utils/filehandler.js'
 import {getBatteryStatus, gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js'
 
-import {SignalBridge} from '../utils/signalBridge.js'
 import {
     attachExamMouseleaveGuardBoolean,
     shouldSkipEdgeFocusLost
@@ -805,9 +804,6 @@ import {ref} from "vue";
 import {useConfigStore} from "../stores/configStore.ts";
 import {useInfoStore} from "../stores/infoStore.ts";
 const lowlight = createLowlight(common)
-
-// signalBridge instance centralizes ipc calls with platform checks
-const signalBridge = new SignalBridge(window)
 
 // Default zoom for #editorcontainer (screen); @media print forces zoom 1 separately.
 const EDITOR_ZOOM_INITIAL = 1.6
@@ -1375,7 +1371,7 @@ export default {
 
 
         async fetchInfo() {
-            let getinfo = await signalBridge.invoke('getinfoasync')  // we need to fetch the updated version of the systemconfig from express api (server.js)
+            let getinfo = await window.ipcRenderer.invoke('getinfoasync')  // we need to fetch the updated version of the systemconfig from express api (server.js)
             applyClientinfoFromFetch(this, getinfo.clientinfo, { trackPrivateSpellcheck: true });
 
             const serverstatusChanged = getinfo.serverstatus
@@ -1415,8 +1411,8 @@ export default {
 
             this.internetCheckCounter++
             if (this.internetCheckCounter % 5 === 0) {
-                    this.wlanInfo = await signalBridge.invoke('get-wlan-info')
-                    this.hostip = await signalBridge.invoke('checkhostip')
+                    this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
+                    this.hostip = await window.ipcRenderer.invoke('checkhostip')
                     this.internetCheckCounter = 0
             }
         },
@@ -1682,7 +1678,7 @@ export default {
 
         //get all files in user directory
         async loadFilelist() {
-            let filelist = await signalBridge.invoke('getfilesasync', null)
+            let filelist = await window.ipcRenderer.invoke('getfilesasync', null)
             this.localfiles = filelist;
 
             // handle audio file objects (playback limitations)
@@ -1774,7 +1770,7 @@ export default {
             }
             if (why === "exitexam") {
                 // stop clipboard clear interval
-                signalBridge.send('restrictions')
+                window.ipcRenderer.send('restrictions')
 
                 this.$swal.fire({
                     title: this.$t("editor.leaving"),
@@ -1788,7 +1784,7 @@ export default {
                 })
 
                 let text = this.editor.getText();
-                signalBridge.send('clipboard', text)
+                window.ipcRenderer.send('clipboard', text)
 
                 navigator.clipboard.writeText(text).then(function () {
                     console.log('editor @ savecontent: Text erfolgreich kopiert');
@@ -1805,11 +1801,11 @@ export default {
 
             // SAVE AS HTML (.htm) - also save editorcontent as *html file - used to re-populate the editor window in case something went completely wrong
             let editorcontent = this.editor.getHTML(); 
-            signalBridge.send('storeHTML', { filename: filename, editorcontent: editorcontent, reason: why })
+            window.ipcRenderer.send('storeHTML', { filename: filename, editorcontent: editorcontent, reason: why })
             
             // SAVE AS PDF - inform mainprocess to save webcontent as pdf (see @media css query for adjustments for pdf)
             // printPDF will trigger a reload of the filelist if finished and send files to teacher if reason (why) is "teacherrequest"
-            signalBridge.send('printpdf', {
+            window.ipcRenderer.send('printpdf', {
                 filename: filename,
                 landscape: false,
                 servername: this.servername,
@@ -1900,7 +1896,7 @@ export default {
                 sectionname: this.serverstatus.examSections[this.lockedSection].sectionname,
             }
             if (type === 'print') {
-                const response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'print' })
+                const response = await window.ipcRenderer.invoke('getPDFbase64', { ...pdfArgs, reason: 'print' })
                 if (response?.status !== 'success') {
                     console.log("editor @ sendExamToTeacher: Error sending exam to teacher")
                     this.showPdfGenerationError(response)
@@ -1918,7 +1914,7 @@ export default {
             await this.waitUntilSigningSwalPainted()
             let response
             try {
-                response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'previewSigned' })
+                response = await window.ipcRenderer.invoke('getPDFbase64', { ...pdfArgs, reason: 'previewSigned' })
             } finally {
                 this.$swal.close()
             }
@@ -2211,7 +2207,7 @@ export default {
                 `editor @ sendFocuslost: source=${source} ctrlalt=${ctrlalt} hidden=${document.hidden} visibility=${document.visibilityState} swal=${document.body.classList.contains('swal2-shown')}`
             );
             console.trace('editor @ sendFocuslost stack');
-            if (!forceBackendLock && await shouldSkipEdgeFocusLost(signalBridge, this.development)) return;
+            if (!forceBackendLock && await shouldSkipEdgeFocusLost(this.development)) return;
             if (message) this.focusLostMessage = message;
             if (instantBlock && !this.development) {
                 if (this.focus) this.entrytime = Date.now();
@@ -2222,8 +2218,8 @@ export default {
             }
 
             const response = forceBackendLock
-                ? await signalBridge.invoke('securityFocusLost', { reason: 'typingRhythm', message, ctrlalt })
-                : await signalBridge.invoke('focuslost', ctrlalt); // refocus, go back to kiosk, inform teacher
+                ? await window.ipcRenderer.invoke('securityFocusLost', { reason: 'typingRhythm', message, ctrlalt })
+                : await window.ipcRenderer.invoke('focuslost', ctrlalt); // refocus, go back to kiosk, inform teacher
 
             if (forceBackendLock) {
                 if (this.focus) this.entrytime = Date.now();
@@ -2253,7 +2249,7 @@ export default {
 
             this.localUnlockBusy = true;
             try {
-                const result = await signalBridge.invoke('restorefocusstateLocal');
+                const result = await window.ipcRenderer.invoke('restorefocusstateLocal');
                 if (result?.ok) {
                     this.localUnlockPassword = '';
                     this.localUnlockError = false;
@@ -2292,7 +2288,7 @@ export default {
                 return true;
             }
             try {
-                const response = await signalBridge.invoke("startLanguageTool");
+                const response = await window.ipcRenderer.invoke("startLanguageTool");
                 if (response) {
                         if (!silent) {
                             this.$swal.fire({
@@ -2439,7 +2435,7 @@ export default {
             if (!this.editor) return false;
             const ready = await this.waitForEditorReady();
             if (!ready) return false;
-            const result = await signalBridge.invoke('writeExamHtmBackupSync', {
+            const result = await window.ipcRenderer.invoke('writeExamHtmBackupSync', {
                 filename: this.currentFile,
                 content: this.editor.getHTML(),
                 reason: 'sectionswitch',
@@ -2452,7 +2448,7 @@ export default {
             const backupfileName = filename ? filename : `${this.clientname}.htm`;
             try {
                 const [backupfileContent, ready] = await Promise.all([
-                    signalBridge.invoke('getbackupfile', backupfileName),
+                    window.ipcRenderer.invoke('getbackupfile', backupfileName),
                     this.waitForEditorReady(),
                 ]);
                 if (!ready) return;
@@ -2474,7 +2470,7 @@ export default {
             console.log(`editor @ loadBackupFile: Checking for backup file: ${backupfileName}`);
             try {
                 const [backupfileContent, ready] = await Promise.all([
-                    signalBridge.invoke('getbackupfile', backupfileName),
+                    window.ipcRenderer.invoke('getbackupfile', backupfileName),
                     this.waitForEditorReady(),
                 ]);
                 if (!ready) return;
@@ -2588,33 +2584,33 @@ export default {
         this.attachEditorInputGuards()
         this.getExamMaterials()
         setTimeout(() => {
-            signalBridge.invoke('prewarmSubmissionSigningP12').catch(() => {})
+            window.ipcRenderer.invoke('prewarmSubmissionSigningP12').catch(() => {})
         }, 400)
 
       
 
-        signalBridge.on('focusLock', (_event, payload = {}) => {
+        window.ipcRenderer.on('focusLock', (_event, payload = {}) => {
             this.focusLockReason = payload.reason || '';
             this.focusLockMessage = payload.message || '';
             if (!this.development) this.focus = false;
         });
 
-        signalBridge.on('getmaterials', (event) => {  // get exam materials from teacher
+        window.ipcRenderer.on('getmaterials', (event) => {  // get exam materials from teacher
             console.log("editor @ getmaterials: get materials request received")
             this.getExamMaterials()
         });
 
-        signalBridge.on('finalsubmit', (event) => {  // triggered on exit exam mode - send exam to teacher
+        window.ipcRenderer.on('finalsubmit', (event) => {  // triggered on exit exam mode - send exam to teacher
             console.log("editor @ finalsubmit: submit exam request received")
             this.sendExamToTeacher(true)
         });
 
-        signalBridge.on('submitexam', (event, why) => {  //send current work as base64 to teacher
+        window.ipcRenderer.on('submitexam', (event, why) => {  //send current work as base64 to teacher
             console.log("editor @ submitexam: submit exam request received")
             this.printBase64(false, typeof why === 'string' ? why : 'submitexam')
         });
 
-        signalBridge.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
+        window.ipcRenderer.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
             console.log("editor @ save: Teacher saverequest received")
             this.saveContent(true, why)
         });
@@ -2625,21 +2621,21 @@ export default {
             } catch (e) {
                 console.error('editor @ save-for-section-switch:', e);
             }
-            signalBridge.send('section-switch-save-done', ok);
+            window.ipcRenderer.send('section-switch-save-done', ok);
         };
-        signalBridge.on('save-for-section-switch', this._onSaveForSectionSwitch);
-        signalBridge.on('denied', (event, why) => {  //print request was denied by teacher because he can not handle so much requests at once
+        window.ipcRenderer.on('save-for-section-switch', this._onSaveForSectionSwitch);
+        window.ipcRenderer.on('denied', (event, why) => {  //print request was denied by teacher because he can not handle so much requests at once
             this.printdenied(why)
         });
-        signalBridge.on('backup', (event, filename) => {
+        window.ipcRenderer.on('backup', (event, filename) => {
             console.log("editor @ backup: Replace event received ")
             this.loadHTML(filename)
         });
-        signalBridge.on('loadfilelist', () => {
+        window.ipcRenderer.on('loadfilelist', () => {
             //console.log("editor @ loadfilelist: Reload Files event received ")
             this.loadFilelist()
         });
-        signalBridge.on('fileerror', (event, msg) => {
+        window.ipcRenderer.on('fileerror', (event, msg) => {
             console.log('editor @ fileerror: ', msg.message);
 
             if (this.showfileerror) {
@@ -2731,14 +2727,14 @@ export default {
         // block editor on escape
         if (!this.development) {
             this._onFocusLostMouseleave = () => this.sendFocuslost(false, { source: 'mouseleave' });
-            attachExamMouseleaveGuardBoolean(signalBridge, this.development, this._onFocusLostMouseleave);
+            attachExamMouseleaveGuardBoolean(this.development, this._onFocusLostMouseleave);
             this.autoEventListener(window,'visibilitychange', this.handleVisibilityChange);
         }
 
       
         // get wlan info and host ip for internet check
-        this.wlanInfo = await signalBridge.invoke('get-wlan-info')
-        this.hostip = await signalBridge.invoke('checkhostip')
+        this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
+        this.hostip = await window.ipcRenderer.invoke('checkhostip')
 
     },
 
@@ -2755,16 +2751,16 @@ export default {
 
         this.stopSplitResize()
 
-        signalBridge.removeAllListeners('focusLock')
-        signalBridge.removeAllListeners('getmaterials')
-        signalBridge.removeAllListeners('finalsubmit')
-        signalBridge.removeAllListeners('submitexam')
-        signalBridge.removeAllListeners('fileerror')
-        signalBridge.removeAllListeners('save')
-        signalBridge.removeAllListeners('save-for-section-switch');
-        signalBridge.removeAllListeners('denied')
-        signalBridge.removeAllListeners('backup')
-        signalBridge.removeAllListeners('loadfilelist')
+        window.ipcRenderer.removeAllListeners('focusLock')
+        window.ipcRenderer.removeAllListeners('getmaterials')
+        window.ipcRenderer.removeAllListeners('finalsubmit')
+        window.ipcRenderer.removeAllListeners('submitexam')
+        window.ipcRenderer.removeAllListeners('fileerror')
+        window.ipcRenderer.removeAllListeners('save')
+        window.ipcRenderer.removeAllListeners('save-for-section-switch');
+        window.ipcRenderer.removeAllListeners('denied')
+        window.ipcRenderer.removeAllListeners('backup')
+        window.ipcRenderer.removeAllListeners('loadfilelist')
         this.editor.destroy()
     },
 }

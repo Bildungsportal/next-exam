@@ -195,7 +195,6 @@ import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue'
 
 import { getExamMaterials, loadPDF, loadImage, loadGGB, resetPdfPreviewToolbar} from '../utils/filehandler.js'
 import {getBatteryStatus, gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js'
-import {SignalBridge} from '../utils/signalBridge.js'
 import {
     attachExamMouseleaveGuardBoolean,
     shouldSkipEdgeFocusLost
@@ -212,9 +211,6 @@ import {useConfigStore} from "../stores/configStore.ts";
 import {useInfoStore} from "../stores/infoStore.ts";
 import {autoCleanupMixin} from "../mixins/autoCleanupMixin.ts";
 import {isIOS} from "../types/platform.ts";
-
-// signalBridge instance centralizes ipc calls with platform checks
-const signalBridge = new SignalBridge(window);
 
 let ggbDeployLoadPromise = null
 
@@ -376,7 +372,7 @@ export default {
         this.autoEventListener(window,'unhandledrejection', this._onUnhandledRejection);
 
 
-        signalBridge.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
+        window.ipcRenderer.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
             console.log("editor @ save: Teacher saverequest received")
             this.saveContent(false, why)
         });
@@ -387,11 +383,11 @@ export default {
             } catch (e) {
                 console.error('geogebra @ save-for-section-switch:', e);
             }
-            signalBridge.send('section-switch-save-done', ok);
+            window.ipcRenderer.send('section-switch-save-done', ok);
         };
-        signalBridge.on('save-for-section-switch', this._onSaveForSectionSwitch);
+        window.ipcRenderer.on('save-for-section-switch', this._onSaveForSectionSwitch);
 
-        signalBridge.on('fileerror', (event, msg) => {
+        window.ipcRenderer.on('fileerror', (event, msg) => {
             console.log('geogebra @ fileerror: writing/deleting file error received');
             this.$swal.fire({
                 title: "Error",
@@ -405,7 +401,7 @@ export default {
             })
         });
 
-        signalBridge.on('getmaterials', (event) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
+        window.ipcRenderer.on('getmaterials', (event) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
             console.log("geogebra @ getmaterials: get materials request received")
             this.getExamMaterials()
         });
@@ -424,7 +420,7 @@ export default {
             this.saveContentGgbAuto = () => this.saveContent(false, 'auto'); // detour so interval does not pass Scheduler event as first arg
             this.autoSchedulerService(this.saveContentGgbAuto, 20000);
 
-            attachExamMouseleaveGuardBoolean(signalBridge, this.development, this.sendFocuslost);
+            attachExamMouseleaveGuardBoolean(this.development, this.sendFocuslost);
 
             this.loadFilelist()
             this.getExamMaterials()
@@ -455,9 +451,9 @@ export default {
 
             this.autoSchedulerService(this.loadFilelist, 10000)
 
-            this.wlanInfo = await signalBridge.invoke('get-wlan-info')
+            this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
             console.log(this.wlanInfo);
-            this.hostip = await signalBridge.invoke('checkhostip')
+            this.hostip = await window.ipcRenderer.invoke('checkhostip')
         });
     },
     methods: {
@@ -602,8 +598,8 @@ export default {
 
         
         async sendFocuslost(ctrlalt = false){
-            if (await shouldSkipEdgeFocusLost(signalBridge, this.development)) return;
-            let response = await signalBridge.invoke('focuslost', ctrlalt)  // refocus, go back to kiosk, inform teacher
+            if (await shouldSkipEdgeFocusLost(this.development)) return;
+            let response = await window.ipcRenderer.invoke('focuslost', ctrlalt)  // refocus, go back to kiosk, inform teacher
             applyFocusLostFromIpc(this, response, this.development);
         },
 
@@ -616,7 +612,7 @@ export default {
 
 
         async loadFilelist(){
-            let filelist = await signalBridge.invoke('getfilesasync', null)
+            let filelist = await window.ipcRenderer.invoke('getfilesasync', null)
             this.localfiles = filelist;
         },
 
@@ -797,7 +793,7 @@ export default {
 
 
         async fetchInfo() {
-            const getinfo = await signalBridge.invoke('getinfoasync');
+            const getinfo = await window.ipcRenderer.invoke('getinfoasync');
             const prevExammode = this.exammode;
 
             applyClientinfoFromFetch(this, getinfo.clientinfo);
@@ -814,8 +810,8 @@ export default {
 
             this.internetCheckCounter++;
             if (this.internetCheckCounter % 5 === 0) {
-                this.wlanInfo = await signalBridge.invoke('get-wlan-info');
-                this.hostip = await signalBridge.invoke('checkhostip');
+                this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info');
+                this.hostip = await window.ipcRenderer.invoke('checkhostip');
                 this.internetCheckCounter = 0;
             }
         },
@@ -912,7 +908,7 @@ export default {
             }
             if (!base64GgbFile) return false;
             const filename = this.currentFile || `${this.clientname}.ggb`;
-            const response = await signalBridge.invoke('saveGGB', {
+            const response = await window.ipcRenderer.invoke('saveGGB', {
                 filename,
                 content: base64GgbFile,
                 reason: 'sectionswitch',
@@ -927,7 +923,7 @@ export default {
             }
             if (!this.ggbReady || !window.ggbApplet) return;
             const filename = `${this.clientname}.ggb`;
-            const loadResult = await signalBridge.invoke('loadGGB', filename);
+            const loadResult = await window.ipcRenderer.invoke('loadGGB', filename);
             console.log("geogebra @ loadBackupGgbIfPresent: ", loadResult);
             if (loadResult?.status !== 'success' || !loadResult.content) return;
             window.ggbApplet.setBase64(loadResult.content);
@@ -989,7 +985,7 @@ export default {
                             console.log("geogebra @ saveContent: no base64 content returned"); // one line comment
                             return;
                         }
-                        let response = await signalBridge.invoke('saveGGB', { filename: filename, content: base64GgbFile, reason: 'manual' });
+                        let response = await window.ipcRenderer.invoke('saveGGB', { filename: filename, content: base64GgbFile, reason: 'manual' });
                         if (response && response.status === "success" && reason == "manual" ){  // we wait for a response - only show feed back if manually saved
                             this.loadFilelist();
                             this.$swal.fire({
@@ -1009,7 +1005,7 @@ export default {
                 } 
                 else {
                     const saveReason = typeof reason === 'string' ? reason : 'auto';
-                    let response = await signalBridge.invoke('saveGGB', { filename: filename, content: base64GgbFile, reason: saveReason });
+                    let response = await window.ipcRenderer.invoke('saveGGB', { filename: filename, content: base64GgbFile, reason: saveReason });
                     if (response && response.status === "success" && reason == "manual" ){  // we wait for a response - only show feed back if manually saved
                         this.loadFilelist();
                         this.$swal.fire({
@@ -1053,10 +1049,10 @@ export default {
             window.__ggbMenuObserver__ = null
         }
 
-        signalBridge.removeAllListeners('getmaterials')
-        signalBridge.removeAllListeners('fileerror')
-        signalBridge.removeAllListeners('save')
-        signalBridge.removeAllListeners('save-for-section-switch');
+        window.ipcRenderer.removeAllListeners('getmaterials')
+        window.ipcRenderer.removeAllListeners('fileerror')
+        window.ipcRenderer.removeAllListeners('save')
+        window.ipcRenderer.removeAllListeners('save-for-section-switch');
         // Clean up preview click listener
         const preview = document.querySelector("#preview");
         if (preview && this._onPreviewClick) {
