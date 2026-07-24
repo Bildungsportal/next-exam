@@ -3,7 +3,7 @@ import { isElectronWindow } from '../types/platform';
 let kioskInfoCache = null;
 
 /** Cached Linux kiosk flags from main process (Cage install/session). */
-export async function getLinuxKioskInfo(signalBridge) {
+export async function getLinuxKioskInfo() {
     if (kioskInfoCache) return kioskInfoCache;
     if (!isElectronWindow(window)) {
         kioskInfoCache = {
@@ -19,7 +19,7 @@ export async function getLinuxKioskInfo(signalBridge) {
         };
         return kioskInfoCache;
     }
-    kioskInfoCache = await signalBridge.invoke('get-platform-info');
+    kioskInfoCache = await window.ipcRenderer.invoke('get-platform-info');
     return kioskInfoCache;
 }
 
@@ -30,24 +30,24 @@ function shouldUseEdgeFocusGuards(platformKiosk, development = false) {
 }
 
 /** True when mouseleave/focuslost edge guards should be skipped (e.g. Cage). */
-export async function shouldSkipEdgeFocusLost(signalBridge, development = false) {
-    const kiosk = await getLinuxKioskInfo(signalBridge);
+export async function shouldSkipEdgeFocusLost(development = false) {
+    const kiosk = await getLinuxKioskInfo();
     return !shouldUseEdgeFocusGuards(kiosk, development);
 }
 
 /** Registers body mouseleave for sendFocuslost unless Cage or development. */
-export async function attachExamMouseleaveGuard(signalBridge, config, handler) {
+export async function attachExamMouseleaveGuard(config, handler) {
     if (config?.development) return;
-    const kiosk = await getLinuxKioskInfo(signalBridge);
+    const kiosk = await getLinuxKioskInfo();
     if (shouldUseEdgeFocusGuards(kiosk, config?.development)) {
         document.body.addEventListener('mouseleave', handler);
     }
 }
 
 /** Registers body mouseleave for sendFocuslost unless Cage or development. */
-export async function attachExamMouseleaveGuardBoolean(signalBridge, development, handler) {
+export async function attachExamMouseleaveGuardBoolean(development, handler) {
     if (development) return;
-    const kiosk = await getLinuxKioskInfo(signalBridge);
+    const kiosk = await getLinuxKioskInfo();
     if (shouldUseEdgeFocusGuards(kiosk, development)) {
         document.body.addEventListener('mouseleave', handler);
     }

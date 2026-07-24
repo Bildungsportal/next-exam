@@ -125,7 +125,6 @@ import {getBatteryStatus, gracefullyExit, reconnect, showUrl} from '../utils/com
 import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue'
 import WebviewPane from '../components/WebviewPane.vue'
 import {isElectronWindow} from "../types/platform.ts";
-import {SignalBridge} from '../utils/signalBridge.js'
 import { attachExamMouseleaveGuardBoolean, shouldSkipEdgeFocusLost } from '../utils/linuxCageKiosk.js'
 import {
     applyClientinfoFromFetch,
@@ -138,8 +137,6 @@ import {ref} from "vue";
 import {useConfigStore} from "../stores/configStore.ts";
 import {useInfoStore} from "../stores/infoStore.ts";
 import {autoCleanupMixin} from "../mixins/autoCleanupMixin.ts";
-
-const signalBridge = new SignalBridge(window);
 
 export default {
     mixins: [autoCleanupMixin],
@@ -213,7 +210,7 @@ export default {
 
         this.autoSchedulerService(this.loadFilelist, 20000);
 
-        attachExamMouseleaveGuardBoolean(signalBridge, this.development, this.sendFocuslost);
+        attachExamMouseleaveGuardBoolean(this.development, this.sendFocuslost);
 
         this.loadFilelist()
 
@@ -230,8 +227,8 @@ export default {
             this.autoEventListener(webview, 'did-fail-load', this._onDidFailLoad);
         }
         if (isElectronWindow(window)) {
-            this.wlanInfo = await signalBridge.invoke('get-wlan-info')
-            this.hostip = await signalBridge.invoke('checkhostip')
+            this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
+            this.hostip = await window.ipcRenderer.invoke('checkhostip')
         }
     },
     methods: {
@@ -306,9 +303,9 @@ export default {
             return new Promise(resolve => setTimeout(resolve, ms));
         },
         async sendFocuslost() {
-            if (await shouldSkipEdgeFocusLost(signalBridge, this.development)) return;
+            if (await shouldSkipEdgeFocusLost(this.development)) return;
             if (isElectronWindow(window)) {
-                let response = await signalBridge.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
+                let response = await window.ipcRenderer.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
                 applyFocusLostFromIpc(this, response, this.development);
             }
         },
@@ -327,7 +324,7 @@ export default {
         },
         async loadFilelist() {
             if (isElectronWindow(window)) {
-                let filelist = await signalBridge.invoke('getfilesasync', null)
+                let filelist = await window.ipcRenderer.invoke('getfilesasync', null)
                 this.localfiles = filelist;
             }
         },
@@ -351,7 +348,7 @@ export default {
 
         async fetchInfo() {
             if (!isElectronWindow(window)) return;
-            const getinfo = await signalBridge.invoke('getinfoasync');
+            const getinfo = await window.ipcRenderer.invoke('getinfoasync');
 
             applyClientinfoFromFetch(this, getinfo.clientinfo);
             if (getinfo.serverstatus) {
@@ -370,8 +367,8 @@ export default {
 
             this.internetCheckCounter++;
             if (this.internetCheckCounter % 5 === 0) {
-                this.wlanInfo = await signalBridge.invoke('get-wlan-info');
-                this.hostip = await signalBridge.invoke('checkhostip');
+                this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info');
+                this.hostip = await window.ipcRenderer.invoke('checkhostip');
                 this.internetCheckCounter = 0;
             }
         },

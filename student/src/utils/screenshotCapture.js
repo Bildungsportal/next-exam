@@ -49,11 +49,11 @@ function captureFrameFromVideo(video) {
 }
 
 /** Cage fallback: capture active window via main-process capturePage. */
-async function captureAndUploadFromIpc(signalBridge, config) {
+async function captureAndUploadFromIpc(config) {
   const { serverip, serverApiPort, clientinfo } = config;
   if (!serverip || !serverApiPort || !clientinfo) return false;
   try {
-    const result = await signalBridge.invoke('capture-screenshot-frame');
+    const result = await window.ipcRenderer.invoke('capture-screenshot-frame');
     if (!result?.screenshotBase64) {
       log.warn('screenshotCapture @ captureAndUploadFromIpc: empty frame');
       return false;
@@ -91,7 +91,7 @@ async function captureAndUploadFromIpc(signalBridge, config) {
  * One tick: capture frame from existing stream/video, upload. No getDisplayMedia call.
  * @returns {Promise<boolean>} true on success, false on any failure
  */
-async function captureAndUpload(signalBridge, config, sharedRef) {
+async function captureAndUpload(config, sharedRef) {
   const { serverip, serverApiPort, clientinfo } = config;
   if (!serverip || !serverApiPort || !clientinfo) return false;
 
@@ -295,7 +295,7 @@ export function isFullDesktopCaptureLikely() {
  * Apply config: start interval when serverip and screenshotinterval > 0, stop when 0 or no serverip.
  * Reuses the long-lived capture stream for every tick (no new getDisplayMedia per tick).
  */
-function applyConfig(signalBridge, config) {
+function applyConfig(config) {
   if (applyInFlight) return;
   applyInFlight = true;
   if (intervalId) {
@@ -315,9 +315,9 @@ function applyConfig(signalBridge, config) {
   if (useWindowCaptureFallback) {
     log.info('screenshotCapture @ applyConfig: starting capturePage interval', ms, 'ms');
     intervalId = setInterval(() => {
-      signalBridge.invoke('getScreenshotConfig').then((cfg) => {
+      window.ipcRenderer.invoke('getScreenshotConfig').then((cfg) => {
         if (!cfg?.serverip || cfg.clientinfo?.localLockdown) return;
-        captureAndUploadFromIpc(signalBridge, cfg).then((ok) => {
+        captureAndUploadFromIpc(cfg).then((ok) => {
           if (ok) consecutiveFailures = 0;
           else {
             consecutiveFailures += 1;
@@ -343,7 +343,7 @@ function applyConfig(signalBridge, config) {
   }
 
   intervalId = setInterval(() => {
-    signalBridge.invoke('getScreenshotConfig').then((cfg) => {
+    window.ipcRenderer.invoke('getScreenshotConfig').then((cfg) => {
       if (!cfg?.serverip || cfg.clientinfo?.localLockdown) return;
       const track = sharedRef.stream?.getVideoTracks?.()[0];
       if (!track || track.readyState === 'ended') {
@@ -353,7 +353,7 @@ function applyConfig(signalBridge, config) {
         log.warn('screenshotCapture @ applyConfig: stream ended, screenshot capture disabled until restart');
         return;
       }
-      captureAndUpload(signalBridge, cfg, sharedRef).then((ok) => {
+      captureAndUpload(cfg, sharedRef).then((ok) => {
         if (ok) consecutiveFailures = 0;
         else {
           consecutiveFailures += 1;
@@ -372,7 +372,7 @@ function applyConfig(signalBridge, config) {
 /**
  * Init screenshot scheduler: only in Electron. Listens for screenshot-config and polls getScreenshotConfig on start.
  */
-export function initScreenshotScheduler(signalBridge) {
+export function initScreenshotScheduler() {
   if (!isElectronWindow(window)) {
     log.info('screenshotCapture @ initScreenshotScheduler: not Electron, skip');
     return;
@@ -385,13 +385,13 @@ export function initScreenshotScheduler(signalBridge) {
     initDisplayStreamOnce();
   }
 
-  signalBridge.on('screenshot-config', (_event, config) => {
-    applyConfig(signalBridge, config);
+  window.ipcRenderer.on('screenshot-config', (_event, config) => {
+    applyConfig(config);
   });
 
-  signalBridge.invoke('getScreenshotConfig').then((config) => {
+  window.ipcRenderer.invoke('getScreenshotConfig').then((config) => {
     if (config?.serverip && config.screenshotinterval > 0 && !config.clientinfo?.localLockdown) {
-      applyConfig(signalBridge, config);
+      applyConfig(config);
     } else {
       log.info('screenshotCapture @ initScreenshotScheduler: not starting interval yet (need serverip, interval > 0, no localLockdown)');
     }

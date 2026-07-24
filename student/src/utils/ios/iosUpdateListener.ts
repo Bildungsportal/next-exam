@@ -1,10 +1,7 @@
-import {SignalBridge} from '../signalBridge.js'
 import {isIOS} from "../../types/platform.js";
 import loggingBridge from "../loggingBridge.js";
 import {router} from "../../router/index.js";
 import {useInfoStore} from "../../stores/infoStore.js";
-
-const signalBridge = new SignalBridge(window)
 
 class IosUpdateListener {
     currentExamType: string = "";
@@ -18,7 +15,7 @@ class IosUpdateListener {
         this.infoStore = useInfoStore();
         await this.infoStore.updateInfo();
 
-        signalBridge.on('startExam', (serverstatus) => {
+        window.ipcRenderer.on('startExam', (serverstatus) => {
             loggingBridge.debug("iosUpdateListener @ startExam: message received: ", serverstatus);
             this.lastServerStatus = serverstatus;
             this.infoStore.exammode = serverstatus.exammode;
@@ -26,7 +23,7 @@ class IosUpdateListener {
             this.handleUpdateReceived();
         });
 
-        signalBridge.on('endExam', () => {
+        window.ipcRenderer.on('endExam', () => {
             loggingBridge.debug("iosUpdateListener @ endExam: received signal");
             router.push("/student");
             this.infoStore.examtype = "";

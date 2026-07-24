@@ -1,6 +1,5 @@
 // gracefullyExit.js
 // ES module: import { gracefullyExit } from 'commonMethods.js'
-import {SignalBridge} from './signalBridge.js'
 import { useInfoStore } from '../stores/infoStore.ts'
 import {isIOS} from "../types/platform.ts";
 
@@ -23,7 +22,7 @@ export async function getBatteryStatus(initialBatteryStatus) {
 
 export function gracefullyExit() {
     if (this.examtype == 'microsoft365'){
-        signalBridge.send('collapse-browserview')
+        window.ipcRenderer.send('collapse-browserview')
     }
     console.log("commonMethods.js @ gracefullyExit: gracefully exiting")
 
@@ -61,14 +60,14 @@ export function gracefullyExit() {
           });
       },
       preConfirm: () => {
-        if (!needsPw) { signalBridge.send('gracefullyexit'); return; }    // no password needed
+        if (!needsPw) { window.ipcRenderer.send('gracefullyexit'); return; }    // no password needed
         const value = document.getElementById('localpassword')?.value || ""; // entered password
-        if (value === expected) { signalBridge.send('gracefullyexit'); return; } // correct
+        if (value === expected) { window.ipcRenderer.send('gracefullyexit'); return; } // correct
         this.$swal.showValidationMessage(this.$t("general.wrongpassword"));          // warning
       }
     }).then(() => {
         if (this.examtype == 'microsoft365'){
-            signalBridge.send('restore-browserview')
+            window.ipcRenderer.send('restore-browserview')
         }
     });
   }
@@ -78,7 +77,7 @@ export function gracefullyExit() {
 
  export function reconnect() {
     if (this.examtype == 'microsoft365'){
-        signalBridge.send('collapse-browserview')
+        window.ipcRenderer.send('collapse-browserview')
     }
 
     const infoStore = useInfoStore();
@@ -122,7 +121,7 @@ export function gracefullyExit() {
         this.serverip = result.value.ip; // Set new IP
         this.pincode = result.value.pin; // Set new PIN
 
-        let IPCresponse = signalBridge.sendSync('register', {clientname:this.clientname, servername:this.servername, serverip: this.serverip, pin:this.pincode }); // Send IPC message
+        let IPCresponse = window.ipcRenderer.sendSync('register', {clientname:this.clientname, servername:this.servername, serverip: this.serverip, pin:this.pincode }); // Send IPC message
 
         this.token = IPCresponse.token; // set token (used to determine server connection status)
 
@@ -136,7 +135,7 @@ export function gracefullyExit() {
             showCancelButton: false, // No cancel button
         });
         if (this.examtype == 'microsoft365'){
-            signalBridge.send('restore-browserview')
+            window.ipcRenderer.send('restore-browserview')
         }
     });
 }
@@ -174,7 +173,7 @@ export function showUrl(url){
     this.urlForWebview = url;
 
     if (this.examtype === 'microsoft365'){
-        signalBridge.send('collapse-browserview');
+        window.ipcRenderer.send('collapse-browserview');
     }
 
     const applyDomChanges = () => {

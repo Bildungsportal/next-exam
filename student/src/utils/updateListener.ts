@@ -1,10 +1,7 @@
-import {SignalBridge} from './signalBridge.js'
 import {useInfoStore} from "../stores/infoStore.js";
 import log from "electron-log";
 import {decryptExamFileAllLayers, encryptExamFileBytes, isExamFileEncryptedBytes} from "../../../shared/examFileCryptoCore.js";
 import {Directory, Filesystem, WriteFileResult} from "@capacitor/filesystem";
-
-const signalBridge = new SignalBridge(window)
 
 class UpdateListener {
     infoStore: any = null;
@@ -15,7 +12,7 @@ class UpdateListener {
         this.infoStore = useInfoStore();
         await this.infoStore.updateInfo();
 
-        signalBridge.on('loadGGB', async (filename: string) => {
+        window.ipcRenderer.on('loadGGB', async (filename: string) => {
             console.log('updateListener @ loadGGB: start', filename);
             const ggbFilePath = this.resolveWritablePathUnderExamDir(this.infoStore.examdirectory, filename, ['.ggb']);
             if (!ggbFilePath) {
@@ -51,7 +48,7 @@ class UpdateListener {
             }
         })
 
-        signalBridge.on('storeHTML', (event, args) => {
+        window.ipcRenderer.on('storeHTML', (event, args) => {
             console.log("updateListener @ storeHTML", event, args);
             const htmlContent = args.editorcontent
             const filename = args.filename

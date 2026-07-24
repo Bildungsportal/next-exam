@@ -4,7 +4,6 @@ import VueSweetalert2 from "vue-sweetalert2";
 import config from '../utils/config.js';
 import NavigationHandler from "../utils/navigationHandler.js";
 import LoggingBridge from "../utils/loggingBridge.js";
-import IosTaskDispatcher from "../utils/ios/iosTaskDispatcher.js";
 import {isIOS} from "../types/platform.js";
 import { ipcRenderer as capacitorIpcRenderer } from "../plugins/ipc-renderer.js";
 import IosUpdateListener from "../utils/ios/iosUpdateListener.ts";
@@ -69,11 +68,9 @@ export default defineBoot(async ( { app, router } ) => {
         const mc = { clientinfo: {} };
         const { default: updateListener } = await electron.UpdateListener;
         NavigationHandler.init(LoggingBridge, mc, config, router);
-        IosTaskDispatcher.init(LoggingBridge, mc, NavigationHandler);
         await updateListener.init();
     } else {
         NavigationHandler.init(LoggingBridge, null, config, router);
-        IosTaskDispatcher.init(LoggingBridge, null, NavigationHandler);
         IosUpdateListener.init();
     }
     PdfHelper.init();

@@ -93,7 +93,6 @@
 import ExamHeader from '../components/ExamHeader.vue';
 import {isElectronWindow} from "../types/platform.js";
 import {getBatteryStatus, gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js'
-import {SignalBridge} from '../utils/signalBridge.js'
 import {
     attachExamMouseleaveGuardBoolean,
     shouldSkipEdgeFocusLost
@@ -105,9 +104,6 @@ import {
     formatFocusLostTime,
     applyFocusLostFromIpc,
 } from '../utils/examFetchInfoSync.js'
-
-// signalBridge instance centralizes ipc calls with platform checks
-const signalBridge = new SignalBridge(window);
 
 import { getExamMaterials, loadPDF, loadImage, resetPdfPreviewToolbar} from '../utils/filehandler.js'
 import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue'
@@ -182,7 +178,7 @@ export default {
     }, 
     components: { ExamHeader, PdfviewPaneRendered, WebviewPane },  
     mounted() {
-        signalBridge.on('getmaterials', (event) => {
+        window.ipcRenderer.on('getmaterials', (event) => {
             console.log("eduvidual @ getmaterials: get materials request received")
             this.getExamMaterials()
         });
@@ -203,15 +199,15 @@ export default {
             await this.fetchInfo(); // initial sync for clientinfo, serverstatus and moodle url
 
             try {
-                this.wlanInfo = await signalBridge.invoke('get-wlan-info')
-                this.hostip = await signalBridge.invoke('checkhostip')
+                this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
+                this.hostip = await window.ipcRenderer.invoke('checkhostip')
                 this.internetCheckCounter = 0
             } catch (err) {
                 console.error('eduvidual @ mounted: initial wlan/host ip error', err)
             }
 
             this.autoSchedulerService(this.loadFilelist, 20000);
-            attachExamMouseleaveGuardBoolean(signalBridge, this.development, this.sendFocuslost);
+            attachExamMouseleaveGuardBoolean(this.development, this.sendFocuslost);
 
 
             this.loadFilelist()
@@ -278,8 +274,8 @@ export default {
                 this.autoEventListener(webview,'did-start-loading', this._onDidStartLoading);
                 this.autoEventListener(webview,'did-stop-loading', this._onDidStopLoading);
             }
-            this.wlanInfo = await signalBridge.invoke('get-wlan-info')
-            this.hostip = await signalBridge.invoke('checkhostip')
+            this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
+            this.hostip = await window.ipcRenderer.invoke('checkhostip')
             
         });
     },
@@ -329,7 +325,7 @@ export default {
             if (!webview?.getWebContentsId || !isElectronWindow(window)) return;
             const guestId = webview.getWebContentsId();
             if (!guestId) return;
-            await signalBridge.invoke('start-blocking-for-website-webview', {
+            await window.ipcRenderer.invoke('start-blocking-for-website-webview', {
                 guestId,
                 mode: 'eduvidual',
                 moodleTestId: this.moodleTestId,
@@ -342,16 +338,16 @@ export default {
 
         formatTime: formatFocusLostTime,
         async sendFocuslost(){
-            if (await shouldSkipEdgeFocusLost(signalBridge, this.development)) return;
+            if (await shouldSkipEdgeFocusLost(this.development)) return;
             if (isElectronWindow(window)) {
-                let response = await signalBridge.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
+                let response = await window.ipcRenderer.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
                 applyFocusLostFromIpc(this, response, this.development);
             }
         },
 
         async loadFilelist(){
             if(isElectronWindow(window)) {
-                let filelist = await signalBridge.invoke('getfilesasync', null)
+                let filelist = await window.ipcRenderer.invoke('getfilesasync', null)
                 this.localfiles = filelist;
             }
         },  
@@ -377,7 +373,7 @@ export default {
         },
 
         async fetchInfo() {
-            const getinfo = await signalBridge.invoke('getinfoasync');
+            const getinfo = await window.ipcRenderer.invoke('getinfoasync');
             const prevExammode = this.exammode;
 
             applyClientinfoFromFetch(this, getinfo.clientinfo);
@@ -404,8 +400,8 @@ export default {
 
             this.internetCheckCounter++;
             if (this.internetCheckCounter % 5 === 0) {
-                this.wlanInfo = await signalBridge.invoke('get-wlan-info');
-                this.hostip = await signalBridge.invoke('checkhostip');
+                this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info');
+                this.hostip = await window.ipcRenderer.invoke('checkhostip');
                 this.internetCheckCounter = 0;
             }
         }, 
@@ -413,7 +409,7 @@ export default {
     },
     beforeUnmount() {
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
-        signalBridge.removeAllListeners('getmaterials');
+        window.ipcRenderer.removeAllListeners('getmaterials');
 
         // Clean up webview event listeners (blocking is handled in backend, but we still clean up local listeners)
         const webview = document.getElementById('webviewmain');
@@ -421,7 +417,7 @@ export default {
             if (webview.getWebContentsId && isElectronWindow(window)) {
                 const guestId = webview.getWebContentsId();
                 if (guestId) {
-                    signalBridge.invoke('detach-eduvidual-moodle-proof', { guestId }).catch(() => {});
+                    window.ipcRenderer.invoke('detach-eduvidual-moodle-proof', { guestId }).catch(() => {});
                 }
             }
         }

@@ -131,7 +131,6 @@ import { getExamMaterials, loadPDF, loadImage, resetPdfPreviewToolbar} from '../
 import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue'
 import WebviewPane from '../components/WebviewPane.vue';
 import PdfOverlay from '../components/PdfRenderer.vue';
-import {SignalBridge} from '../utils/signalBridge.js'
 import {
     attachExamMouseleaveGuardBoolean,
     shouldSkipEdgeFocusLost
@@ -150,8 +149,6 @@ import {autoCleanupMixin} from "../mixins/autoCleanupMixin.ts";
 import {ref} from "vue";
 import {useConfigStore} from "../stores/configStore.ts";
 import {useInfoStore} from "../stores/infoStore.ts";
-// signalBridge instance centralizes ipc calls with platform checks
-const signalBridge = new SignalBridge(window);
 
 // Default zoom for #content (screen); @media print hides zoom UI.
 const ACTIVESHEETS_ZOOM_INITIAL = 1.0
@@ -373,8 +370,8 @@ export default {
         },
        
         async sendFocuslost(){
-            if (await shouldSkipEdgeFocusLost(signalBridge, this.development)) return;
-            let response = await signalBridge.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
+            if (await shouldSkipEdgeFocusLost(this.development)) return;
+            let response = await window.ipcRenderer.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
             applyFocusLostFromIpc(this, response, this.development);
         },
 
@@ -383,7 +380,7 @@ export default {
 
 
         async loadFilelist(){
-            let filelist = await signalBridge.invoke('getfilesasync', null)
+            let filelist = await window.ipcRenderer.invoke('getfilesasync', null)
             this.localfiles = filelist;
         },
         
@@ -408,7 +405,7 @@ export default {
                 document.getElementById('pdfrenderer'),
                 this.activeSheetPdfFilename || 'unknown.pdf'
             );
-            const result = await signalBridge.invoke('writeExamHtmBackupSync', {
+            const result = await window.ipcRenderer.invoke('writeExamHtmBackupSync', {
                 filename: this.clientname,
                 content: JSON.stringify(formData, null, 2),
                 reason: 'sectionswitch',
@@ -421,7 +418,7 @@ export default {
             const backupfileName = filename ? filename : `${this.clientname}.htm`;
             try {
                 const [backupfileContent, ready] = await Promise.all([
-                    signalBridge.invoke('getbackupfile', backupfileName),
+                    window.ipcRenderer.invoke('getbackupfile', backupfileName),
                     this.waitForActivesheetsInputsReady(),
                 ]);
                 if (!ready || !backupfileContent) return;
@@ -442,7 +439,7 @@ export default {
             let backupfileName = filename ? filename : this.clientname + ".htm"
             console.log(`activesheets @ loadBackupFile: Checking for backup file: ${backupfileName}`)
             try {
-                let backupfileContent = await signalBridge.invoke('getbackupfile', backupfileName )
+                let backupfileContent = await window.ipcRenderer.invoke('getbackupfile', backupfileName )
                
                 if (backupfileContent){
                     // Validate that the content is JSON-parseable before offering to load it
@@ -497,7 +494,7 @@ export default {
         },
         async loadBAK(filename, skipDialog = false, silent = false) {
             try {
-                const bakContent = await signalBridge.invoke('getbackupfile', filename);
+                const bakContent = await window.ipcRenderer.invoke('getbackupfile', filename);
 
                 if (!bakContent) {
                     console.warn('activesheets @ loadBAK: No content found in .htm file');
@@ -597,7 +594,7 @@ export default {
         },
 
         async fetchInfo() {
-            const getinfo = await signalBridge.invoke('getinfoasync');
+            const getinfo = await window.ipcRenderer.invoke('getinfoasync');
             const prevClientinfo = this.clientinfo;
             const prevGroup = prevClientinfo?.group;
 
@@ -620,8 +617,8 @@ export default {
 
             this.internetCheckCounter++;
             if (this.internetCheckCounter % 5 === 0) {
-                this.wlanInfo = await signalBridge.invoke('get-wlan-info');
-                this.hostip = await signalBridge.invoke('checkhostip');
+                this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info');
+                this.hostip = await window.ipcRenderer.invoke('checkhostip');
                 this.internetCheckCounter = 0;
             }
         }, 
@@ -697,7 +694,7 @@ export default {
             }
             if (why === "exitexam") { 
                 // stop clipboard clear interval
-                signalBridge.send('restrictions')
+                window.ipcRenderer.send('restrictions')
 
                 this.$swal.fire({
                     title: this.$t("editor.leaving"),
@@ -715,7 +712,7 @@ export default {
             );
 
             // Save form data to .htm file via IPC
-            signalBridge.send('saveActivesheetsBak', {
+            window.ipcRenderer.send('saveActivesheetsBak', {
                 filename: filename || this.clientname,
                 formData: formData,
                 reason: why
@@ -728,9 +725,9 @@ export default {
 
             // One render via getPDFbase64; printpdf writes the buffer to disk (no second printToPDF).
             await this.withActivesheetsPdfCapture(async () => {
-                const response = await signalBridge.invoke('getPDFbase64', this.activesheetsPdfInvokeArgs(why))
+                const response = await window.ipcRenderer.invoke('getPDFbase64', this.activesheetsPdfInvokeArgs(why))
                 if (response?.status === 'success') {
-                    signalBridge.send('printpdf', {
+                    window.ipcRenderer.send('printpdf', {
                         filename: filename || false,
                         landscape: false,
                         servername: this.servername,
@@ -820,7 +817,7 @@ export default {
             }
             const reason = type === 'print' ? 'print' : 'previewSigned'
             await this.withActivesheetsPdfCapture(async () => {
-                const response = await signalBridge.invoke('getPDFbase64', this.activesheetsPdfInvokeArgs(reason))
+                const response = await window.ipcRenderer.invoke('getPDFbase64', this.activesheetsPdfInvokeArgs(reason))
                 if (response?.status !== 'success') {
                     this.showPdfGenerationError(response)
                     return
@@ -921,21 +918,21 @@ export default {
             this.autoSchedulerService(this.loadFilelist, 20000);
             this.autoSchedulerService(() => this.saveContent(true, 'auto'), 20000)
 
-            attachExamMouseleaveGuardBoolean(signalBridge, this.development, this.sendFocuslost);
+            attachExamMouseleaveGuardBoolean(this.development, this.sendFocuslost);
 
-            signalBridge.on('getmaterials', (event) => {   this.getExamMaterials()  });
+            window.ipcRenderer.on('getmaterials', (event) => {   this.getExamMaterials()  });
             
-            signalBridge.on('finalsubmit', (event) => {  // triggered on exit exam mode - send exam to teacher
+            window.ipcRenderer.on('finalsubmit', (event) => {  // triggered on exit exam mode - send exam to teacher
                 console.log("activesheets @ finalsubmit: submit exam request received")
                 this.sendExamToTeacher(true) 
             }); 
 
-            signalBridge.on('submitexam', (event, why) => {  //send current work as base64 to teacher
+            window.ipcRenderer.on('submitexam', (event, why) => {  //send current work as base64 to teacher
                 console.log("activesheets @ submitexam: submit exam request received")
                 this.printBase64(false, typeof why === 'string' ? why : 'submitexam')
             });
             
-            signalBridge.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
+            window.ipcRenderer.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
                 console.log("activesheets @ save: Teacher saverequest received")
                 this.saveContent(true, why) 
             });
@@ -946,15 +943,15 @@ export default {
                 } catch (e) {
                     console.error('activesheets @ save-for-section-switch:', e);
                 }
-                signalBridge.send('section-switch-save-done', ok);
+                window.ipcRenderer.send('section-switch-save-done', ok);
             };
-            signalBridge.on('save-for-section-switch', this._onSaveForSectionSwitch);
+            window.ipcRenderer.on('save-for-section-switch', this._onSaveForSectionSwitch);
 
-            signalBridge.on('denied', (event, why) => {  //print request was denied by teacher because he can not handle so much requests at once
+            window.ipcRenderer.on('denied', (event, why) => {  //print request was denied by teacher because he can not handle so much requests at once
                 this.printdenied(why)
             });
 
-            signalBridge.on('backup', (event, filename) => {
+            window.ipcRenderer.on('backup', (event, filename) => {
                 console.log("activesheets @ backup: Replace event received ")
                 this.loadBAK(filename)
             });
@@ -968,8 +965,8 @@ export default {
             this.autoEventListener(document.querySelector("#preview"), "click", this._onPreviewClick);
 
 
-            this.wlanInfo = await signalBridge.invoke('get-wlan-info')
-            this.hostip = await signalBridge.invoke('checkhostip')
+            this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
+            this.hostip = await window.ipcRenderer.invoke('checkhostip')
 
            
             this.hidepreview()
@@ -984,7 +981,7 @@ export default {
                 this.loadBackupFile();
             }
             setTimeout(() => {
-                signalBridge.invoke('prewarmSubmissionSigningP12').catch(() => {})
+                window.ipcRenderer.invoke('prewarmSubmissionSigningP12').catch(() => {})
             }, 400)
 
         });
@@ -994,13 +991,13 @@ export default {
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
 
         // Clean up IPC listeners
-        signalBridge.removeAllListeners('getmaterials');
-        signalBridge.removeAllListeners('finalsubmit');
-        signalBridge.removeAllListeners('submitexam');
-        signalBridge.removeAllListeners('save');
-        signalBridge.removeAllListeners('save-for-section-switch');
-        signalBridge.removeAllListeners('denied');
-        signalBridge.removeAllListeners('backup');
+        window.ipcRenderer.removeAllListeners('getmaterials');
+        window.ipcRenderer.removeAllListeners('finalsubmit');
+        window.ipcRenderer.removeAllListeners('submitexam');
+        window.ipcRenderer.removeAllListeners('save');
+        window.ipcRenderer.removeAllListeners('save-for-section-switch');
+        window.ipcRenderer.removeAllListeners('denied');
+        window.ipcRenderer.removeAllListeners('backup');
         this.stopSplitResize()
     },
     

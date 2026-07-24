@@ -1,16 +1,13 @@
 import { Buffer } from 'buffer';
 import DOMPurify from 'dompurify';
 import mammoth from 'mammoth';
-import {SignalBridge} from './signalBridge.js';
 import {odtToTiptapHtml} from './odtToTiptapHtml.js';
 import { resolveEditorExamConfig, resolveGroupKey } from 'next-exam-shared/editorExamConfig.js';
 import {examApiFetch} from "../../../shared/examApiFetch.js";
-import log from "electron-log";
 import {useInfoStore} from "../stores/infoStore.ts";
 import {useConfigStore} from "../stores/configStore.ts";
+import loggingBridge from "./loggingBridge.js";
 
-// signalBridge instance centralizes ipc calls with platform checks
-const signalBridge = new SignalBridge(window);
 
 /** Read audioRepeat from group.examConfig.editor for the active locked section. */
 function editorAudioRepeatLimit(vm) {
@@ -44,7 +41,7 @@ export async function loadPDF(file, base64 = false, zoom=180, submission=false, 
 
     
     if (this.examtype == 'microsoft365'){
-        signalBridge.send('collapse-browserview')
+        window.ipcRenderer.send('collapse-browserview')
     }
 
     
@@ -64,7 +61,7 @@ export async function loadPDF(file, base64 = false, zoom=180, submission=false, 
         fallbackUrl = file.filecontent || '';
     }
     else {   //fetch file from filesystem
-        let data = await signalBridge.invoke('getpdfasync', file )
+        let data = await window.ipcRenderer.invoke('getpdfasync', file )
         let isvalid = isValidPdf(data)
         if (!isvalid){
             this.$swal.fire({
@@ -161,7 +158,7 @@ function processNode(node) {
 
 // get file from local examdirectory and replace editor content with it
 export async function loadHTML(file){
-    let data = await signalBridge.invoke('getfilesasync', file )
+    let data = await window.ipcRenderer.invoke('getfilesasync', file )
     this.LTdisable()
     this.$swal.fire({
         title: this.$t("editor.replace"),
@@ -204,7 +201,7 @@ export async function loadDOCX(file, base64 = false, silent = false) {
             this.editor.commands.clearContent(true);
             this.editor.commands.insertContent(html);
         } else {
-            const data = await signalBridge.invoke('getfilesasync', file, false, true);
+            const data = await window.ipcRenderer.invoke('getfilesasync', file, false, true);
             this.editor.commands.clearContent(true);
             const cleanHtml = DOMPurify.sanitize(data.value);
             parseHTMLString(cleanHtml);
@@ -271,7 +268,7 @@ export async function loadODT(file, base64 = false, silent = false) {
             const response = await fetch(file.filecontent);
             arrayBuffer = await response.arrayBuffer();
         } else {
-            const b64 = await signalBridge.invoke('getfilesasync', file, false, false, true);
+            const b64 = await window.ipcRenderer.invoke('getfilesasync', file, false, false, true);
             if (!b64 || typeof b64 !== 'string') {
                 this.$swal.fire({
                     title: this.$t('general.error'),
@@ -340,7 +337,7 @@ export async function loadODT(file, base64 = false, silent = false) {
 // fetch file from disc - show preview
 export async function loadImage(file, base64=false){
     if (this.examtype == 'microsoft365'){
-        signalBridge.send('collapse-browserview')
+        window.ipcRenderer.send('collapse-browserview')
     }
 
 
@@ -356,7 +353,7 @@ export async function loadImage(file, base64=false){
         this.currentpreviewBase64 = file.filecontent.split(',')[1];  // we only need the base64 data not the complete url
     }
     else {
-        let data = await signalBridge.invoke('getpdfasync', file )
+        let data = await window.ipcRenderer.invoke('getpdfasync', file )
         this.currentpreview =  URL.createObjectURL(new Blob([data], {type: "image/jpeg"})) 
         this.currentpreviewBase64 = Buffer.from(data).toString('base64');
     }
@@ -430,7 +427,7 @@ export async function playAudio(file, base64=false) {
                 if (audioFile.playbacks > 0){
                     try {
                         
-                        const base64Data = !base64 ? await signalBridge.invoke('getfilesasync', file, true) : file.filecontent.split(',')[1];
+                        const base64Data = !base64 ? await window.ipcRenderer.invoke('getfilesasync', file, true) : file.filecontent.split(',')[1];
                         
                         if (base64Data) {
                             this.audioSource = `data:audio/mp3;base64,${base64Data}`;
@@ -449,7 +446,7 @@ export async function playAudio(file, base64=false) {
         document.querySelector("#aplayer").style.display = 'block';
         try {
             
-            const base64Data = !base64 ? await signalBridge.invoke('getfilesasync', file, true) : file.filecontent.split(',')[1];
+            const base64Data = !base64 ? await window.ipcRenderer.invoke('getfilesasync', file, true) : file.filecontent.split(',')[1];
             
 
             if (base64Data) {
@@ -464,7 +461,7 @@ async function soundtest(context){
     const ap = document.getElementById('audioPlayer');
     if (ap && !ap.paused && !ap.ended) return;
     try {
-        const base64Data = await signalBridge.invoke('getAudioFile', 'attention.wav', true);
+        const base64Data = await window.ipcRenderer.invoke('getAudioFile', 'attention.wav', true);
         if (base64Data) {
             let soundtest = document.getElementById('soundtest')
 
@@ -523,7 +520,7 @@ export async function loadGGB(file, base64=false){
             }
 
             if (!base64){
-                const loadResult = await signalBridge.invoke('loadGGB', file);
+                const loadResult = await window.ipcRenderer.invoke('loadGGB', file);
                 log.info("filehandler @ loadGGB: check loadGGB result: ", loadResult);
                 if (loadResult.status === "success") {
                     const base64GgbFile = loadResult.content;
@@ -598,7 +595,7 @@ export async function getExamMaterials() {
 
                                 // console.log('filehandler @ getExamMaterials: 3')
                                 // send webview id + allowlist to main process to block navigation before it happens
-                                await signalBridge.invoke('start-blocking-for-webview', {guestId, allowedUrls});
+                                await window.ipcRenderer.invoke('start-blocking-for-webview', {guestId, allowedUrls});
                                 console.log(`filehandler @ getExamMaterials: started blocking for WebviewPane ${guestId}`);
                                 return;
                             }
@@ -645,11 +642,11 @@ export async function getExamMaterials() {
             })
                 .then(response => response.json())
                 .catch(err => {
-                    log.error(`filehandler @ fetchExamMaterials: ${err}`)
+                    loggingBridge.error(`filehandler @ fetchExamMaterials: ${err}`)
                     return false
                 })
         } catch (err) {
-            log.error(`filehandler @ fetchExamMaterials: ${err}`)
+            loggingBridge.error(`filehandler @ fetchExamMaterials: ${err}`)
             return false
         }
     }
