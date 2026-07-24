@@ -326,8 +326,8 @@ class WindowHandler {
     }
 
     installVueJsDevTools() {
-        if (!app.isPackaged) {
-            // Dev-only: keep optional dependency out of release builds.
+        // Only when DEVELOPMENT=true; unpackaged + production-like .env must not install (blocks first paint on Windows).
+        if (!app.isPackaged && this.config.development) {
             import('electron-devtools-installer')
                 .then((m) => m.installExtension(m.VUEJS_DEVTOOLS))
                 .then((name) => log.info(`windowhandler @ devtools: Added Extension: ${name.name}`))

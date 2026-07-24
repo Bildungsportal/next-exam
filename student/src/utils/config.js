@@ -4,12 +4,12 @@
  */
 
 const config = {
-    development: true,  // disable kiosk mode on exam mode and other stuff (autofill input fields)
+    development: false,  // disable kiosk mode on exam mode and other stuff (autofill input fields)
     showdevtools: false,
     useBundledJRE: true,
     bipIntegration: true,
-    bipDemo: false,
-    bipApiUrl: 'https://www.bildung.gv.at/webservice/rest/next-exam/student',
+    bipDemo: true,
+    bipApiUrl: 'https://localhost:8444',
 
     workdirectory : "",   // (desktop path + examdir)
     tempdirectory : "",   // (desktop path + 'tmp')
@@ -26,9 +26,9 @@ const config = {
     virtualized: false,
     isPuavo: false,
     
-    version: '2.0.0.6',
+    version: '2.0.0.4',
     buildDate: '20260724',
-    buildNumber: '6',
-    info: 'Release'
+    buildNumber: '4',
+    info: 'Development'
 }
 export default config;
