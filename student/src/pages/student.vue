@@ -34,7 +34,7 @@
             {{ $t("student.offline") }}
         </div>
         <div v-if="hostipDisplay && !token" id="adv" class="btn btn-sm btn-outline-success m-0 mt-1" :style="canSelectInterface ? 'cursor: pointer; float: right' : 'cursor: unset; float: right'" @click="canSelectInterface && reconfigurePreferredInterface()">{{ hostip?.interface ? hostip.interface + ' : ' + hostip.hostip : hostipDisplay }}</div>
-        <div v-if="networkerror" id="adv" class="btn btn-danger btn-sm m-0  mt-1 " style="cursor: unset; float: right">
+        <div v-if="networkerror" id="adv" class="btn btn-danger btn-sm me-1 mt-1" style="cursor: unset; float: right">
             {{ $t("student.noapi") }}
         </div>
     </div>
