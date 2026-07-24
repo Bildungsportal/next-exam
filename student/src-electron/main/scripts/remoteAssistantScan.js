@@ -12,24 +12,28 @@ import { logNetworkActiveProcesses, findNonLanguageToolOn8088 } from './networkA
 /**
  * Run remote-assistant detectors and merge into clientinfo.remoteassistant.
  * @param {object} clientinfo - multicast clientinfo object to mutate
- * @param {{ applySecurityFocusLost?: (reason: string) => void, logTag?: string }} [opts]
+ * @param {{ applySecurityFocusLost?: (reason: string) => void, logTag?: string, skipNetworkScan?: boolean }} [opts]
  */
 export async function updateRemoteAssistant(clientinfo, opts = {}) {
     if (!clientinfo) return;
     const logTag = opts.logTag || 'remoteAssistantScan';
 
+    // skipNetworkScan: run only the cheap keyword+port remoteCheck (reported to teacher),
+    // skip the PowerShell-heavy network scan (local logs only) so this can tick more often
     const [keywordHit, , ltFakes] = await Promise.all([
         runRemoteCheck(process.platform),
-        logNetworkActiveProcesses({ mode: 'both' }).catch((err) => {
+        opts.skipNetworkScan ? { processes: [] } : logNetworkActiveProcesses({ mode: 'both' }).catch((err) => {
             log.warn(`${logTag} @ updateRemoteAssistant: networkActiveProcesses failed: ${err.message}`);
             return { processes: [] };
         }),
-        findNonLanguageToolOn8088().catch((err) => {
+        opts.skipNetworkScan ? [] : findNonLanguageToolOn8088().catch((err) => {
             log.warn(`${logTag} @ updateRemoteAssistant: port 8088 check failed: ${err.message}`);
             return [];
         }),
     ]);
 
+    // skipNetworkScan: port-8088 not checked this tick -> keep any prior languagetoolFake untouched
+    const ltFakePrev = !!clientinfo.remoteassistant?.languagetoolFake;
     if (ltFakes.length) {
         const occupantSummary = ltFakes.map((o) => `${o.name}(pid=${o.pid})`).join(', ');
         log.warn(`${logTag} @ updateRemoteAssistant: non-LanguageTool listener on port 8088: ${occupantSummary}`);
@@ -38,7 +42,7 @@ export async function updateRemoteAssistant(clientinfo, opts = {}) {
         }
         const ra = clientinfo.remoteassistant || { keywords: [], ports: [] };
         clientinfo.remoteassistant = { ...ra, languagetoolFake: true };
-    } else if (clientinfo.remoteassistant?.languagetoolFake) {
+    } else if (!opts.skipNetworkScan && ltFakePrev) {
         const ra = { ...clientinfo.remoteassistant };
         delete ra.languagetoolFake;
         if (!ra.keywords?.length && !ra.ports?.length) {
@@ -74,6 +78,9 @@ export async function updateRemoteAssistant(clientinfo, opts = {}) {
             ports: ports.length ? ports : (ra.ports || []),
         };
     } else if (clientinfo.remoteassistant?.languagetoolFake) {
+        clientinfo.remoteassistant = { languagetoolFake: true };
+    } else if (opts.skipNetworkScan && ltFakePrev) {
+        // no keyword/port hit and port-8088 not rechecked -> preserve prior fake flag
         clientinfo.remoteassistant = { languagetoolFake: true };
     } else {
         delete clientinfo.remoteassistant;

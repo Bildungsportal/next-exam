@@ -320,10 +320,16 @@ import config from "../../../src/utils/config.js";
             applySecurityFocusLost: (reason) => this.applySecurityFocusLost(reason),
         });
 
-        if (this.timer % 20 === 0 || this.timer === 1){  // run every 20*5 (updateloop) seconds
+        if (this.timer % 20 === 0 || this.timer === 1){  // full scan incl. network scan every 20*5 = 100s
             await updateRemoteAssistant(this.multicastClient.clientinfo, {
                 logTag: 'communicationhandler',
                 applySecurityFocusLost: (reason) => this.applySecurityFocusLost(reason),
+            });
+        } else if (this.timer % 6 === 0){  // cheap keyword+port remoteCheck every 6*5 = 30s (no PowerShell network scan)
+            await updateRemoteAssistant(this.multicastClient.clientinfo, {
+                logTag: 'communicationhandler',
+                applySecurityFocusLost: (reason) => this.applySecurityFocusLost(reason),
+                skipNetworkScan: true,
             });
         }
 
