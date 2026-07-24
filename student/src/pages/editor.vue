@@ -868,7 +868,7 @@ export default {
         const initialEditorCfg = resolveEditorExamConfig(activeSection, 'groupA');
         const ltExternalHost = initialEditorCfg.languagetoolhost || null;
         const ltExternalPort = String(initialEditorCfg.languagetoolport || '8088');
-        const ltLocalHost = 'http://127.0.0.1';
+        const ltLocalHost = 'http://localhost';
         const ltLocalPort = '8088';
         const ltUseExternal = !!ltExternalHost;
 

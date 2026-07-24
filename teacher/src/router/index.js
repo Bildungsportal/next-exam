@@ -1,7 +1,7 @@
 /** 
  * VUE.js Frontend - Routing 
 */
-import { createRouter as _createRouter, createWebHashHistory } from 'vue-router'
+import { createRouter as _createRouter, createMemoryHistory } from 'vue-router'
 import notfound from '../pages/notfound.vue';
 import startserver from '../pages/startserver.vue';
 import dashboard from '../pages/dashboard.vue';
@@ -86,7 +86,7 @@ function extractServername(path) {
 
 export function createRouter() {
     const router = _createRouter({
-        history: createWebHashHistory(),
+        history: createMemoryHistory(),   // memory history = no browser history stack -> keys/swipe/mouse back-forward have no target; only router.push/replace (buttons) navigate
         routes
     });
 

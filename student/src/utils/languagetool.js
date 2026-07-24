@@ -124,12 +124,13 @@ async function LTcheckAllWords(closeLT = true){
             'Content-Type': 'application/x-www-form-urlencoded',
             'Accept': 'application/json',
         };
-        // Optional custom headers for logging/proxy; only set when available (editor context)
-        if (this.servername != null) headers['X-Exam-Name'] = String(this.servername);
-        if (this.clientname != null) headers['X-Student-Name'] = String(this.clientname);
-        if (this.pincode != null && this.pincode !== '') headers['X-Exam-Pin'] = String(this.pincode);
+        // Pass exam/student info via query string (not headers) so no CORS preflight is triggered; a proxy can log these, LT ignores them.
+        const logParams = new URLSearchParams();
+        if (this.servername != null) logParams.set('examName', String(this.servername));
+        if (this.clientname != null) logParams.set('studentName', String(this.clientname));
+        const logQuery = logParams.toString() ? `?${logParams.toString()}` : '';
 
-        const response = await fetch(`${this.LThost}:${this.LTport ?? '8088'}/v2/check`, {
+        const response = await fetch(`${this.LThost}:${this.LTport ?? '8088'}/v2/check${logQuery}`, {
             method: 'POST',
             headers,
             body: new URLSearchParams({

@@ -212,6 +212,4 @@ app.whenReady().then(()=>{
             }
         })
     }
-    globalShortcut.register('Alt+Left', () => {  return false });  // Navigation attempt blocked
-
 })

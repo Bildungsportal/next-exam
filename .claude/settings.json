@@ -26,7 +26,10 @@
       "Bash(loginctl list-sessions *)",
       "Bash(busctl get-property *)",
       "Bash(node t3.mjs)",
-      "Bash(node t4.mjs)"
+      "Bash(node t4.mjs)",
+      "Bash(grep -rniE 'onMounted|route\\\\.params|useRoute|$route|router\\\\.push|router\\\\.replace|initialLocation|createMemoryHistory|\\\\.replace\\\\\\(' student/src/App.vue student/src/pages/student.vue student/src/router/index.ts)",
+      "Bash(grep -iE \"ltLocalHost|^[a-f0-9]{7,}\")",
+      "Bash(node /tmp/claude-1000/-home-valueerror-STUFF-DEV-00-Next-Exam-DEV-next-exam/d21c5108-2da0-4d81-b290-95a51f0fe44b/scratchpad/argtest.mjs)"
     ]
   }
 }
