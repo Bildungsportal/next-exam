@@ -169,7 +169,6 @@
 <script>
     import { parsePdfToPages } from 'next-exam-shared/pdfparser/index.js'
     import { pdfPageAnnotationsMixin } from 'next-exam-shared/pdfPageAnnotationsMixin.js'
-    import { SignalBridge } from '../utils/signalBridge.js'
     import PdfHelper from "../utils/pdfHelper.ts";
 
     const signalBridge = new SignalBridge(window)
@@ -274,7 +273,7 @@
                 uint8 = new Uint8Array(buf)
             } catch (e2) {
                 if (!filename) throw e2
-                const data = await signalBridge.invoke('getpdfasync', filename)
+                const data = await window.ipcRenderer.invoke('getpdfasync', filename)
                 uint8 = new Uint8Array(data)
             }
             }

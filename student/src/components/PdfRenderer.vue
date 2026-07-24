@@ -262,10 +262,7 @@
 import { parsePdfToPages, ensurePdfOverlayFontsReady } from 'next-exam-shared/pdfparser/index.js';
 import { mergePageOverlayFields } from 'next-exam-shared/overlayFieldOrder.js';
 import { pdfPageAnnotationsMixin } from 'next-exam-shared/pdfPageAnnotationsMixin.js';
-import { SignalBridge } from '../utils/signalBridge.js';
 import Swal from 'sweetalert2';
-
-const signalBridge = new SignalBridge(window);
 
 export default {
     name: 'PdfOverlay',
@@ -371,7 +368,7 @@ export default {
             this.resetAnnotations();
             if (!key) return;
             try {
-                const raw = await signalBridge.invoke('readPdfAnnotations', key);
+                const raw = await window.ipcRenderer.invoke('readPdfAnnotations', key);
                 if (!raw) return;
                 const parsed = JSON.parse(raw);
                 this.annotations = Array.isArray(parsed?.annotations) ? parsed.annotations : [];
@@ -384,7 +381,7 @@ export default {
             if (!this._loadedAnnotationsKey) return;
             try {
                 const payload = JSON.stringify({ version: 1, annotations: this.annotations }, null, 2);
-                await signalBridge.invoke('writePdfAnnotations', this._loadedAnnotationsKey, payload);
+                await window.ipcRenderer.invoke('writePdfAnnotations', this._loadedAnnotationsKey, payload);
             } catch (e) {
                 console.warn('PdfOverlay: saveAnnotations failed', e);
             }

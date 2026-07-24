@@ -174,7 +174,7 @@
     "tiff": "5.0.3",
     "@parcel/watcher": "npm:@favware/skip-dependency@1.2.2"
   },
-  "buildVersion": "2.0.0.6",
+  "buildVersion": "2.0.0.4",
   "version": "2.0.0",
-  "buildNumber": "6"
+  "buildNumber": "4"
 }

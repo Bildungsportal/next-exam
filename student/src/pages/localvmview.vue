@@ -103,8 +103,7 @@ import {getBatteryStatus, gracefullyExit, reconnect, showUrl} from '../utils/com
 import {attachExamMouseleaveGuardBoolean, shouldSkipEdgeFocusLost} from '../utils/linuxCageKiosk.js';
 import {getExamMaterials, loadPDF, loadImage, resetPdfPreviewToolbar} from '../utils/filehandler.js';
 import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue';
-import WebviewPane from '../components/WebviewPane.vue';
-import {SignalBridge} from '../utils/signalBridge.js';
+import WebviewPane from '../components/WebviewPane.vue';;
 import {
     applyClientinfoFromFetch,
     applyServerstatusFromFetch,
@@ -115,7 +114,6 @@ import {useConfigStore} from "../stores/configStore.ts";
 import {useInfoStore} from "../stores/infoStore.ts";
 import {autoCleanupMixin} from "../mixins/autoCleanupMixin.ts";
 
-const signalBridge = new SignalBridge(window);
 const logPrefix = 'localvmview';
 
 export default {
@@ -218,15 +216,15 @@ export default {
 
         this.$nextTick(async () => {
             try {
-                this.wlanInfo = await signalBridge.invoke('get-wlan-info');
-                this.hostip = await signalBridge.invoke('checkhostip');
+                this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info');
+                this.hostip = await window.ipcRenderer.invoke('checkhostip');
                 this.internetCheckCounter = 0;
             } catch (err) {
                 console.error('localvmview @ mounted: initial wlan/host ip error', err);
             }
         });
 
-        attachExamMouseleaveGuardBoolean(signalBridge, this.development, this.sendFocuslost);
+        attachExamMouseleaveGuardBoolean(this.development, this.sendFocuslost);
 
         this.tryConnectLoop();
 
@@ -234,14 +232,14 @@ export default {
 
         this.loadFilelist();
         this.getExamMaterials();
-        signalBridge.on('getmaterials', () => {
+        window.ipcRenderer.on('getmaterials', () => {
             this.getExamMaterials();
         });
     },
 
     beforeUnmount() {
         this.isUnmounted = true;
-        signalBridge.removeAllListeners('getmaterials');
+        window.ipcRenderer.removeAllListeners('getmaterials');
 
         if (this.connectScheduler) {
             this.connectScheduler.removeEventListener('action', this.tryConnectLoop);
@@ -252,7 +250,7 @@ export default {
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
         this.teardownRfb();
         // make sure the vncproxy-helper does not survive when leaving the localvm view
-        signalBridge.invoke('stop-proxy').catch((err) => {
+        window.ipcRenderer.invoke('stop-proxy').catch((err) => {
             console.warn('localvmview @ beforeUnmount: stop-proxy failed', err);
         });
     },
@@ -292,7 +290,7 @@ export default {
         },
 
         async loadFilelist() {
-            const filelist = await signalBridge.invoke('getfilesasync', null);
+            const filelist = await window.ipcRenderer.invoke('getfilesasync', null);
             this.localfiles = filelist;
         },
 
@@ -415,7 +413,7 @@ export default {
             let proxyInfo = null;
             try {
                 const port = this.clientinfo?.localVMPort ? Number(this.clientinfo.localVMPort) : 5901;
-                proxyInfo = await signalBridge.invoke('start-proxy', { host, port });
+                proxyInfo = await window.ipcRenderer.invoke('start-proxy', { host, port });
             } catch (err) {
                 console.error('localvmview @ connectVnc: start-proxy failed', err);
                 proxyInfo = null;
@@ -545,13 +543,13 @@ export default {
         },
 
         async sendFocuslost() {
-            if (await shouldSkipEdgeFocusLost(signalBridge, this.development)) return;
-            const response = await signalBridge.invoke('focuslost');
+            if (await shouldSkipEdgeFocusLost(this.development)) return;
+            const response = await window.ipcRenderer.invoke('focuslost');
             applyFocusLostFromIpc(this, response, this.development);
         },
 
         async fetchInfo() {
-            const getinfo = await signalBridge.invoke('getinfoasync');
+            const getinfo = await window.ipcRenderer.invoke('getinfoasync');
             if (!getinfo) return;
 
             this.applyGetinfoPayload(getinfo);
@@ -565,8 +563,8 @@ export default {
             this.internetCheckCounter++;
             if (this.internetCheckCounter % 5 === 0) {
                 try {
-                    this.wlanInfo = await signalBridge.invoke('get-wlan-info');
-                    this.hostip = await signalBridge.invoke('checkhostip');
+                    this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info');
+                    this.hostip = await window.ipcRenderer.invoke('checkhostip');
                 } catch (err) {
                     console.error('localvmview @ fetchInfo: wlan/host ip error', err);
                 }
@@ -588,7 +586,7 @@ export default {
             if (!result?.isConfirmed) return;
             try {
                 this.vmResetBusy = true;
-                const res = await signalBridge.invoke('qemu-reset-hard');
+                const res = await window.ipcRenderer.invoke('qemu-reset-hard');
                 if (!res?.ok) {
                     throw new Error(res?.error || 'reset failed');
                 }

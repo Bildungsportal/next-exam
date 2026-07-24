@@ -15,11 +15,6 @@
  * If not, see <http://www.gnu.org/licenses/>
  */
 
-import {SignalBridge} from './signalBridge.js'
-
-// signalBridge centralizes ipc calls with platform checks
-const signalBridge = new SignalBridge(window);
-
 
 
 function LTdisable(){
@@ -90,7 +85,7 @@ async function LTcheckAllWords(closeLT = true){
     this.LTinfo = this.$t('editor.ltSearching')
 
     try {
-        const ltStatus = await signalBridge.invoke('isLanguageToolRunning', {
+        const ltStatus = await window.ipcRenderer.invoke('isLanguageToolRunning', {
             host: this.LThost,
             port: this.LTport ?? '8088',
         })

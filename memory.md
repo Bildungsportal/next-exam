@@ -50,6 +50,7 @@ PATH^linux^cageInstall^install-cage-kiosk.sh pkexec; APPIMAGE mount=noexec→res
 TECH^linux^cage^platformDispatcher.runningInCage; lin.js appsToClose then skip gsettings; renderer linuxCageKiosk.js; quit-app; exit sidebar student.vue
 TECH^linux^cageScreenshot^registerClient skip stream+fullDesktop in Cage; capturePage IPC; useSystemPicker true initDisplayStreamOnce at scheduler
 RULE^kiosk^screenshotPath^Linux cage=capturePage window-only (electron-main setDisplayMediaRequestHandler types:['window']+useSystemPicker:false; setCageWindowCaptureFallback(true)); Win32 kiosk=normal getDisplayMedia full screen (types:['screen']+useSystemPicker:true); gate via runningInCage && displayServer!=='windows' (NOT runningInCage alone - that field is shared between both kiosk types)
+RULE^win32^screenshotWgc^electron-main win32 disable-features=WebRtcAllowWgcDesktopCapturer (DXGI); WGC CreateForMonitor E_INVALIDARG spam otherwise
 
 # Windows kiosk
 PATH^win32^kioskInstall^src-electron/resources/win32/install-windows-kiosk.ps1 (extraResources→win32/) + windowsKioskSetup.js; UAC Start-Process -Verb RunAs; edition gate Pro|Edu|Ent; bundle source fallback: explicit -AppDir then %TEMP%\\next-exam-student then C:\\Program Files\\Next-Exam-Student (MSI); copy full Electron bundle→C:\\NextExam; ProfileList State=128 REQUIRED for AssignedAccess kiosk; persistent profile C:\\Users\\next-exam-kiosk; AllowedApps must include next-exam exe + java/javaw + disable-shortcuts + netsh + powershell + reg.exe + whoami.exe

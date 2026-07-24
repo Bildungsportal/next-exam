@@ -129,7 +129,6 @@
   
 <script>
   import moment from 'moment-timezone';
-  import {SignalBridge} from '../utils/signalBridge.js'
   import {SchedulerService} from '../utils/schedulerservice.js'
   import {autoCleanupMixin} from "../mixins/autoCleanupMixin.ts";
   import {storeToRefs} from "pinia";
@@ -139,9 +138,6 @@
   import { switchExamSectionFiles } from '../utils/switchExamSection.ts'
   import {isIOS} from "../types/platform.ts";
   import iosUpdateListener from "../utils/ios/iosUpdateListener.ts";
-
-  // signalBridge instance centralizes ipc calls with platform checks
-  const signalBridge = new SignalBridge(window);
 
   // Match wlan/wlp/wifi interface names from checkhostip — not a link-type probe.
   function isWirelessInterfaceName(name) {
@@ -250,17 +246,17 @@
       }
       window.addEventListener('resize', this._nxSetHeaderHeightVar);
       this.$nextTick(() => this.tickHeaderClock());
-      loadWinKioskLauncherApps(signalBridge).then((apps) => { this.kioskLauncherApps = apps; });
+      loadWinKioskLauncherApps().then((apps) => { this.kioskLauncherApps = apps; });
       this._onSwitchingExamSection = (_event, sectionNumber) => {
         useInfoStore().beginSectionSwitch(Number(sectionNumber) || 1);
       };
       this._onSectionSwitchAborted = () => {
         useInfoStore().endSectionSwitchOverlay();
       };
-      signalBridge.on('switching-exam-section', this._onSwitchingExamSection);
-      signalBridge.on('section-switch-aborted', this._onSectionSwitchAborted);
+      window.ipcRenderer.on('switching-exam-section', this._onSwitchingExamSection);
+      window.ipcRenderer.on('section-switch-aborted', this._onSectionSwitchAborted);
       this._onExamConnectionLost = (_event, payload) => this.handleExamConnectionLost(payload);
-      signalBridge.on('exam-connection-lost', this._onExamConnectionLost);
+      window.ipcRenderer.on('exam-connection-lost', this._onExamConnectionLost);
       useInfoStore().updateInfo();
       this.autoSchedulerService(() => useInfoStore().updateInfo(), 5000);
       this._scheduleEndSectionSwitchOverlay();
@@ -270,9 +266,9 @@
         clearTimeout(this._sectionSwitchOverlayTimer);
         this._sectionSwitchOverlayTimer = null;
       }
-      signalBridge.removeAllListeners('switching-exam-section');
-      signalBridge.removeAllListeners('section-switch-aborted');
-      signalBridge.removeAllListeners('exam-connection-lost');
+      window.ipcRenderer.removeAllListeners('switching-exam-section');
+      window.ipcRenderer.removeAllListeners('section-switch-aborted');
+      window.ipcRenderer.removeAllListeners('exam-connection-lost');
       if (this._clockInterval) {
         this._clockInterval.removeEventListener('action', this.tickHeaderClock);
         this._clockInterval.stop();
@@ -328,7 +324,7 @@
       async handleExamConnectionLost({ examStartIp } = {}) {
         if (!examStartIp) return
         try {
-          const cur = await signalBridge.invoke('checkhostip')
+          const cur = await window.ipcRenderer.invoke('checkhostip')
           const newIp = cur?.hostip
           if (!newIp || examStartIp === newIp) return
           this.$swal.fire({
@@ -352,7 +348,7 @@
       async launchKioskApp(exePath) {
         const p = String(exePath || '').trim();
         if (!p) return;
-        const res = await signalBridge.invoke('launch-kiosk-allowed-app', p);
+        const res = await window.ipcRenderer.invoke('launch-kiosk-allowed-app', p);
         if (res?.ok) return;
         this.$swal.fire({ title: 'Error', text: res?.error || 'launch failed', icon: 'error', showCancelButton: false });
       },
@@ -360,7 +356,7 @@
         if (!this.serverstatus?.allowSectionSwitch || this.lockedSection === sectionNumber) return;
 
         if (this.serverstatus.examSections[this.lockedSection].examtype == 'microsoft365'){
-          signalBridge.send('collapse-browserview');
+          window.ipcRenderer.send('collapse-browserview');
         }
         //  ask if the user wants to switch to the new section via swal2dialog
         this.$swal.fire({
@@ -379,7 +375,7 @@
             if (isIOS()) {
               await switchExamSectionFiles(this.examdirectory, this.lockedSection, sectionNumber);
             }
-            signalBridge.invoke('switch-exam-section', sectionNumber)
+            window.ipcRenderer.invoke('switch-exam-section', sectionNumber)
               .finally(() => {
 
                 this._scheduleEndSectionSwitchOverlay();
@@ -393,7 +389,7 @@
           }
           else {
             if (this.serverstatus.examSections[this.lockedSection].examtype == 'microsoft365'){
-              signalBridge.send('restore-browserview');
+              window.ipcRenderer.send('restore-browserview');
             }
           }
         });

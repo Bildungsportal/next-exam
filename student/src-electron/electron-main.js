@@ -69,6 +69,10 @@ if (process.platform === 'linux'){
 else if (process.platform === 'darwin'){
     app.commandLine.appendSwitch('enable-features', 'Metal,CanvasOopRasterization');  // macos only
 }
+else if (process.platform === 'win32'){
+    // WGC CreateForMonitor can fail in a loop and spam stderr; use DXGI capturer instead
+    app.commandLine.appendSwitch('disable-features', 'WebRtcAllowWgcDesktopCapturer');
+}
 
 
 

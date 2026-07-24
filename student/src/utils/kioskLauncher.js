@@ -31,9 +31,9 @@ export function filterKioskLauncherButtons(apps) {
 }
 
 /** Win Assigned Access session — reads C:\\NextExam\\kiosk-launcher-apps.json via IPC. */
-export async function loadWinKioskLauncherApps(signalBridge) {
+export async function loadWinKioskLauncherApps() {
     if (!isElectronWindow(window)) return [];
-    const k = await getLinuxKioskInfo(signalBridge);
+    const k = await getLinuxKioskInfo();
     if (!k.runningInCage || k.displayServer !== 'windows') return [];
-    return filterKioskLauncherButtons(await signalBridge.invoke('get-kiosk-launcher-apps') || []);
+    return filterKioskLauncherButtons(await window.ipcRenderer.invoke('get-kiosk-launcher-apps') || []);
 }

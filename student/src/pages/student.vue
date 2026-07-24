@@ -303,7 +303,6 @@
 <script lang="ts">
 import validator from 'validator'
 import log from 'electron-log/renderer'
-import {SignalBridge} from '../utils/signalBridge.js'
 import { initScreenshotScheduler, hasActiveScreenshotStream, isFullDesktopCaptureLikely, ensureDisplayStreamAsync, setCageWindowCaptureFallback, setLinuxKioskRunningInCage, isCageWindowCaptureFallback } from '../utils/screenshotCapture.js'
 import { getLinuxKioskInfo } from '../utils/linuxCageKiosk.js'
 import { loadWinKioskLauncherApps } from '../utils/kioskLauncher.js'
@@ -339,9 +338,6 @@ function unhandledRejectionFunction(event: any) {
 window.addEventListener('unhandledrejection', event => unhandledRejectionFunction(event));
 
 Object.assign(console, log.functions);  // Replace all console logs with logger
-
-// signalBridge instance centralizes ipc send calls with platform checks
-const signalBridge = new SignalBridge(window);
 
 export default {
     mixins: [autoCleanupMixin],
@@ -503,7 +499,7 @@ export default {
             await showLocalVmQemuIssueDialog({
                 swal: this.$swal,
                 t: this.$t.bind(this),
-                invoke: (channel, ...args) => signalBridge.invoke(channel, ...args),
+                invoke: (channel, ...args) => window.ipcRenderer.invoke(channel, ...args),
                 i18nPrefix: 'student',
                 check: payload || {},
                 cancelKey: 'cancel',
@@ -529,7 +525,7 @@ export default {
                 allowEscapeKey: false,
             }).then((result) => {
                 if (result.isConfirmed) {
-                    void signalBridge.invoke('confirm-exit-quit');
+                    void window.ipcRenderer.invoke('confirm-exit-quit');
                 }
             }).finally(() => {
                 this.exitQuestionSwalOpen = false;
@@ -595,9 +591,9 @@ export default {
                 },
             });
             if (!result.isConfirmed) return;
-            const install = await signalBridge.invoke('install-linux-cage-kiosk');
+            const install = await window.ipcRenderer.invoke('install-linux-cage-kiosk');
             if (install?.ok) {
-                this.platformKiosk = await signalBridge.invoke('get-platform-info');
+                this.platformKiosk = await window.ipcRenderer.invoke('get-platform-info');
                 let successHtml = `${this.$t(this.kioskI18n('Success'))}<br><br>${this.$t(this.kioskI18n('SuccessHint'))}`;
                 if (install.kioskSourceDir && this.platformKiosk?.displayServer === 'windows') {
                     const src = this.$t('student.winKioskSetupSuccessSource', {
@@ -669,7 +665,7 @@ export default {
         async launchCageApp(exePath) {
             const p = String(exePath || '').trim();
             if (!p) return;
-            const res = await signalBridge.invoke('launch-kiosk-allowed-app', p);
+            const res = await window.ipcRenderer.invoke('launch-kiosk-allowed-app', p);
             if (res?.ok) return;
             this.$swal.fire({ title: 'Error', text: res?.error || 'launch failed', icon: 'error', showCancelButton: false });
         },
@@ -688,7 +684,7 @@ export default {
             // Kiosk: main-process close handler shows the native cage exit warning (single source of truth).
             // Non-kiosk: simple inline confirm.
             if (this.platformKiosk?.runningInCage) {
-                signalBridge.invoke('quit-app');
+                window.ipcRenderer.invoke('quit-app');
                 return;
             }
             this.$swal.fire({
@@ -699,14 +695,14 @@ export default {
                 confirmButtonText: this.$t('student.cageExit'),
                 cancelButtonText: this.$t('dashboard.cancel'),
             }).then((result) => {
-                if (result.isConfirmed) signalBridge.invoke('quit-app');
+                if (result.isConfirmed) window.ipcRenderer.invoke('quit-app');
             });
         },
 
         toggleLocale() {
             // Switch between 'de' and 'en'
             this.$i18n.locale = this.$i18n.locale === 'de' ? 'en' : 'de';
-            signalBridge.send('set-new-locale', this.$i18n.locale);
+            window.ipcRenderer.send('set-new-locale', this.$i18n.locale);
         },
 
         async selectPreferredInterface() {
@@ -739,8 +735,8 @@ export default {
                 inputPlaceholder: "",
             }).then(async (result) => {
                 if (result.isConfirmed) {
-                    await signalBridge.invoke('setPreferredInterface', result.value);
-                    const updated = await signalBridge.invoke('checkhostip');
+                    await window.ipcRenderer.invoke('setPreferredInterface', result.value);
+                    const updated = await window.ipcRenderer.invoke('checkhostip');
                     this.safeAssignHostip(updated);
                 }
                 this.activeDialog = false;
@@ -756,7 +752,7 @@ export default {
 
         async loginBiP() {
 
-            let IPCresponse = signalBridge.sendSync('loginBiP', this.biptest)
+            let IPCresponse = window.ipcRenderer.sendSync('loginBiP', this.biptest)
             if (IPCresponse && IPCresponse.status === "success") {
 
             }
@@ -781,7 +777,7 @@ export default {
                     this.pincode = ""
                     this.bipData = null
                     this.onlineExams = []
-                    signalBridge.invoke('clearBipSiteInfo')
+                    window.ipcRenderer.invoke('clearBipSiteInfo')
                     const loginBtn = document.querySelector('#biploginbutton')
                     if (loginBtn) {
                         loginBtn.classList.remove('disabledbutton')
@@ -824,7 +820,7 @@ export default {
             if (this.clickCount > 6) {
                 this.clickCount = 0
                 console.log("Easter Egg");
-                signalBridge.send('reload-url');
+                window.ipcRenderer.send('reload-url');
             }
         },
 
@@ -885,12 +881,12 @@ export default {
                         this.bipUsername = displayName
                         this.bipuserID = response.userid
                         if (response.userprivateaccesskey) {
-                            await signalBridge.invoke('setBipSiteInfo', {
+                            await window.ipcRenderer.invoke('setBipSiteInfo', {
                                 userprivateaccesskey: response.userprivateaccesskey,
                                 userid: response.userid,
                                 fullname: response.fullname,
                             })
-                            signalBridge.invoke('prewarmSubmissionSigningP12').catch(() => {})
+                            window.ipcRenderer.invoke('prewarmSubmissionSigningP12').catch(() => {})
                         }
 
                         document.querySelector("#biploginbutton").classList.remove('btn-info')
@@ -1157,7 +1153,7 @@ export default {
                     }
 
                     this.localLockdown = true
-                    signalBridge.send('locallockdown', {
+                    window.ipcRenderer.send('locallockdown', {
                         password: password,
                         exammode: exammode,
                         clientname: username,
@@ -1386,7 +1382,7 @@ export default {
 
 
         async fetchInfo() {
-            let getinfo = await signalBridge.invoke('getinfoasync')  // gets serverlist and clientinfo from multicastclient
+            let getinfo = await window.ipcRenderer.invoke('getinfoasync')  // gets serverlist and clientinfo from multicastclient
 
 
             applyClientinfoFromFetch(this, getinfo.clientinfo);
@@ -1502,7 +1498,7 @@ export default {
              * Check if network connection is still alive or if we are already connected and received a token
              * If not we exit here
              */
-            const newHostip = await signalBridge.invoke('checkhostip');
+            const newHostip = await window.ipcRenderer.invoke('checkhostip');
             this.safeAssignHostip(newHostip);
             const hasIp = this.hostip && (typeof this.hostip === 'object' ? this.hostip.hostip : this.hostip);
             if (!hasIp) return;
@@ -1524,7 +1520,7 @@ export default {
                 if (!server.serverip) continue;
                 const serverIdentifier = this.getServerIdentifier(server);
                 const isManual = this.isManuallyAddedServer(server);
-                signalBridge.invoke('pingexamserver', { serverip: server.serverip })
+                window.ipcRenderer.invoke('pingexamserver', { serverip: server.serverip })
                     .then((result) => {
                         if (!result?.ok) throw new Error('Response not OK');
                         // Optimized: Only set if value changes
@@ -1577,7 +1573,7 @@ export default {
             try {
                 this.localVmBusy = true;
                 this.localVmFixPhase = null;
-                const res = await signalBridge.invoke('localvm-retry-start');
+                const res = await window.ipcRenderer.invoke('localvm-retry-start');
                 if (!res?.ok) {
                     await this.status(this.$t('student.localvmStartError'));
                 }
@@ -1603,7 +1599,7 @@ export default {
                     return;
                 }
             await this.status(this.$t('student.localvmDownloadingFromTeacher'));
-                const res = await signalBridge.invoke('qemu-download-disk', {
+                const res = await window.ipcRenderer.invoke('qemu-download-disk', {
                     serverip: this.clientinfo?.serverip,
                     serverApiPort: this.serverApiPort,
                     servername: this.clientinfo?.servername,
@@ -1634,7 +1630,7 @@ export default {
             if (this.localVmBusy) return;
             try {
                 this.localVmBusy = true;
-                const pick = await signalBridge.invoke('qemu-pick-disk-file');
+                const pick = await window.ipcRenderer.invoke('qemu-pick-disk-file');
                 if (!pick?.ok || pick.cancelled) {
                     await this.status(this.$t('student.localvmImportCancelled'));
                     this.localVmFixPhase = null;
@@ -1642,7 +1638,7 @@ export default {
                 }
                 this.localVmFixPhase = 'importing';
                 this.localVmDownloadPercent = null;
-                const res = await signalBridge.invoke('qemu-import-disk', { sourcePath: pick.sourcePath });
+                const res = await window.ipcRenderer.invoke('qemu-import-disk', { sourcePath: pick.sourcePath });
                 const filename = res && res.ok ? res.filename : null;
                 if (!filename) {
                     await this.status(this.$t('student.localvmImportFailed'));
@@ -1652,7 +1648,7 @@ export default {
                 await this.status(this.$t('student.localvmImportDoneWaiting', { filename }));
                 this.localVmFixPhase = 'waiting_for_start';
             } catch (e) {
-                log.error('student.vue @ browseVm', e);
+                loggingBridge.error('student.vue @ browseVm', e);
                 await this.status(this.$t('student.localvmImportFailed'));
                 this.localVmFixPhase = null;
             } finally {
@@ -1704,7 +1700,7 @@ export default {
                 icon: 'question',
             }).then((result) => {
                 if (result.isConfirmed) {
-                    signalBridge.send('disconnect');
+                    window.ipcRenderer.send('disconnect');
                     this.token = '';
                 }
             });
@@ -1738,7 +1734,7 @@ export default {
                     return;
                 }
             }
-            const displayInfo = await signalBridge.invoke('getinfoasync');
+            const displayInfo = await window.ipcRenderer.invoke('getinfoasync');
             if (displayInfo?.clientinfo?.multiMonitor && !this.development) {
                 this.$swal.fire({ title: "Error", text: this.$t("student.multimonitor"), icon: 'error', showCancelButton: false });
                 return;
@@ -1762,7 +1758,7 @@ export default {
 
 
                 //  console.log({clientname:this.username, servername:servername, serverip, serverip, pin:this.pincode, bipuserID:this.bipuserID })
-                let IPCresponse = await signalBridge.sendSync('register', {
+                let IPCresponse = await window.ipcRenderer.sendSync('register', {
                     clientname: this.username,
                     servername: servername,
                     serverip: serverip,
@@ -1862,7 +1858,7 @@ export default {
     },
     created() {
         // Register before mounted awaits so early LocalVM IPC is not dropped.
-        signalBridge.on('localvm-compat-check-start', () => {
+        window.ipcRenderer.on('localvm-compat-check-start', () => {
             if (!this.clientinfo) {
                 this.clientinfo = {};
             }
@@ -1871,22 +1867,22 @@ export default {
             this.showLocalVmCompatCheckDialog();
         });
 
-        signalBridge.on('localvm-compat-check-end', () => {
+        window.ipcRenderer.on('localvm-compat-check-end', () => {
             if (this.clientinfo?.localVMState === 'checking_compat') {
                 this.clientinfo.localVMState = null;
             }
             this.closeLocalVmCompatCheckDialog();
         });
 
-        signalBridge.on('qemu-not-available', (_event, payload) => {
+        window.ipcRenderer.on('qemu-not-available', (_event, payload) => {
             void this.showQemuMissingWarning(payload || {});
         });
 
-        signalBridge.on('show-exit-question', () => {
+        window.ipcRenderer.on('show-exit-question', () => {
             this.showExitQuestion();
         });
 
-        signalBridge.on('close-exit-question', () => {
+        window.ipcRenderer.on('close-exit-question', () => {
             if (this.exitQuestionSwalOpen) { this.$swal.close(); }
         });
     },
@@ -1904,18 +1900,18 @@ export default {
 
         if (isElectronWindow(window)) {
             if (!this.development) {
-                const macArch = await signalBridge.invoke('get-mac-arch-info');
+                const macArch = await window.ipcRenderer.invoke('get-mac-arch-info');
                 if (macArch?.runningUnderRosetta) {
                     await this.warnMacRosettaArch();
                 }
             }
-            this.platformKiosk = await getLinuxKioskInfo(signalBridge);
+            this.platformKiosk = await getLinuxKioskInfo();
             setLinuxKioskRunningInCage(this.platformKiosk.runningInCage);
             // capturePage path (no getDisplayMedia/picker): macOS always, plus Linux Cage. Win32 kiosk uses normal full-desktop getDisplayMedia.
             const isMac = this.platformKiosk.platform === 'darwin';
             const linuxCage = this.platformKiosk.runningInCage && this.platformKiosk.displayServer !== 'windows';
             setCageWindowCaptureFallback(isMac || linuxCage);
-            this.cageLauncherApps = await loadWinKioskLauncherApps(signalBridge);
+            this.cageLauncherApps = await loadWinKioskLauncherApps();
             await this.maybeOfferCageKioskSetup();
         }
 
@@ -1944,23 +1940,23 @@ export default {
         });
 
         // TODO: Modify windowhandling and token saving
-        signalBridge.on('entering-exam-mode', () => {
+        window.ipcRenderer.on('entering-exam-mode', () => {
             this.enteringExamModeOverlay = true;
         });
 
-        signalBridge.on('bipToken', (event, token) => {
+        window.ipcRenderer.on('bipToken', (event, token) => {
             console.log("token received: ", token)
             this.bipToken = token
             this.fetchBiPData(token)
         });
 
-        signalBridge.on('qemu-download-progress', (_event, payload) => {
+        window.ipcRenderer.on('qemu-download-progress', (_event, payload) => {
             const pct = payload && typeof payload.percent === 'number' ? payload.percent : null;
             this.localVmDownloadPercent = pct;
         });
 
         // Screenshot scheduler only in main window (this page); exam window never loads student.vue
-        initScreenshotScheduler(signalBridge);
+        initScreenshotScheduler();
 
         // Set locale to system locale or fallback to 'en'
         const systemLocale = navigator.language.split('-')[0] // e.g. "de" from "de-DE"
@@ -1972,12 +1968,12 @@ export default {
 
         window.removeEventListener('unhandledrejection', event => unhandledRejectionFunction(event));
 
-        signalBridge.removeAllListeners('qemu-download-progress');
-        signalBridge.removeAllListeners('localvm-compat-check-start');
-        signalBridge.removeAllListeners('localvm-compat-check-end');
-        signalBridge.removeAllListeners('qemu-not-available');
-        signalBridge.removeAllListeners('show-exit-question');
-        signalBridge.removeAllListeners('close-exit-question');
+        window.ipcRenderer.removeAllListeners('qemu-download-progress');
+        window.ipcRenderer.removeAllListeners('localvm-compat-check-start');
+        window.ipcRenderer.removeAllListeners('localvm-compat-check-end');
+        window.ipcRenderer.removeAllListeners('qemu-not-available');
+        window.ipcRenderer.removeAllListeners('show-exit-question');
+        window.ipcRenderer.removeAllListeners('close-exit-question');
     }
 }
 </script>

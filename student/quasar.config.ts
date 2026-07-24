@@ -217,6 +217,7 @@ export default defineConfig(( ctx: any ) => {
             ...viteConf.resolve.alias,
             'pdfjs-dist/legacy/build/pdf.mjs': pdfjsLegacyPdf,
             'pdfjs-dist/legacy/build/pdf.worker.mjs': pdfjsLegacyWorker,
+            'pdfjs-dist': path.resolve(__dirname, 'node_modules/pdfjs-dist'),
             'next-exam-shared': sharedDir,
             // @noble/* subpath → ESM files directly (avoids Rolldown export condition mismatch)
             '@noble/hashes/scrypt.js': path.join(nobleHashes, 'scrypt.js'),
