@@ -1057,7 +1057,7 @@ import config from "../../../src/utils/config.js";
         this._startExamRunning = true;
         try {
             // check if any dialog is open and log warning
-            if (WindowHandler.exitWarningOpen || WindowHandler.exitQuestionOpen || WindowHandler.minimizeWarningOpen) {
+            if (WindowHandler.exitWarningOpen || WindowHandler.minimizeWarningOpen) {
                 log.warn("communicationhandler @ startExam: Dialog is still open - exam will start anyway")
             }
 

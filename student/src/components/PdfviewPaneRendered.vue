@@ -301,7 +301,7 @@
         async loadAnnotations() {
         try {
             const key = this.annotationsKey
-            const raw = (await PdfHelper.readPdfAnnotations(key)).data;
+            const raw = (await PdfHelper.readPdfAnnotations(key))?.data;
             if (!raw) {
             this.annotations = []
             return

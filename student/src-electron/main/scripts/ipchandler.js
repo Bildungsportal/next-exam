@@ -340,6 +340,12 @@ class IpcHandler {
             else app.quit();
         });
 
+        // Post-exam exit-question "Ja": unconditional quit (mirrors old showExitQuestion behaviour).
+        ipcMain.handle('confirm-exit-quit', () => {
+            if (this.WindowHandler?.mainwindow) this.WindowHandler.mainwindow.allowexit = true;
+            app.quit();
+        });
+
         ipcMain.handle('capture-screenshot-frame', async () => {
             return captureActiveWindowScreenshot(this.WindowHandler, this.multicastClient);
         });

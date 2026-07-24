@@ -29,7 +29,11 @@
       "Bash(node t4.mjs)",
       "Bash(grep -rniE 'onMounted|route\\\\.params|useRoute|$route|router\\\\.push|router\\\\.replace|initialLocation|createMemoryHistory|\\\\.replace\\\\\\(' student/src/App.vue student/src/pages/student.vue student/src/router/index.ts)",
       "Bash(grep -iE \"ltLocalHost|^[a-f0-9]{7,}\")",
-      "Bash(node /tmp/claude-1000/-home-valueerror-STUFF-DEV-00-Next-Exam-DEV-next-exam/d21c5108-2da0-4d81-b290-95a51f0fe44b/scratchpad/argtest.mjs)"
+      "Bash(node /tmp/claude-1000/-home-valueerror-STUFF-DEV-00-Next-Exam-DEV-next-exam/d21c5108-2da0-4d81-b290-95a51f0fe44b/scratchpad/argtest.mjs)",
+      "Bash(node --check src-electron/main/scripts/windowhandler.js)",
+      "Bash(node --check src-electron/main/scripts/communicationhandler.js)",
+      "Bash(grep -n '$t\\('\\\\''student\\\\.\\\\|$t\\(`student\\\\.\\\\|$t\\('\\\\''localvmCompat\\\\|localvmCompatCheckTitle' /home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/pages/student.vue)",
+      "Bash(awk -F: '$1>219 && $1<330')"
     ]
   }
 }

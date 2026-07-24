@@ -63,7 +63,6 @@ class WindowHandler {
       this.examServerstatus = null
     
       this.exitWarningOpen = false  // track if exit warning dialog is open
-      this.exitQuestionOpen = false  // track if exit question dialog is open
       this.cageExitWarningOpen = false
       this.minimizeWarningOpen = false  // track if minimize warning dialog is open
       this.ms365BrowserView = null
@@ -937,38 +936,14 @@ class WindowHandler {
         }
     }
 
-    // Force-close the open exit question (resolves as "Nein"); used when the server restarts exammode while the dialog is up.
+    // Force-close the renderer exit-question Swal; used when the server restarts exammode while the dialog is up.
     closeExitQuestion(){
-        if (!this.exitQuestionOpen || !this.mainwindow) return
-        for (const child of this.mainwindow.getChildWindows()){
-            try { child.close() } catch (e){ log.warn("Windowhandler @ closeExitQuestion:", e) }
-        }
+        this.mainwindow?.webContents?.send('close-exit-question')
     }
 
-    async showExitQuestion(){
-        if (this.exitQuestionOpen) {
-            log.info("Windowhandler @ showExitQuestion: dialog already open, skipping")
-            return
-        }
-        this.exitQuestionOpen = true
-        try {
-            let choice = await dialog.showMessageBox(this.mainwindow, {
-                type: 'question',
-                buttons: ['Ja', 'Nein'],
-                title: 'Programm beenden',
-                message: 'Wollen sie die Anwendung Next-Exam beenden?',
-                cancelId: 1
-            });
-            if(choice.response === 1){
-                log.info("Windowhandler @ showExitQuestion: do not close Next-Exam after finished Exam")
-            }
-            else {
-                this.mainwindow.allowexit = true
-                app.quit()
-            }
-        } finally {
-            this.exitQuestionOpen = false
-        }
+    // Ask the student (Swal in student.vue) whether to quit after finishing the exam.
+    showExitQuestion(){
+        this.mainwindow?.webContents?.send('show-exit-question')
     }
 
     async showMinimizeWarning(){

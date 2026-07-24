@@ -406,6 +406,7 @@ export default {
             localVmDownloadPercent: null,
             localVmFixPhase: null,
             localVmCompatCheckSwalOpen: false,
+            exitQuestionSwalOpen: false,
 
         };
     },
@@ -512,6 +513,27 @@ export default {
             }
             this.clientinfo.examtype = 'localvm';
             this.clientinfo.localVMState = 'error';
+        },
+
+        // Post-exam quit prompt (replaces the old native main-process dialog). Ja -> quit, Nein -> stay.
+        showExitQuestion() {
+            if (this.exitQuestionSwalOpen) { return; }
+            this.exitQuestionSwalOpen = true;
+            void this.$swal.fire({
+                title: this.$t('student.exitQuestionTitle'),
+                text: this.$t('student.exitQuestionText'),
+                showCancelButton: true,
+                confirmButtonText: this.$t('student.exitQuestionConfirm'),
+                cancelButtonText: this.$t('student.exitQuestionCancel'),
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    void signalBridge.invoke('confirm-exit-quit');
+                }
+            }).finally(() => {
+                this.exitQuestionSwalOpen = false;
+            });
         },
 
         // Swal while main runs QEMU / hypervisor compatibility probes before LocalVM exam start.
@@ -1859,6 +1881,14 @@ export default {
         signalBridge.on('qemu-not-available', (_event, payload) => {
             void this.showQemuMissingWarning(payload || {});
         });
+
+        signalBridge.on('show-exit-question', () => {
+            this.showExitQuestion();
+        });
+
+        signalBridge.on('close-exit-question', () => {
+            if (this.exitQuestionSwalOpen) { this.$swal.close(); }
+        });
     },
     async mounted() {
       if (isIOS()) {
@@ -1946,6 +1976,8 @@ export default {
         signalBridge.removeAllListeners('localvm-compat-check-start');
         signalBridge.removeAllListeners('localvm-compat-check-end');
         signalBridge.removeAllListeners('qemu-not-available');
+        signalBridge.removeAllListeners('show-exit-question');
+        signalBridge.removeAllListeners('close-exit-question');
     }
 }
 </script>
