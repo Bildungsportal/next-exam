@@ -34,6 +34,7 @@ class MulticastClient {
         this.MULTICAST_ADDR = config.multicastServerAdrr
         this.client = null
         this.beaconsLost = 0
+        this.lastMembershipRefresh = 0
         this.examServerList = []
         this.serverstatus = {}
         this.clientinfo = {
@@ -151,10 +152,31 @@ class MulticastClient {
     }
 
     /**
+     * re-joins the multicast group every ~120s to survive IGMP-snooping timeouts
+     */
+    refreshMulticastMembership () {
+        if (!this.client) return
+        const now = new Date().getTime()
+        if (now - this.lastMembershipRefresh < 120000) return
+        this.lastMembershipRefresh = now
+        try {
+            try { this.client.dropMembership(this.MULTICAST_ADDR, config.hostip) } catch (e) {}
+            this.client.addMembership(this.MULTICAST_ADDR, config.hostip)
+        } catch (e) {
+            LoggingBridge.error(`multicastclient @ refreshMulticastMembership: ${e.message}`)
+        }
+    }
+
+    /**
      * checks servertimestamp and removes server from list if older than 1 minute
      */
     isDeprecatedInstance () {
-        for (let i = 0; i < this.examServerList.length; i++) {
+        // re-join multicast group periodically so APs/switches with IGMP snooping
+        // don't drop our membership after idle -> beacons keep arriving
+        this.refreshMulticastMembership()
+
+        // iterate backwards so splice() does not skip the next entry
+        for (let i = this.examServerList.length - 1; i >= 0; i--) {
             const now = new Date().getTime()
 
             if (now - 16000 > this.examServerList[i].timestamp) {
