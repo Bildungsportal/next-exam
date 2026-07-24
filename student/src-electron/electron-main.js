@@ -71,7 +71,11 @@ else if (process.platform === 'darwin'){
 }
 else if (process.platform === 'win32'){
     // WGC CreateForMonitor can fail in a loop and spam stderr; use DXGI capturer instead
-    app.commandLine.appendSwitch('disable-features', 'WebRtcAllowWgcScreenCapturer,WebRtcAllowWgcWindowCapturer,WebRtcAllowWgcDesktopCapturer');
+    // + keep renderer timers running while system is idle (fetchInfo/serverlist froze on idle -> server vanished)
+    app.commandLine.appendSwitch('disable-features', 'WebRtcAllowWgcScreenCapturer,WebRtcAllowWgcWindowCapturer,WebRtcAllowWgcDesktopCapturer,IntensiveWakeUpThrottling');
+    app.commandLine.appendSwitch('disable-renderer-backgrounding');
+    app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+    app.commandLine.appendSwitch('disable-background-timer-throttling');
 }
 
 

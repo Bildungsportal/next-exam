@@ -818,7 +818,7 @@ class WindowHandler {
                 ),
                 spellcheck: false,
                 webviewTag: true,  // exam runs in mainwindow now (eduvidual/website use <webview>)
-                backgroundThrottling: true  // allow throttling when window is in background
+                backgroundThrottling: false  // keep fetchInfo/serverlist polling alive when window is occluded (Windows froze setInterval -> server vanished)
             }
         })
 
