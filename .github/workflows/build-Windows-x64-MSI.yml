@@ -40,7 +40,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24.14.0'
+          node-version: '24.18.0'
      
      
       - name: Teacher cache dependencies

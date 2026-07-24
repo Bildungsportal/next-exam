@@ -44,7 +44,7 @@
     "@vitejs/plugin-vue": "^6.0.6",
     "@vue/devtools": "^8.1.1",
     "concurrently": "^9.2.1",
-    "electron": "41.7.0",
+    "electron": "41.10.3",
     "electron-builder": "26.11.0",
     "electron-devtools-installer": "^4.0.0",
     "esbuild": "^0.28.0",
