@@ -3,10 +3,6 @@
 import { useInfoStore } from '../stores/infoStore.ts'
 import {isIOS} from "../types/platform.ts";
 
-// signalBridge instance centralizes ipc calls with platform checks
-const signalBridge = new SignalBridge(window);
-
-
 export async function getBatteryStatus(initialBatteryStatus) {
     let batteryStatus = initialBatteryStatus;
     if (!isIOS()) {

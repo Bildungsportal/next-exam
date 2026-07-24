@@ -1,12 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('./signalBridge.js', () => ({
-  SignalBridge: class {
-    send() {}
-    sendSync() {}
-  },
-}));
-
 vi.mock('../stores/infoStore.ts', () => ({
   useInfoStore: vi.fn(),
 }));

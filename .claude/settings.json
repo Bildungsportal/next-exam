@@ -33,7 +33,15 @@
       "Bash(node --check src-electron/main/scripts/windowhandler.js)",
       "Bash(node --check src-electron/main/scripts/communicationhandler.js)",
       "Bash(grep -n '$t\\('\\\\''student\\\\.\\\\|$t\\(`student\\\\.\\\\|$t\\('\\\\''localvmCompat\\\\|localvmCompatCheckTitle' /home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/pages/student.vue)",
-      "Bash(awk -F: '$1>219 && $1<330')"
+      "Bash(awk -F: '$1>219 && $1<330')",
+      "Bash(timeout 60 ./node_modules/.bin/electron /tmp/claude-1000/-home-valueerror-STUFF-DEV-00-Next-Exam-DEV-next-exam/b22e5fe9-45a9-4576-8ea6-6c8183ceeda3/scratchpad/probe.mjs)",
+      "Bash(timeout 60 ./node_modules/.bin/electron /tmp/claude-1000/-home-valueerror-STUFF-DEV-00-Next-Exam-DEV-next-exam/b22e5fe9-45a9-4576-8ea6-6c8183ceeda3/scratchpad/probe.cjs)",
+      "Bash(timeout 60 ./node_modules/.bin/electron __probe.cjs)",
+      "Bash(timeout 60 ./node_modules/.bin/electron __probe.js)",
+      "Bash(timeout 60 ./node_modules/.bin/electron __probe)",
+      "Bash(timeout 60 ./node_modules/.bin/electron ./__probe/probe.cjs)",
+      "Bash(env)",
+      "Bash(ELECTRON_RUN_AS_NODE= timeout 60 env -u ELECTRON_RUN_AS_NODE ./node_modules/.bin/electron ./__probe/probe.cjs)"
     ]
   }
 }

@@ -171,8 +171,6 @@
     import { pdfPageAnnotationsMixin } from 'next-exam-shared/pdfPageAnnotationsMixin.js'
     import PdfHelper from "../utils/pdfHelper.ts";
 
-    const signalBridge = new SignalBridge(window)
-
     export default {
     name: 'PdfviewPaneRendered',
     mixins: [pdfPageAnnotationsMixin],
