@@ -2323,6 +2323,10 @@ computed: {
                 this.serverstatus.activeSection = 1
                 this.serverstatus.lockedSection = 1
             }
+            else {
+                // sections manage groups per-section -> drop the global groups setting
+                this.serverstatus.examSections[1].groups = false
+            }
         },
 
         // activate section: when allowSectionSwitch only switch view; else optionally lock section for all students (confirm dialog)
