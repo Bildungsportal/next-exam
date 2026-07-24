@@ -136,20 +136,14 @@ async function processPrintJobPdf(docBase64, printerName, jobTitle) {
                 }
                 cleanup()
                 clearPendingPdfPrintPayload('after print-ready')
-                // Wake the Chromium PrintBackendServiceManager with a no-op using the real
-                // printer name, then do the actual print. Using the real deviceName forces
-                // Chromium to contact the CUPS backend process (an invalid name like '\x00'
-                // gets rejected internally before reaching the backend).
-                win.webContents.print({ silent: true, deviceName: printerName }, () => {
-                    win.webContents.print(printOptions, (success, reason) => {
-                        if (success) {
-                            log.info(`${LOG}: printed OK → ${printerName} (${title})`)
-                            setTimeout(resolve, PRINT_POST_HANDOFF_DELAY_MS)
-                        } else {
-                            log.error(`${LOG}: print failed → ${printerName} (${title}) reason=${reason || 'empty'}`)
-                            reject(new Error(reason || 'Print failed'))
-                        }
-                    })
+                win.webContents.print(printOptions, (success, reason) => {
+                    if (success) {
+                        log.info(`${LOG}: printed OK → ${printerName} (${title})`)
+                        setTimeout(resolve, PRINT_POST_HANDOFF_DELAY_MS)
+                    } else {
+                        log.error(`${LOG}: print failed → ${printerName} (${title}) reason=${reason || 'empty'}`)
+                        reject(new Error(reason || 'Print failed'))
+                    }
                 })
             }
             const onError = (event, msg) => {

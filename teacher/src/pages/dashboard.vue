@@ -5280,7 +5280,7 @@ hr {
 @media print {
     /* nur #pdfpreview im Print sichtbar, Rest weg damit Layout-Flow den PDF-Wrapper voll nutzt */
     /* #pdfpreview haengt unter #q-app als Sibling von #wrapper -> alle Geschwister ausser #pdfpreview ausblenden */
-    #q-app > *:not(#pdfpreview),
+    #q-app > *:not(#pdfpreview):not(#pages-root),
     #setupoverlay, .sidebar-root, #content,
     .studentslist-controls, .tab-buttons-container { display: none !important; }
     /* Root entclippen: body inline position:fixed + #q-app height:100vh begrenzen sonst Druck auf 1 Viewport-Hoehe -> nur Seite 1 */
