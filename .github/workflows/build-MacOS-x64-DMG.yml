@@ -81,7 +81,7 @@ jobs:
         run: |
           npm install
           # Force reinstall electron with correct architecture if needed
-          ELECTRON_ARCH=x64 npm install electron@38.1.2 --force
+          ELECTRON_ARCH=x64 npm install electron@41.10.3 --force
           mkdir dist
 
       - name: Teacher build
@@ -129,7 +129,7 @@ jobs:
         run: |
           npm install
           # Force reinstall electron with correct architecture if needed
-          ELECTRON_ARCH=x64 npm install electron@38.1.2 --force
+          ELECTRON_ARCH=x64 npm install electron@41.10.3 --force
           mkdir dist
 
       - name: Student build apple helpers
