@@ -23,6 +23,7 @@ let pendingPdfPrintJob = null
 let pendingPdfPrintWebContentsId = null
 let printConsumeHandlerRegistered = false
 let printRendererLogRegistered = false
+let printBackendWarmedUp = false
 
 function clearPendingPdfPrintPayload(reason) {
     pendingPdfPrintJob = null
@@ -105,7 +106,30 @@ function getPreloadPath() {
         : join(import.meta.dirname, '../preload/preload.mjs')
 }
 
+// Warm up Chromium's print backend once per session. The backend process starts lazily on the
+// first webContents.print; while it initialises, print() reports success:true but the job never
+// reaches the printer (no failure/timeout signal to detect). A single blank print upfront takes
+// that hit (discarded when the backend is cold), so every real job afterwards prints exactly once.
+async function ensurePrintBackendWarm(printerName) {
+    if (printBackendWarmedUp) return
+    printBackendWarmedUp = true
+    const win = makeHiddenWindow(getPreloadPath())
+    try {
+        await win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent('<!DOCTYPE html><html><body></body></html>'))
+        await new Promise((resolve) => {
+            win.webContents.print({ silent: true, deviceName: printerName }, () => resolve())
+            setTimeout(resolve, 5000)
+        })
+        log.info(`${LOG}: print backend warmed up (${printerName})`)
+    } catch (err) {
+        log.warn(`${LOG}: warm-up error (non-fatal): ${err.message}`)
+    } finally {
+        if (!win.isDestroyed()) win.close()
+    }
+}
+
 async function processPrintJobPdf(docBase64, printerName, jobTitle) {
+    await ensurePrintBackendWarm(printerName)
     const title = sanitizeTitle(jobTitle)
     const win = makeHiddenWindow(getPreloadPath())
 
@@ -136,20 +160,14 @@ async function processPrintJobPdf(docBase64, printerName, jobTitle) {
                 }
                 cleanup()
                 clearPendingPdfPrintPayload('after print-ready')
-                // Wake the Chromium PrintBackendServiceManager with a no-op using the real
-                // printer name, then do the actual print. Using the real deviceName forces
-                // Chromium to contact the CUPS backend process (an invalid name like '\x00'
-                // gets rejected internally before reaching the backend).
-                win.webContents.print({ silent: true, deviceName: printerName }, () => {
-                    win.webContents.print(printOptions, (success, reason) => {
-                        if (success) {
-                            log.info(`${LOG}: printed OK → ${printerName} (${title})`)
-                            setTimeout(resolve, PRINT_POST_HANDOFF_DELAY_MS)
-                        } else {
-                            log.error(`${LOG}: print failed → ${printerName} (${title}) reason=${reason || 'empty'}`)
-                            reject(new Error(reason || 'Print failed'))
-                        }
-                    })
+                win.webContents.print(printOptions, (success, reason) => {
+                    if (success) {
+                        log.info(`${LOG}: printed OK → ${printerName} (${title})`)
+                        setTimeout(resolve, PRINT_POST_HANDOFF_DELAY_MS)
+                    } else {
+                        log.error(`${LOG}: print failed → ${printerName} (${title}) reason=${reason || 'empty'}`)
+                        reject(new Error(reason || 'Print failed'))
+                    }
                 })
             }
             const onError = (event, msg) => {
@@ -190,6 +208,7 @@ async function processPrintJobPdf(docBase64, printerName, jobTitle) {
 }
 
 async function processPrintJobImage(docBase64, printerName, jobTitle) {
+    await ensurePrintBackendWarm(printerName)
     const title = sanitizeTitle(jobTitle)
     const dataUrl = docBase64.startsWith('data:') ? docBase64 : `data:image/jpeg;base64,${docBase64}`
 
