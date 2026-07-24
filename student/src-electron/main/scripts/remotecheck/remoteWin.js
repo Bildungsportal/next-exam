@@ -1,10 +1,9 @@
-import { exec, execFile } from 'child_process'
+import { exec } from 'child_process'
 import { promisify } from 'util'
 import { appsToClose } from '../appsToClose.js'
 import { findKeywordHits, normalizeStem, parseWinTasklistStems } from './processKeywords.js'
 
 const execAsync = promisify(exec)
-const execFileAsync = promisify(execFile)
 
 // derived from appsToClose (single source of truth); lowercase + deduped; exact process-stem match via processKeywords.js
 const suspiciousKeywords = [...new Set(appsToClose.map((k) => k.toLowerCase()))]
@@ -14,20 +13,24 @@ const suspiciousPorts = [
   7070, 6783, 6784, 6785, 8040, 8041, 8042, 21115, 21116
 ];
 
-// True when msedge runs in an interactive session with a visible window or renderer (not Session-0 service).
+const MSEDGE_BROWSER_TITLE = /\bedge\b/i
+
+// True when interactive msedge shows a real browser window title (not leftover OLE/N/A stubs after quit).
 async function confirmMsedgeUserBrowser() {
   try {
-    const ps =
-      '$h=Get-CimInstance Win32_Process -Filter "Name=\'msedge.exe\'"|Where-Object{$_.SessionId -gt 0 -and ' +
-      '(($_.CommandLine -match \'--type=renderer\') -or ((Get-Process -Id $_.ProcessId -EA SilentlyContinue).MainWindowHandle -gt 0))}|Select -First 1;' +
-      'if($h){"1"}'
-    const { stdout } = await execFileAsync('powershell.exe', ['-NoProfile', '-Command', ps], {
+    const { stdout } = await execAsync('tasklist /FI "IMAGENAME eq msedge.exe" /FO CSV /V', {
       encoding: 'utf8',
       timeout: 3000,
-      maxBuffer: 64 * 1024,
-      windowsHide: true,
+      maxBuffer: 1024 * 1024,
     })
-    return stdout.trim() === '1'
+    for (const line of String(stdout).split(/\r?\n/)) {
+      const cols = line.match(/"(.*?)"/g)?.map((s) => s.slice(1, -1))
+      if (!cols || cols.length < 9 || normalizeStem(cols[0]) !== 'msedge') continue
+      const sessionId = Number(cols[3])
+      const title = cols[cols.length - 1] || ''
+      if (sessionId > 0 && MSEDGE_BROWSER_TITLE.test(title)) return true
+    }
+    return false
   } catch {
     return false
   }
