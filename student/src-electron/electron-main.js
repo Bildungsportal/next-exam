@@ -71,7 +71,7 @@ else if (process.platform === 'darwin'){
 }
 else if (process.platform === 'win32'){
     // WGC CreateForMonitor can fail in a loop and spam stderr; use DXGI capturer instead
-    app.commandLine.appendSwitch('disable-features', 'WebRtcAllowWgcDesktopCapturer');
+    app.commandLine.appendSwitch('disable-features', 'WebRtcAllowWgcScreenCapturer,WebRtcAllowWgcWindowCapturer,WebRtcAllowWgcDesktopCapturer');
 }
 
 
@@ -374,7 +374,7 @@ app.whenReady()
         else { log.info('main @ tray: GNOME detected, skipping system tray'); }
         
         if (!platformDispatcher.runningInCage) {  // Skip in Win/Linux kiosk
-            runParentProcessCheck();  // check if the app was started from within a browser and quit if detected
+           runParentProcessCheck();  // check if the app was started from within a browser and quit if detected
         }
     }
     if (config.development){

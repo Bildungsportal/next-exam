@@ -1,9 +1,10 @@
-import { exec } from 'child_process';
+import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
 import { readFile } from 'fs/promises';
 import log from 'electron-log';
 
 const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 // Expanded browser keywords to catch more variants
 const browserKeywords = [
@@ -18,34 +19,37 @@ const browserKeywords = [
 ];
 
 /**
- * Get process info on Windows using PowerShell
+ * Walk parent chain in one PowerShell spawn (avoids ~3s cold-start per PID).
  */
-async function getProcessInfoWindows(pid) {
-    try {
-        const command = `powershell.exe -NoLogo -NoProfile -Command "& { $proc = Get-CimInstance -Class Win32_Process -Filter 'ProcessId=${pid}'; if ($proc) { $proc.ParentProcessId; $proc.Name } }"`;
-        const { stdout } = await execAsync(command, {
-            encoding: 'utf8',
-            timeout: 3000,
-            maxBuffer: 1024 * 64
-        });
-        
-        const lines = stdout.trim().split('\n').map(line => line.trim()).filter(line => line);
-        if (lines.length < 2) {
-            return null;
-        }
-        
-        const ppid = parseInt(lines[0], 10);
-        const name = lines[1].toLowerCase();
-        
-        if (isNaN(ppid)) {
-            return null;
-        }
-        
-        return { ppid, name };
-    } catch (error) {
-        log.error(`checkparent @ getProcessInfoWindows: Error for PID ${pid}: ${error.message}`);
-        return null;
-    }
+async function walkParentChainWindows(startPid, maxDepth) {
+    const ps =
+        `$id=${Number(startPid)};$d=${Number(maxDepth)};$seen=@{};` +
+        `while($d -gt 0 -and $id -gt 1){` +
+        `if($seen.ContainsKey([string]$id)){break};$seen[[string]$id]=1;` +
+        `$p=Get-CimInstance Win32_Process -Filter "ProcessId=$id" -ErrorAction SilentlyContinue;` +
+        `if(-not $p){break};` +
+        `Write-Output ("{0}|{1}|{2}" -f $p.ProcessId,$p.ParentProcessId,$p.Name);` +
+        `$id=$p.ParentProcessId;$d--` +
+        `}`;
+    const { stdout } = await execFileAsync(
+        'powershell.exe',
+        ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', ps],
+        { encoding: 'utf8', timeout: 15000, maxBuffer: 1024 * 64, windowsHide: true }
+    );
+    return stdout
+        .trim()
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line) => {
+            const [pidStr, ppidStr, ...nameParts] = line.split('|');
+            const pid = parseInt(pidStr, 10);
+            const ppid = parseInt(ppidStr, 10);
+            const name = nameParts.join('|').toLowerCase();
+            if (isNaN(pid) || isNaN(ppid) || !name) return null;
+            return { pid, ppid, name };
+        })
+        .filter(Boolean);
 }
 
 /**
@@ -97,25 +101,15 @@ async function getProcessInfoUnix(pid) {
     }
 }
 
-/**
- * Get process info based on platform
- */
-async function getProcessInfo(pid) {
-    const platform = process.platform;
-    
-    if (platform === 'win32') {
-        return await getProcessInfoWindows(pid);
-    } else if (platform === 'linux' || platform === 'darwin') {
-        return await getProcessInfoUnix(pid); // Linux/macOS: tries /proc, falls back to ps
-    }
-    
-    return null;
+/** True if process name matches a known browser keyword. */
+function isBrowserName(name) {
+    return browserKeywords.some((browser) => name.includes(browser));
 }
 
 /**
- * Recursively check parent processes for browser
+ * Recursively check parent processes for browser (Unix: /proc or ps per step)
  */
-async function findParentProcess(pid, maxDepth, visitedPids) {
+async function findParentProcessUnix(pid, maxDepth, visitedPids) {
     if (pid === 1 || pid === 0) {
         log.info('checkparent @ findParentProcess: Root PID reached. No web browser found.');
         return false;
@@ -131,8 +125,7 @@ async function findParentProcess(pid, maxDepth, visitedPids) {
     
     visitedPids.add(pid);
     
-    // Get process info (getProcessInfo already has its own timeout protection)
-    const processInfo = await getProcessInfo(pid);
+    const processInfo = await getProcessInfoUnix(pid);
     
     if (!processInfo) {
         return false;
@@ -140,18 +133,41 @@ async function findParentProcess(pid, maxDepth, visitedPids) {
     
     const { ppid, name } = processInfo;
     
-    // Log the process info for debugging
     log.info(`checkparent @ findParentProcess: Checking process: ${name} (PID: ${pid}, PPID: ${ppid})`);
     
-    // More thorough browser detection
-    if (browserKeywords.some(browser => name.includes(browser))) {
+    if (isBrowserName(name)) {
         log.info(`checkparent @ findParentProcess: Browser found: ${name}`);
         return true;
     } else if (name.includes('explorer') || ppid <= 1) {
         log.info(`checkparent @ findParentProcess: Reached system process or explorer`);
         return false;
     } else {
-        return await findParentProcess(ppid, maxDepth - 1, visitedPids);
+        return await findParentProcessUnix(ppid, maxDepth - 1, visitedPids);
+    }
+}
+
+/** Windows: one CIM walk, then keyword check in JS. */
+async function findParentProcessWindows(startPid, maxDepth) {
+    try {
+        const chain = await walkParentChainWindows(startPid, maxDepth);
+        for (const { pid, ppid, name } of chain) {
+            log.info(`checkparent @ findParentProcess: Checking process: ${name} (PID: ${pid}, PPID: ${ppid})`);
+            if (isBrowserName(name)) {
+                log.info(`checkparent @ findParentProcess: Browser found: ${name}`);
+                return true;
+            }
+            if (name.includes('explorer') || ppid <= 1) {
+                log.info(`checkparent @ findParentProcess: Reached system process or explorer`);
+                return false;
+            }
+        }
+        if (chain.length === 0) {
+            log.info('checkparent @ findParentProcess: Empty parent chain (process gone or CIM miss)');
+        }
+        return false;
+    } catch (error) {
+        log.error(`checkparent @ findParentProcessWindows: ${error.message}`);
+        return false;
     }
 }
 
@@ -160,7 +176,10 @@ async function findParentProcess(pid, maxDepth, visitedPids) {
  */
 export async function checkParentProcess() {
     try {
-        const foundBrowser = await findParentProcess(process.ppid, 6, new Set());
+        const startPid = process.ppid;
+        const foundBrowser = process.platform === 'win32'
+            ? await findParentProcessWindows(startPid, 6)
+            : await findParentProcessUnix(startPid, 6, new Set());
         log.info(`checkparent @ checkParentProcess: Browser detection result: ${foundBrowser}`);
         return { success: true, foundBrowser };
     } catch (error) {
@@ -168,4 +187,3 @@ export async function checkParentProcess() {
         return { success: false, foundBrowser: false, error: error.message };
     }
 }
-
