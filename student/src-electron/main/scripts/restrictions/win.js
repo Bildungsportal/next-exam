@@ -81,7 +81,7 @@ export function disableWindowsRestrictions() {
             }
             if (!stdout.includes('explorer.exe')) {
                 log.info("platformrestrictions @ disableRestrictions (win): restarting explorer...");
-                const child = childProcess.exec('start explorer.exe', { detached: true, stdio: 'ignore' });
+                const child = childProcess.spawn('explorer.exe', [], { detached: true, stdio: 'ignore' });
                 child.unref();
             }
         });
