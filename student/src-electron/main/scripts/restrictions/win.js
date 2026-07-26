@@ -55,7 +55,7 @@ export async function enableWindowsRestrictions() {
         const publicBase = platformDispatcher.publicBase;
         const executable1 = join(publicBase, 'disable-shortcuts.exe');
         childProcess.execFile(executable1, [], { detached: true, stdio: 'ignore', shell: false, windowsHide: true });
-        log.info("platformrestrictions @ enableRestrictions: windows shortcuts disabled");
+        log.info("platformrestrictions @ enableRestrictions (win): blocking shortcuts...");
     } catch (err) { log.error(`platformrestrictions @ enableRestrictions (win shortcuts): ${err}`); }
 }
 
