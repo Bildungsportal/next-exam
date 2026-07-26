@@ -201,7 +201,7 @@ class WindowHandler {
         }
     }
 
-    /** Kiosk first, then blur listener, then restrictions (after exam route loaded). */
+    /** Kiosk, then restrictions; blur only after refocus (Win explorer/app kill steals focus). */
     async applyExamWindowLockdown(win) {
         if (!win || win.isDestroyed?.()) return;
         if (this.config.showdevtools) { win.webContents.openDevTools() }
@@ -214,10 +214,13 @@ class WindowHandler {
             if (platformDispatcher.skipElectronKiosk) {
                 await killWinKioskExamApps(this.multicastClient?.clientinfo);
             } else {
+                await enableRestrictions(this);
+                if (!win || win.isDestroyed?.()) return;
+                win.moveTop();
+                win.focus();
                 if (!isAssessmentSessionActive()) {
                     this.addBlurListener(win);
                 }
-                await enableRestrictions(this);
             }
         } catch (e) {
             log.error('windowhandler @ applyExamWindowLockdown:', e)

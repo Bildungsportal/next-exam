@@ -48,7 +48,6 @@ import {
 } from './restrictions/win.js';
 import {clearMacClipboard, killMacAppsToClose} from './restrictions/mac.js';
 import {updateRemoteAssistant} from './remoteAssistantScan.js';
-import {isElectronWindow, isIOS} from "../../../src/types/platform.ts";
 import {stopAssessmentSession} from './assessmentSession.js';
 import {appsToClose} from './appsToClose.js';
 
@@ -123,29 +122,16 @@ export async function disableRestrictions() {
     if (clipboardInterval) {
         clipboardInterval.stop();
     }
-    if (isElectronWindow(window)) {
-        globalShortcut.unregister('CommandOrControl+V', () => {
-            console.log('activate clipboard');
-        });
-        globalShortcut.unregister('CommandOrControl+Shift+V', () => {
-            console.log('activate clipboard');
-        });
-        globalShortcut.unregister('CommandOrControl+C', () => {
-            console.log('activate clipboard');
-        });
-        globalShortcut.unregister('CommandOrControl+X', () => {
-            console.log('activate clipboard');
-        });
-    }
+    globalShortcut.unregister('CommandOrControl+V');
+    globalShortcut.unregister('CommandOrControl+Shift+V');
+    globalShortcut.unregister('CommandOrControl+C');
+    globalShortcut.unregister('CommandOrControl+X');
+
     if (platformDispatcher.platform === 'linux') {
         disableLinuxRestrictions(configStore);
     }
 
     if (platformDispatcher.platform === 'win32') {
         disableWindowsRestrictions();
-    }
-
-    if (isIOS(window)) {
-        disableIOSRestrictions();
     }
 }
