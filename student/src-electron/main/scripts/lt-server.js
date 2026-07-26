@@ -30,7 +30,7 @@ class LanguageToolServer {
             this.languageToolProcess = JreHandler.jSpawn(
                 [languageToolJarPath], // Classpath
                 'org.languagetool.server.HTTPServer', // Main class of the LanguageTool API
-                ['--port', this.port,'--config',languageToolConfigPath, '--allow-origin', "*" ] // Additional arguments, e.g. port and CORS permission
+                ['--port', this.port,'--config',languageToolConfigPath, '--allow-origin' ] // Additional arguments, e.g. port and CORS permission (--allow-origin without value implies *; avoids Windows java glob-expanding a bare *)
             );
             //console.log( this.languageToolProcess)
             log.info('lt-server @ startserver: LanguageTool API running at localhost:8088');
