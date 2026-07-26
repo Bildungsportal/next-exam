@@ -1254,7 +1254,6 @@ export default {
                 server1.examStatus === server2.examStatus &&
                 server1.bip === server2.bip &&
                 !!server1.requireBiP === !!server2.requireBiP &&
-                server1.reachable === server2.reachable &&
                 server1.serverip === server2.serverip
             );
         },
