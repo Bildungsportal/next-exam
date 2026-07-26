@@ -40,8 +40,8 @@ class LanguageToolServer {
                 // log.info('lt-server @ startserver data: Received data from LanguageTool API', data.toString());
                 
                 const output = data.toString();
-                if (output.toLowerCase().includes('error')) {
-                    log.info('lt-server @ startserver  data-error:', output);
+                if (/^(Error:|Exception|.*Exception:)/m.test(output)) {
+                    log.warn('lt-server @ startserver  data-error:', output);
                 }
                 if (output.toLowerCase().includes('starting')) {
                     log.info('lt-server @ startserver  data-info:', output);
