@@ -44,6 +44,7 @@ import { stopProxy } from './main/scripts/vncproxy.js';
 import { stopAssessmentSession } from './main/scripts/assessmentSession.js';
 import { initErrorHandling } from './main/scripts/errorHandling.js';
 import { syncClientDisplayInfo } from './main/scripts/displayInfo.js';
+import { execSync } from 'child_process';
 
 
 // if (!config.development && process.argv.some(arg => arg.startsWith('--inspect') || arg.startsWith('--remote-debugging'))) {  // disable options to read v8 heap on production builds
@@ -168,13 +169,16 @@ config.examdirectory = config.workdirectory    // we need this variable setup ev
 
 if (!fs.existsSync(config.workdirectory)){ fs.mkdirSync(config.workdirectory, { recursive: true }); }
 if (!fs.existsSync(config.tempdirectory)){ fs.mkdirSync(config.tempdirectory, { recursive: true }); }
-if (!fs.existsSync(platformDispatcher.desktopPath)) {  fs.mkdirSync(platformDispatcher.desktopPath, { recursive: true }); }  // Check if the desktop folder exists and create if it doesn't
-
-// Create the symbolic link to the workdirectory on the desktop
-const linkPath = path.join(platformDispatcher.desktopPath, config.clientdirectory);  // Define the path for the symbolic link
-try {fs.unlinkSync(linkPath) }catch(e){}
-try {   if (!fs.existsSync(linkPath)) { fs.symlinkSync(config.workdirectory, linkPath, 'junction'); }}
-catch(e){log.error("main @ create-symlink: can't create symlink")}
+if (process.platform === 'win32') {
+    const lnk = path.join(platformDispatcher.desktopPath, `${config.clientdirectory}.lnk`);
+    const t = config.workdirectory.replace(/'/g, "''"), l = lnk.replace(/'/g, "''");
+    try { execSync(`powershell -NoProfile -Command "$s=New-Object -ComObject WScript.Shell;$x=$s.CreateShortcut('${l}');$x.TargetPath='${t}';$x.Save()"`, { windowsHide: true }); }
+    catch (e) { log.error("main @ desktop-link: can't create .lnk") }
+} else {
+    const linkPath = path.join(platformDispatcher.desktopPath, config.clientdirectory);
+    try { fs.unlinkSync(linkPath); } catch {}
+    try { if (!fs.existsSync(linkPath)) fs.symlinkSync(config.workdirectory, linkPath); } catch (e) { log.error("main @ create-symlink: can't create symlink"); }
+}
 
 
 try { //bind to the correct interface

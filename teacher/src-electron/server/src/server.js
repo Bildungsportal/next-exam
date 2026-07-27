@@ -35,6 +35,7 @@ import multicastClient from '../../main/scripts/multicastclient.js'
 import cookieParser from 'cookie-parser'
 import { app } from 'electron'
 import log from 'electron-log';
+import { execSync } from 'child_process';
 
 
 config.homedirectory = os.homedir()
@@ -45,17 +46,17 @@ if (!fs.existsSync(config.workdirectory)){ fs.mkdirSync(config.workdirectory, { 
 if (!fs.existsSync(config.tempdirectory)){ fs.mkdirSync(config.tempdirectory, { recursive: true }); }
 
 
-// Define the desktop path based on the platform
-const desktopPath = process.platform === 'win32'
-    ? path.join(process.env['USERPROFILE'], 'Desktop')
-    : path.join(config.homedirectory, 'Desktop');
-
-// Create the symbolic link
-if (!fs.existsSync(desktopPath)) {  fs.mkdirSync(desktopPath, { recursive: true }); }  // Check if the desktop folder exists and create if it doesn't
-const linkPath = path.join(desktopPath, config.serverdirectory);  // Define the path for the symbolic link
-try {fs.unlinkSync(linkPath) }catch(e){}
-try {   if (!fs.existsSync(linkPath)) { fs.symlinkSync(config.workdirectory, linkPath, 'junction'); }}
-catch(e){log.error("main: can't create symlink")}
+if (process.platform === 'win32') {
+    const lnk = path.join(app.getPath('desktop'), `${config.serverdirectory}.lnk`);
+    const t = config.workdirectory.replace(/'/g, "''"), l = lnk.replace(/'/g, "''");
+    try { execSync(`powershell -NoProfile -Command "$s=New-Object -ComObject WScript.Shell;$x=$s.CreateShortcut('${l}');$x.TargetPath='${t}';$x.Save()"`, { windowsHide: true }); }
+    catch (e) { log.error("server @ desktop-link: can't create .lnk") }
+} else {
+    const desktopPath = app.getPath('desktop');
+    const linkPath = path.join(desktopPath, config.serverdirectory);
+    try { fs.unlinkSync(linkPath); } catch {}
+    try { if (!fs.existsSync(linkPath)) fs.symlinkSync(config.workdirectory, linkPath); } catch (e) { log.error("main: can't create symlink"); }
+}
 
 
 

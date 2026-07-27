@@ -83,8 +83,11 @@ class PlatformDispatcher {
     }
 
     _getDesktopPath() {
-        if (this.platform === 'win32') return path.join(process.env['USERPROFILE'], 'Desktop');
-        return path.join(os.homedir(), 'Desktop');
+        try {
+            return app.getPath('desktop');
+        } catch {
+            return path.join(os.homedir(), 'Desktop');
+        }
     }
 }
 
