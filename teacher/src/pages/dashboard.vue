@@ -923,7 +923,7 @@
                                         type="checkbox"
                                         v-model="serverstatus.examSections[1].groups"
                                         :disabled="serverstatus.useExamSections"
-                                        @change="serverstatus.useExamSections ? null : (serverstatus.examSections[1].groups ? setupGroups(1) : setServerStatus())">
+                                        @change="serverstatus.useExamSections ? null : (serverstatus.examSections[1].groups ? setupGroups(1) : resetGroups(1))">
                                     <label class="form-check-label" for="activategroups">{{$t('dashboard.groups')}}</label>
                                 </div>
                             </div>
@@ -1828,6 +1828,9 @@ computed: {
             section.timelimit = Number(nextTimelimit);
             if (groupsChanged && section.groups) {
                 await this.setupGroups(sectionIndex);
+            }
+            else if (groupsChanged) {
+                this.resetGroups(sectionIndex);
             }
             this.setServerStatus();
         },
@@ -2865,6 +2868,21 @@ computed: {
                 } 
             } 
             await this.sleep(1000)
+            this.setServerStatus()
+        },
+
+        /** Gruppen aus: alle schueler nach groupA, groupB.users leeren (groupB.users wird anderswo ungeschuetzt gelesen) */
+        resetGroups(sectionIndex = this.serverstatus.activeSection){
+            this.serverstatus.examSections[sectionIndex].groupA.users = []
+            this.serverstatus.examSections[sectionIndex].groupB.users = []
+            for (let student of this.studentlist) {
+                if (sectionIndex === this.serverstatus.activeSection) {
+                    student.status.group = "a"
+                }
+                if (!this.serverstatus.examSections[sectionIndex].groupA.users.includes(student.clientname)) {
+                    this.serverstatus.examSections[sectionIndex].groupA.users.push(student.clientname)
+                }
+            }
             this.setServerStatus()
         },
 

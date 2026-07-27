@@ -1609,6 +1609,7 @@ class IpcHandler {
             if (!this.multicastClient.clientinfo.exammode) return;
             if (this.multicastClient.clientinfo.lockedSection === sectionNumber) return;
             log.info(`ipchandler @ switch-exam-section: switching to section ${sectionNumber}`)
+            this.CommunicationHandler.syncGroupForSection(serverstatus.examSections[sectionNumber]);   // vor dem reroute, sonst mountet die neue view mit der gruppe des alten abschnitts
             await switchExamSection(this.CommunicationHandler, serverstatus, sectionNumber);
         })
 

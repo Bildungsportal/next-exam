@@ -9,7 +9,7 @@ export function isNxe1ExamEncrypted(buf) {
     return b.length >= 5 && b.subarray(0, 4).toString('ascii') === 'NXE1' && b.readUInt8(4) === 1;
 }
 
-/** Resolves active exam section index from serverstatus (mirrors student lockedSection logic). */
+/** Section index nur fuer den localvm-examtype-check (canDecryptStudentNxE1) - NICHT die student lockedSection logic. */
 export function effectiveSectionIndex(serverstatus) {
     if (!serverstatus) return 1;
     const idx = serverstatus.allowSectionSwitch && serverstatus.lockedSection != null
@@ -105,7 +105,12 @@ export async function decryptNxe1FilesUnderDir(dir, mcServer, logPrefix) {
         try {
             plain = decryptExamFileBytes(raw, pw);
         } catch (e) {
-            log.error(`${logPrefix}: decrypt failed ${d.name}`, e);
+            // ghash tag mismatch = NXE1 header ok, aber anderer key -> datei stammt aus einem frueheren exam (anderes encryptionPassword)
+            if (String(e?.message || '').includes('ghash tag')) {
+                log.info(`${logPrefix}: skipping ${d.name} - encrypted with a different exam password (leftover file from an earlier exam)`);
+            } else {
+                log.error(`${logPrefix}: decrypt failed ${d.name}`, e);
+            }
             continue;
         }
         log.info(`${logPrefix}: decrypted write ${d.name}`);

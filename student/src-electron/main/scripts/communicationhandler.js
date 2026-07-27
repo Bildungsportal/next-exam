@@ -558,6 +558,7 @@ import config from "../../../src/utils/config.js";
                     const serverSection = Number(serverstatus.lockedSection || 1);
                     const clientSection = Number(this.multicastClient.clientinfo.lockedSection || 1);
                     if (serverSection !== clientSection){
+                        this.syncGroupForSection(serverstatus.examSections[serverSection]);   // vor dem reroute, sonst mountet die neue view mit der gruppe des alten abschnitts
                         await switchExamSection(this, serverstatus, serverSection);
                     }
                 }
@@ -572,7 +573,11 @@ import config from "../../../src/utils/config.js";
         }
 
         const sectionForSync = serverstatus.allowSectionSwitch ? this.multicastClient.clientinfo.lockedSection : serverstatus.lockedSection;
-        const section = serverstatus.examSections[sectionForSync];
+        this.syncGroupForSection(serverstatus.examSections[sectionForSync]);
+    }
+
+    /** Setzt clientinfo.groups/group anhand der uebergebenen section; bei aenderung nachladen der materialien anstossen */
+    syncGroupForSection(section){
         if (section?.groups) {
             this.multicastClient.clientinfo.groups = true;
             const clientname = this.multicastClient.clientinfo.name;
@@ -589,6 +594,7 @@ import config from "../../../src/utils/config.js";
             }
         } else {
             this.multicastClient.clientinfo.groups = false;
+            this.multicastClient.clientinfo.group = 'a';   // gruppenloser abschnitt: groupA ist kanonisch - sonst bleibt 'b' aus vorigem abschnitt stehen
         }
     }
 

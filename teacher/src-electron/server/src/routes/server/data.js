@@ -129,7 +129,7 @@ router.post('/getexammaterials/:servername', async (req, res, next) => {
     if (student) {  
 
         let serverstatus = mcServer.serverstatus
-        const sectionIndex = serverstatus.allowSectionSwitch && clientLockedSection != null ? clientLockedSection : serverstatus.activeSection
+        const sectionIndex = serverstatus.allowSectionSwitch && clientLockedSection != null ? clientLockedSection : serverstatus.lockedSection   // NICHT activeSection - das ist nur die vom lehrer angezeigte section, nicht die der schueler
         let examSection = serverstatus.examSections[sectionIndex]
         if (!examSection || typeof examSection !== 'object') {
             log.warn(`data @ getexammaterials: missing examSections[${sectionIndex}]`)
