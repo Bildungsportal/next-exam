@@ -7,7 +7,7 @@ class UpdateListener {
     infoStore: any = null;
 
     async init(): Promise<void> {
-        console.log("updateListener @ init");
+        console.log("updateListener @ init: starting...");
 
         this.infoStore = useInfoStore();
         await this.infoStore.updateInfo();
