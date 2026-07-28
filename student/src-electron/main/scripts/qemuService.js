@@ -429,13 +429,16 @@ async function startHeadless({
         port: EXAM_WEBDAV_PORT,
         mountPath: EXAM_WEBDAV_MOUNT_PATH,
     });
-    // guestfwd tunnels guest TCP 10.0.2.1:1900 to host WebDAV; must listen before QEMU starts.
-    // .1 = only slirp IP QEMU accepts for guestfwd (.2 gateway/.3 DNS rejected) that's also outside DHCP range → routable in guest.
-    const webdavGuestFwd = `guestfwd=tcp:10.0.2.1:${EXAM_WEBDAV_PORT}-tcp:127.0.0.1:${EXAM_WEBDAV_PORT}`;
+    // Guest reaches host WebDAV on 10.0.2.2:1900 in BOTH modes (rclone.conf uses .2).
+    // Unblocked: plain slirp — .2 is the native host alias (stable, no guestfwd; whole host open anyway).
+    // blockInternet: restrict=on isolates the guest incl. native host access, so gateway is relocated to .1 (host=10.0.2.1)
+    //   freeing .2 for a guestfwd that tunnels WebDAV through. KNOWN BUG: guestfwd deadlocks after the 1st response
+    //   (libslirp #1835) → share drops until QEMU restart; awaits a qemu/libslirp fix.
+    const restrictNetdev = `user,id=net0,net=10.0.2.0/24,host=10.0.2.1,dhcpstart=10.0.2.15,restrict=on,guestfwd=tcp:10.0.2.2:${EXAM_WEBDAV_PORT}-tcp:127.0.0.1:${EXAM_WEBDAV_PORT}`;
     const netArgs = blockInternet
-        ? ['-netdev', `user,id=net0,restrict=on,${webdavGuestFwd}`, '-device', 'virtio-net-pci,netdev=net0']
-        : ['-netdev', `user,id=n0,${webdavGuestFwd}`, '-device', 'virtio-net-pci,netdev=n0'];
-    log.info(`qemuService @ startHeadless: WebDAV host=127.0.0.1:${EXAM_WEBDAV_PORT}${EXAM_WEBDAV_MOUNT_PATH} root=${workdirectory} guestfwd=10.0.2.1:${EXAM_WEBDAV_PORT} blockInternet=${blockInternet}`);
+        ? ['-netdev', restrictNetdev, '-device', 'virtio-net-pci,netdev=net0']
+        : ['-netdev', `user,id=n0`, '-device', 'virtio-net-pci,netdev=n0'];
+    log.info(`qemuService @ startHeadless: WebDAV host=127.0.0.1:${EXAM_WEBDAV_PORT}${EXAM_WEBDAV_MOUNT_PATH} guest=10.0.2.2:${EXAM_WEBDAV_PORT} root=${workdirectory} mode=${blockInternet ? 'restrict+guestfwd(gw=.1)' : 'plain'}`);
 
     const args = [
         ...getQemuAccelArgs(),
