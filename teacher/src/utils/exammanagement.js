@@ -68,14 +68,11 @@ async function startExam(){
     this.serverstatus.lockedSection = sectionIndex;
     this.serverstatus.examSections[sectionIndex].startTs = now
     
-    // Set group assignments and notify students
+    // Group assignments live in section.groupA/B.users (student syncs via serverstatus)
     if (!this.serverstatus.examSections[sectionIndex].groups) {
-        // No groups activated - all in group A
         this.serverstatus.examSections[sectionIndex].groupA.users = this.studentlist.map(student => student.clientname);
-        this.setStudentStatus({group:"a"}, 'all');
     } else {
-        // Groups activated - notify students according to stored assignment
-        this.restoreGroupAssignments(true);
+        this.restoreGroupAssignments();
     }
 
     this.lockscreens(false, false, true); // deactivate lockscreen (bypass reachable gate; exam start must update server state)
@@ -109,9 +106,8 @@ async function lockSectionForAll(sectionIndex){
 
     if (!this.serverstatus.examSections[sectionIndex].groups) {
         this.serverstatus.examSections[sectionIndex].groupA.users = this.studentlist.map(student => student.clientname)
-        this.setStudentStatus({group:"a"}, 'all')
     } else {
-        this.restoreGroupAssignments(true)
+        this.restoreGroupAssignments()
     }
 
     this.setStudentStatus({msofficeshare:false}, 'all')

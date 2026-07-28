@@ -243,7 +243,6 @@ class IpcHandler {
             const activatePrivateSpellcheck = p.activatePrivateSpellcheck
             const activatePrivateSuggestions = p.activatePrivateSuggestions
             const removeprintrequest = p.removeprintrequest
-            const group = p.group
             const kicked = p.kick
             const msofficeshare = p.msofficeshare
             const getmaterials = p.getmaterials
@@ -266,9 +265,6 @@ class IpcHandler {
                     }
                     if (delfolder) {
                         student.status.delfolder = true
-                    }
-                    if (group) {
-                        student.status.group = group
                     }
                     if (typeof msofficeshare !== 'undefined') {
                         student.status.msofficeshare = msofficeshare
@@ -311,9 +307,6 @@ class IpcHandler {
                     }
                     if (removeprintrequest === true) {
                         student.printrequest = false
-                    }
-                    if (group) {
-                        student.status.group = group
                     }
                     if (typeof msofficeshare !== 'undefined') {
                         student.status.msofficeshare = msofficeshare

@@ -95,6 +95,8 @@ RULE^student^registerExamMismatch^client exammode=true and !serverstatus.exammod
 TECH^exam^editorBackupExt^editor/activesheets HTML backup filename <name>.htm + type htm in getfilesasync; teacher getLatestBakFile reads <student>.htm in latest backup dir
 
 RULE^materials^pushOrder^teacher: await setServerStatus before setStudentStatus getmaterials; flag one-shot else student fetches stale list
+RULE^exam^groupSource^group via section.groupA/B.users→student syncGroupForSection; no setStudentStatus({group}); teacher UI derives status.group from users[]
+RULE^exam^groupBeforeMount^startExam+sectionSwitch: syncGroupForSection(target) before navigate; mount getExamMaterials; exammode still false at startExam sync→no getmaterials IPC
 RULE^dashboard^setupLogic^exam setup funcs live in teacher/src/utils/examsetup.js; dashboard.vue should mostly import+map
 TECH^dashboard^overlayZ^StudentView 4000; DashboardExplorer 4100; StudentEditorTimelineDiffViewer 1003 (below StudentView unless raised)
 PATH^examlog^settings^examLogSettings.js snapshot on examstart→event.settings; ExamLog.vue UI+print; examEventBus.push meta.settings

@@ -1075,6 +1075,8 @@ import config from "../../../src/utils/config.js";
                 this.multicastClient.clientinfo.lockedSection = serverstatus.lockedSection;
             }
             const effectiveSection = this.multicastClient.clientinfo.lockedSection;
+            // Same as section-switch: set group for target section before mount fetches materials
+            this.syncGroupForSection(serverstatus.examSections[effectiveSection]);
 
             const examtype = serverstatus.examSections[effectiveSection].examtype;
 

@@ -2337,8 +2337,8 @@ computed: {
             this.serverstatus.activeSection = section
             this.setServerStatus()
 
-            // Show the groups configured for this section (without notifying students)
-            this.restoreGroupAssignments(false)
+            // Show the groups configured for this section (users[] → widget display)
+            this.restoreGroupAssignments()
 
             if (this.serverstatus.allowSectionSwitch) return
             if (this.serverstatus.exammode && !this.serverstatus.examSections[this.serverstatus.activeSection].locked) {
@@ -2886,10 +2886,8 @@ computed: {
             this.setServerStatus()
         },
 
-        // Restore group assignments from the stored arrays
-        // informStudents: if true, students are notified about their group assignment
-        restoreGroupAssignments(informStudents = false) {
-            // Check whether groups are activated for this section
+        // Sync widget A/B display from section.groupA/B.users (student reads same arrays via serverstatus)
+        restoreGroupAssignments() {
             if (!this.serverstatus.examSections[this.serverstatus.activeSection].groups) {
                 return;
             }
@@ -2897,26 +2895,13 @@ computed: {
             const groupA = this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users;
             const groupB = this.serverstatus.examSections[this.serverstatus.activeSection].groupB.users;
 
-            if (!informStudents) {
-                // Only update local display, do not notify students
-                for (let widget of this.studentwidgets) {
-                    if (widget.clientname && widget.status) {
-                        if (groupB.includes(widget.clientname)) {
-                            widget.status.group = "b";
-                        } else if (groupA.includes(widget.clientname)) {
-                            widget.status.group = "a";
-                        }
+            for (let widget of this.studentwidgets) {
+                if (widget.clientname && widget.status) {
+                    if (groupB.includes(widget.clientname)) {
+                        widget.status.group = "b";
+                    } else if (groupA.includes(widget.clientname)) {
+                        widget.status.group = "a";
                     }
-                }
-                return;
-            }
-
-            // Notify students about their group assignment
-            for (let student of this.studentlist) {
-                if (groupB.includes(student.clientname)) {
-                    this.setStudentStatus({group:"b"}, student.token);
-                } else {
-                    this.setStudentStatus({group:"a"}, student.token);
                 }
             }
         },
@@ -2931,27 +2916,13 @@ computed: {
             
             let studentWidget = this.studentwidgets.find(el => el.token === student.token);
 
-            // Check whether students should be notified:
-            // - When no sections are activated (always notify)
-            // - When the current section is the locked section (students are in this section)
-            const shouldInformStudents = !this.serverstatus.useExamSections || 
-                                       this.serverstatus.activeSection === this.serverstatus.lockedSection;
-
             if (student.status.group == "a"){
-                //Add and Set         
-                this.serverstatus.examSections[this.serverstatus.activeSection].groupB.users.push(student.clientname)  //update group arrays
-                if (shouldInformStudents) {
-                    this.setStudentStatus({group:"b"}, student.token)  //set student object (and inform student about group)
-                }
+                this.serverstatus.examSections[this.serverstatus.activeSection].groupB.users.push(student.clientname)
                 this.setServerStatus()
-                if(studentWidget){ studentWidget.status.group = "b"}                          
+                if(studentWidget){ studentWidget.status.group = "b"}
             }
             else {
-                //Add and Set
                 this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users.push(student.clientname)
-                if (shouldInformStudents) {
-                    this.setStudentStatus({group:"a"}, student.token) 
-                }
                 this.setServerStatus()
                 if(studentWidget){ studentWidget.status.group = "a"}
             }
