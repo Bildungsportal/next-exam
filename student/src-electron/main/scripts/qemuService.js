@@ -429,14 +429,16 @@ async function startHeadless({
         port: EXAM_WEBDAV_PORT,
         mountPath: EXAM_WEBDAV_MOUNT_PATH,
     });
-    // Guest reaches WebDAV on 10.0.2.1:1900 (matches VM rclone.conf) in BOTH modes; blockInternet only adds restrict=on.
-    // KNOWN BUG (both modes, restrict irrelevant): guestfwd deadlocks after the 1st response (libslirp #1835) → share drops
-    // until a QEMU restart; unblocked just hit it less often (no rclone poll). Awaits a QEMU/libslirp fix. WebDAV must listen first.
-    const webdavGuestFwd = `guestfwd=tcp:10.0.2.1:${EXAM_WEBDAV_PORT}-tcp:127.0.0.1:${EXAM_WEBDAV_PORT}`;
+    // Guest reaches host WebDAV on 10.0.2.2:1900 in BOTH modes (rclone.conf uses .2).
+    // Unblocked: plain slirp — .2 is the native host alias (stable, no guestfwd; whole host open anyway).
+    // blockInternet: restrict=on isolates the guest incl. native host access, so gateway is relocated to .1 (host=10.0.2.1)
+    //   freeing .2 for a guestfwd that tunnels WebDAV through. KNOWN BUG: guestfwd deadlocks after the 1st response
+    //   (libslirp #1835) → share drops until QEMU restart; awaits a qemu/libslirp fix.
+    const restrictNetdev = `user,id=net0,net=10.0.2.0/24,host=10.0.2.1,dhcpstart=10.0.2.15,restrict=on,guestfwd=tcp:10.0.2.2:${EXAM_WEBDAV_PORT}-tcp:127.0.0.1:${EXAM_WEBDAV_PORT}`;
     const netArgs = blockInternet
-        ? ['-netdev', `user,id=net0,restrict=on,${webdavGuestFwd}`, '-device', 'virtio-net-pci,netdev=net0']
-        : ['-netdev', `user,id=n0,${webdavGuestFwd}`, '-device', 'virtio-net-pci,netdev=n0'];
-    log.info(`qemuService @ startHeadless: WebDAV guest=http://10.0.2.1:${EXAM_WEBDAV_PORT}${EXAM_WEBDAV_MOUNT_PATH} host=127.0.0.1:${EXAM_WEBDAV_PORT} root=${workdirectory} blockInternet=${blockInternet}`);
+        ? ['-netdev', restrictNetdev, '-device', 'virtio-net-pci,netdev=net0']
+        : ['-netdev', `user,id=n0`, '-device', 'virtio-net-pci,netdev=n0'];
+    log.info(`qemuService @ startHeadless: WebDAV host=127.0.0.1:${EXAM_WEBDAV_PORT}${EXAM_WEBDAV_MOUNT_PATH} guest=10.0.2.2:${EXAM_WEBDAV_PORT} root=${workdirectory} mode=${blockInternet ? 'restrict+guestfwd(gw=.1)' : 'plain'}`);
 
     const args = [
         ...getQemuAccelArgs(),
