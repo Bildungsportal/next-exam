@@ -42,7 +42,9 @@
       "Bash(timeout 60 ./node_modules/.bin/electron ./__probe/probe.cjs)",
       "Bash(env)",
       "Bash(ELECTRON_RUN_AS_NODE= timeout 60 env -u ELECTRON_RUN_AS_NODE ./node_modules/.bin/electron ./__probe/probe.cjs)",
-      "Bash(lpstat -p MFC-9332CDW)"
+      "Bash(lpstat -p MFC-9332CDW)",
+      "WebFetch(domain:gitlab.com)",
+      "WebFetch(domain:bugs.launchpad.net)"
     ]
   }
 }

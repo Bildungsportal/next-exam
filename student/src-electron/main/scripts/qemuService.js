@@ -429,13 +429,14 @@ async function startHeadless({
         port: EXAM_WEBDAV_PORT,
         mountPath: EXAM_WEBDAV_MOUNT_PATH,
     });
-    // guestfwd tunnels guest TCP 10.0.2.1:1900 to host WebDAV; must listen before QEMU starts.
-    // .1 = only slirp IP QEMU accepts for guestfwd (.2 gateway/.3 DNS rejected) that's also outside DHCP range → routable in guest.
+    // Guest reaches WebDAV on 10.0.2.1:1900 (matches VM rclone.conf) in BOTH modes; blockInternet only adds restrict=on.
+    // KNOWN BUG (both modes, restrict irrelevant): guestfwd deadlocks after the 1st response (libslirp #1835) → share drops
+    // until a QEMU restart; unblocked just hit it less often (no rclone poll). Awaits a QEMU/libslirp fix. WebDAV must listen first.
     const webdavGuestFwd = `guestfwd=tcp:10.0.2.1:${EXAM_WEBDAV_PORT}-tcp:127.0.0.1:${EXAM_WEBDAV_PORT}`;
     const netArgs = blockInternet
         ? ['-netdev', `user,id=net0,restrict=on,${webdavGuestFwd}`, '-device', 'virtio-net-pci,netdev=net0']
         : ['-netdev', `user,id=n0,${webdavGuestFwd}`, '-device', 'virtio-net-pci,netdev=n0'];
-    log.info(`qemuService @ startHeadless: WebDAV host=127.0.0.1:${EXAM_WEBDAV_PORT}${EXAM_WEBDAV_MOUNT_PATH} root=${workdirectory} guestfwd=10.0.2.1:${EXAM_WEBDAV_PORT} blockInternet=${blockInternet}`);
+    log.info(`qemuService @ startHeadless: WebDAV guest=http://10.0.2.1:${EXAM_WEBDAV_PORT}${EXAM_WEBDAV_MOUNT_PATH} host=127.0.0.1:${EXAM_WEBDAV_PORT} root=${workdirectory} blockInternet=${blockInternet}`);
 
     const args = [
         ...getQemuAccelArgs(),

@@ -43,9 +43,9 @@ async function getHypervisorPresentCim() {
 }
 
 /**
- * Hypervisor Platform / WHPX readiness on win32.
- * Primary: optional feature Enabled|EnablePending (needs admin to query on many PCs).
- * Fallback: Win32_ComputerSystem.HypervisorPresent (no admin).
+ * Hypervisor Platform / WHPX readiness on win32 only (non-win32 → enabled n/a).
+ * Known Disabled wins over HypervisorPresent (Hyper-V/WSL can be on while feature is off).
+ * CIM HypervisorPresent only when optional-feature query fails (often needs admin).
  */
 export async function getWindowsHypervisorPlatformState() {
     if (process.platform !== 'win32') {
@@ -57,24 +57,23 @@ export async function getWindowsHypervisorPlatformState() {
         return { supported: true, enabled: true, state: optional.state, source: 'optionalFeature' };
     }
 
-    const hypervisorPresent = await getHypervisorPresentCim();
-    if (hypervisorPresent === true) {
-        const state = optional.state || 'HypervisorPresent';
-        return { supported: true, enabled: true, state, source: 'cimHypervisorPresent' };
-    }
-
     if (optional.state === 'Disabled' || optional.state === 'DisabledWithPayloadRemoved') {
         return { supported: true, enabled: false, state: optional.state, source: 'optionalFeature' };
     }
 
+    // Query empty/failed: fall back to CIM (no admin); HypervisorPresent≠HypervisorPlatform but better than nothing
+    const hypervisorPresent = await getHypervisorPresentCim();
+    if (hypervisorPresent === true) {
+        return { supported: true, enabled: true, state: 'HypervisorPresent', source: 'cimHypervisorPresent' };
+    }
     if (hypervisorPresent === false) {
-        return { supported: true, enabled: false, state: optional.state || 'false', source: 'cimHypervisorPresent' };
+        return { supported: true, enabled: false, state: 'false', source: 'cimHypervisorPresent' };
     }
 
     return {
         supported: true,
         enabled: false,
-        state: optional.state || (optional.elevatedRequired ? 'queryNeedsElevation' : 'unknown'),
+        state: optional.elevatedRequired ? 'queryNeedsElevation' : 'unknown',
         source: 'unknown',
     };
 }

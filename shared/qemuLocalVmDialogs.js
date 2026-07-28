@@ -86,7 +86,8 @@ export async function ensureQemuAvailableForLocalVmUi({
 }) {
     let check;
     try {
-        check = await invoke(QEMU_IPC.CHECK_AVAILABLE, { deep: false });
+        // deep=true: WHPX/HypervisorPlatform (deep=false only for disk-picker binary probe)
+        check = await invoke(QEMU_IPC.CHECK_AVAILABLE, { deep: true });
     } catch (e) {
         console.error('qemuLocalVmDialogs @ ensureQemuAvailableForLocalVmUi', e);
         await showQemuMissingDialog({ swal, t, invoke, i18nPrefix, check: {} });
