@@ -1,6 +1,5 @@
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import loggingBridge from './loggingBridge.js';
-import log from "electron-log";
 
 let _running: boolean = false;
 
@@ -22,7 +21,7 @@ export async function switchExamSectionFiles(
     newSection: number
 ): Promise<void> {
     if (_running) {
-        log.warn('switchExamSection: already running, skip duplicate');
+        loggingBridge.warn('switchExamSection: already running, skip duplicate');
         return;
     }
     if (!examDir) {

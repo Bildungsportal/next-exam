@@ -23,13 +23,14 @@
 
 
 import {isElectronWindow, isIOS} from '../types/platform.ts'
-import log from "electron-log";
 
-
+let log = null;
+if (isElectronWindow()) {
+    import("electron-log").then(mod => { log = mod.default; });
+}
 
 // class wraps logging for electron and capacitor
 export class LoggingBridge {
-    // constructor stores reference to target window
     constructor() {
         this.targetWindow = null;
     }
@@ -41,11 +42,9 @@ export class LoggingBridge {
     error(...message) {
         const win = this.targetWindow
 
-        if (isElectronWindow(win)) {
+        if (isElectronWindow(win) && log) {
             log.error(...message)
-        }
-
-        if (isIOS()) {
+        } else {
             console.error(...message)
         }
     }
@@ -53,11 +52,9 @@ export class LoggingBridge {
     warn(...message) {
         const win = this.targetWindow
 
-        if (isElectronWindow(win)) {
+        if (isElectronWindow(win) && log) {
             log.warn(...message)
-        }
-
-        if (isIOS()) {
+        } else {
             console.warn(...message)
         }
     }
@@ -65,11 +62,9 @@ export class LoggingBridge {
     info(...message) {
         const win = this.targetWindow
 
-        if (isElectronWindow(win)) {
+        if (isElectronWindow(win) && log) {
             log.info(...message)
-        }
-
-        if (isIOS()) {
+        } else {
             console.info(...message)
         }
     }
@@ -77,11 +72,9 @@ export class LoggingBridge {
     debug(...message) {
         const win = this.targetWindow
 
-        if (isElectronWindow(win)) {
+        if (isElectronWindow(win) && log) {
             log.debug(...message)
-        }
-
-        if (isIOS()) {
+        } else {
             console.debug(...message)
         }
     }

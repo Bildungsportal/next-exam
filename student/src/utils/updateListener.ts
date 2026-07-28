@@ -1,5 +1,5 @@
 import {useInfoStore} from "../stores/infoStore.js";
-import log from "electron-log";
+import loggingBridge from "./loggingBridge.js";
 import {decryptExamFileAllLayers, encryptExamFileBytes, isExamFileEncryptedBytes} from "../../../shared/examFileCryptoCore.js";
 import {Directory, Filesystem, WriteFileResult} from "@capacitor/filesystem";
 
@@ -16,7 +16,7 @@ class UpdateListener {
             console.log('updateListener @ loadGGB: start', filename);
             const ggbFilePath = this.resolveWritablePathUnderExamDir(this.infoStore.examdirectory, filename, ['.ggb']);
             if (!ggbFilePath) {
-                log.warn(`updateListener @ loadGGB: rejected unsafe ggb filename (${filename})`);
+                loggingBridge.warn(`updateListener @ loadGGB: rejected unsafe ggb filename (${filename})`);
                 return { sender: "client", content: false , status:"error" };
             }
             try {
@@ -35,7 +35,7 @@ class UpdateListener {
                 }
 
                 const isEnc = isExamFileEncryptedBytes(uint8Array);
-                if (isEnc && pw) log.info(`updateListener @ loadGGB: decrypted read ${filename}`);
+                if (isEnc && pw) loggingBridge.info(`updateListener @ loadGGB: decrypted read ${filename}`);
                 const fileData = (isEnc && pw) ? decryptExamFileAllLayers(uint8Array, pw) : uint8Array;
                 console.log("updateListener @ loadGGB: got data", fileData)
                 const base64GgbFile = Buffer.from(fileData).toString('base64');

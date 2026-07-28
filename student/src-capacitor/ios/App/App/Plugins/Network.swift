@@ -1,7 +1,9 @@
 import Capacitor
 import CapacitorNetwork
+import CoreLocation
 import Foundation
 import Network
+import NetworkExtension
 
 @objc(NetworkPlugin)
 public class NetworkPlugin: CAPPlugin, CAPBridgedPlugin {
@@ -13,6 +15,8 @@ public class NetworkPlugin: CAPPlugin, CAPBridgedPlugin {
     
     private var interfaces: [NetworkInterfaceInfo] = []
     private var preferredInterface: NetworkInterfaceInfo? = nil
+
+    private let locationDelegate = WlanLocationDelegate()
 
     public override func load() {
         IPCBridge.shared.handle("checkhostip") { [weak self] _ throws -> Any? in
@@ -26,6 +30,10 @@ public class NetworkPlugin: CAPPlugin, CAPBridgedPlugin {
             }
             self.setPerferredInterface(preferredName: preferredName)
             return
+        }
+        IPCBridge.shared.handle("get-wlan-info") { [weak self] _ throws -> Any? in
+            guard let self else { throw PluginError.notInitialized }
+            return await self.getWlanInfo()
         }
     }
 
@@ -101,5 +109,66 @@ public class NetworkPlugin: CAPPlugin, CAPBridgedPlugin {
             self.preferredInterface = preferredInterface
             Config.hostip = preferredInterface.address
         }
+    }
+
+    // Fetch SSID/BSSID/signal via NEHotspotNetwork.
+    private func getWlanInfo() async -> [String: Any] {
+        let noPerms: [String: Any] = ["ssid": NSNull(), "bssid": NSNull(), "quality": NSNull(), "message": "nopermissions"]
+
+        let status = await locationDelegate.requestIfNeeded()
+        guard status == .authorizedWhenInUse || status == .authorizedAlways else {
+            print("getWlanInfo nopermissions")
+            return noPerms
+        }
+
+        guard let network = await fetchCurrentNetwork() else {
+            print("getWlanInfo nointerface")
+            return ["ssid": NSNull(), "bssid": NSNull(), "quality": NSNull(), "message": "nointerface"]
+        }
+        
+        print("getWlanInfo \(network.ssid) \(network.bssid)")
+
+        return [
+            "ssid":    network.ssid as Any,
+            "bssid":   network.bssid as Any,
+            "quality": network.signalStrength > 0 ? Int(network.signalStrength * 100) : NSNull(),
+            "message": NSNull()
+        ]
+    }
+
+    private func fetchCurrentNetwork() async -> NEHotspotNetwork? {
+        await withCheckedContinuation { continuation in
+            NEHotspotNetwork.fetchCurrent { network in
+                continuation.resume(returning: network)
+            }
+        }
+    }
+}
+
+// Minimal CLLocationManager delegate that awaits the user's permission decision.
+private class WlanLocationDelegate: NSObject, CLLocationManagerDelegate {
+    private let manager = CLLocationManager()
+    private var continuation: CheckedContinuation<CLAuthorizationStatus, Never>?
+
+    override init() {
+        super.init()
+        manager.delegate = self
+    }
+
+    func requestIfNeeded() async -> CLAuthorizationStatus {
+        let status = manager.authorizationStatus
+        guard status == .notDetermined else { return status }
+
+        return await withCheckedContinuation { continuation in
+            self.continuation = continuation
+            manager.requestWhenInUseAuthorization()
+        }
+    }
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        let status = manager.authorizationStatus
+        guard status != .notDetermined else { return }
+        continuation?.resume(returning: status)
+        continuation = nil
     }
 }

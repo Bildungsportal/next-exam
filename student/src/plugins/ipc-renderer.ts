@@ -37,7 +37,7 @@ class IpcRenderer {
      * process will not be the same as the one thrown in the main process.
      */
     async invoke(channel: string, args: any[]): Promise<any> {
-        //loggingBridge.info(`IpcRenderer ${channel} invoked with: `, data);
+        loggingBridge.info(`IpcRenderer ${channel} invoked with: `, args);
         try {
             const result = await IPC.invoke({channel, payload: args});
             if ('result' in result) {

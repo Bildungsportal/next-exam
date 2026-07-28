@@ -302,7 +302,6 @@
 
 <script lang="ts">
 import validator from 'validator'
-import log from 'electron-log/renderer'
 import { initScreenshotScheduler, hasActiveScreenshotStream, isFullDesktopCaptureLikely, ensureDisplayStreamAsync, setCageWindowCaptureFallback, setLinuxKioskRunningInCage, isCageWindowCaptureFallback } from '../utils/screenshotCapture.js'
 import { getLinuxKioskInfo } from '../utils/linuxCageKiosk.js'
 import { loadWinKioskLauncherApps } from '../utils/kioskLauncher.js'
@@ -330,14 +329,11 @@ function unhandledRejectionFunction(event: any) {
     event.preventDefault(); // swallow guest view clone errors and ERR_FAILED
     return;
   }
-  log.error('Unhandled promise rejection:', reason); // log all other errors
+  loggingBridge.error('Unhandled promise rejection:', reason);
 }
-
 
 // Capture unhandled promise rejections
 window.addEventListener('unhandledrejection', event => unhandledRejectionFunction(event));
-
-Object.assign(console, log.functions);  // Replace all console logs with logger
 
 export default {
     mixins: [autoCleanupMixin],
@@ -1577,7 +1573,7 @@ export default {
                     await this.status(this.$t('student.localvmStartError'));
                 }
             } catch (e) {
-                log.error('student.vue @ retryLocalVmStart', e);
+                loggingBridge.error('student.vue @ retryLocalVmStart', e);
                 await this.status(this.$t('student.localvmStartError'));
             } finally {
                 this.localVmBusy = false;
@@ -1614,7 +1610,7 @@ export default {
             await this.status(this.$t('student.localvmDownloadDoneWaiting'));
                 this.localVmFixPhase = 'waiting_for_start';
             } catch (e) {
-                log.error('student.vue @ downloadVm', e);
+                loggingBridge.error('student.vue @ downloadVm', e);
             await this.status(this.$t('student.localvmDownloadFailed'));
                 this.localVmFixPhase = null;
             } finally {
