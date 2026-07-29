@@ -168,7 +168,7 @@ function fdelete(file){
         if (result.isConfirmed) {
             ipcRenderer.invoke('deleteWorkdirItem', { servername: this.servername, filepath: file.path })
             .then( result => {
-                log.info(result)
+                log.info( `filemanager @ fdelete: ${result.message}`)
                 this.loadFilelist(this.currentdirectory)
             }).catch(err => { log.error(err)});
         }

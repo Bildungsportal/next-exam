@@ -226,7 +226,7 @@ class IpcHandler {
             return { sender: 'server', message: t('general.ok'), status: 'success' }
         })
 
-        /** Merges flags into student.status for one token or all; sendexam+sendlog; fetchfiles+files queues client download; msofficeshare; restorefocus; print/group/kick/materials; spellcheck if activatePrivateSpellcheck key present; kick: reachable=flag+7s timeout drop, offline=immediate drop. */
+        /** Merges flags into student.status for one token or all; sendexam+sendlog; fetchfiles+files queues client download; msofficeshare; restorefocus; print/group/kick/materials; spellcheck if activatePrivateSpellcheck key present; kick: reachable=flag+5.5s timeout drop, offline=immediate drop. */
         ipcMain.handle('setStudentStatus', (_event, payload) => {
             const p = payload || {}
             const servername = p.servername
@@ -318,7 +318,7 @@ class IpcHandler {
                         const now = Date.now()
                         const reachable = now - 20000 <= student.timestamp
                         if (reachable) {
-                            // keep entry so online student can collect kick; drop if never polled (~1 update cycle)
+                            // keep entry so online student can collect kick; drop if never polled (5s cycle + slack)
                             student.status.kicked = true
                             const token = studenttoken
                             const srv = servername
@@ -329,7 +329,7 @@ class IpcHandler {
                                 if (s?.status?.kicked) {
                                     mc.studentList = mc.studentList.filter((el) => el.token !== token)
                                 }
-                            }, 7000)
+                            }, 5500)
                         } else {
                             mcServer.studentList = mcServer.studentList.filter((el) => el.token !== studenttoken)
                         }

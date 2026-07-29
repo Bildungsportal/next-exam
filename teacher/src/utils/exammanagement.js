@@ -337,8 +337,8 @@ async function kick(studenttoken, studentip){
                 servername: this.servername,
                 studenttoken,
                 delfolder: delfolderonexit,
-                sendlog: true,
-                kick: true,
+                kick: true,   // no sendlog: server drops the student in the same update, so the log upload would lose its token
+
             })
                 .then((result) => { log.info('exammanagment @ kick:', result.message) })
         }

@@ -16,6 +16,8 @@ dotenv.config({ path: envFile });
 // wifi-helper is a plain CLI. Sign each at its bundle/binary path with its own entitlements.
 const helperEntitlements = {
     'assessment-helper.app': path.join(projectRoot, 'scripts', 'entitlements.mac.assessment.plist'),
+    // Ad-hoc only here; production resign is notarize.cjs afterSign (pre-pack SHAID codesign hung CI).
+    'wifi-helper': path.join(projectRoot, 'scripts', 'entitlements.mac.wifi.plist'),
 };
 
 function run(cmd, args, opts = {}) {
