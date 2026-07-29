@@ -1776,9 +1776,6 @@ export default {
                         icon: 'success',
                         timer: 6000,
                         showCancelButton: false,
-                        didOpen: () => {
-                            this.$swal.showLoading();
-                        },
                     })
 
 
@@ -1936,6 +1933,7 @@ export default {
 
         // TODO: Modify windowhandling and token saving
         window.ipcRenderer.on('entering-exam-mode', () => {
+            this.$swal.close();
             this.enteringExamModeOverlay = true;
         });
 
