@@ -20,9 +20,9 @@ export async function updateRemoteAssistant(clientinfo, opts = {}) {
 
     // skipNetworkScan: run only the cheap keyword+port remoteCheck (reported to teacher),
     // skip the PowerShell-heavy network scan (local logs only) so this can tick more often
-    const [keywordHit, , ltFakes] = await Promise.all([
+    const [keywordHit, networkResult, ltFakes] = await Promise.all([
         runRemoteCheck(process.platform),
-        opts.skipNetworkScan ? { processes: [] } : logNetworkActiveProcesses({ mode: 'both' }).catch((err) => {
+        opts.skipNetworkScan ? { processes: [] } : logNetworkActiveProcesses({ mode: 'both', prevSummary: clientinfo._networkScanSummary ?? null }).catch((err) => {
             log.warn(`${logTag} @ updateRemoteAssistant: networkActiveProcesses failed: ${err.message}`);
             return { processes: [] };
         }),
@@ -31,6 +31,10 @@ export async function updateRemoteAssistant(clientinfo, opts = {}) {
             return [];
         }),
     ]);
+
+    if (!opts.skipNetworkScan && networkResult?.summary !== undefined) {
+        clientinfo._networkScanSummary = networkResult.summary;
+    }
 
     // skipNetworkScan: port-8088 not checked this tick -> keep any prior languagetoolFake untouched
     const ltFakePrev = !!clientinfo.remoteassistant?.languagetoolFake;
@@ -60,16 +64,15 @@ export async function updateRemoteAssistant(clientinfo, opts = {}) {
     }
 
     if (keywordHits.length || ports.length) {
-        if (keywordHit?.keywords?.length) {
-            log.warn(`${logTag} @ updateRemoteAssistant: possible remote assistance detected`);
-            for (const keyword of keywordHit.keywords) {
-                log.warn(`${logTag} @ updateRemoteAssistant: keyword ${keyword} detected`);
-            }
-        }
-        if (ports.length) {
-            for (const port of ports) {
-                log.warn(`${logTag} @ updateRemoteAssistant: port ${port} detected`);
-            }
+        const prevKeywords = clientinfo.remoteassistant?.keywords || [];
+        const prevPorts    = clientinfo.remoteassistant?.ports    || [];
+        const changed = keywordHits.length !== prevKeywords.length || ports.length !== prevPorts.length
+            || keywordHits.some((k) => !prevKeywords.includes(k)) || ports.some((p) => !prevPorts.includes(p));
+        if (changed) {
+            const parts = [];
+            if (keywordHits.length) parts.push(keywordHits.join(', '));
+            if (ports.length) parts.push(`ports: ${ports.join(', ')}`);
+            log.warn(`${logTag} @ updateRemoteAssistant: remote assistance apps: ${parts.join(' | ') || 'none'}`);
         }
         const ra = clientinfo.remoteassistant || { keywords: [], ports: [] };
         clientinfo.remoteassistant = {

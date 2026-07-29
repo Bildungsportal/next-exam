@@ -470,10 +470,6 @@ export async function findNonLanguageToolOn8088() {
  */
 export async function logNetworkActiveProcesses(opts = {}) {
     const { processes, snapshotTs } = await getNetworkActiveProcesses(opts);
-    if (!processes.length) {
-        log.info('networkActiveProcesses @ scan: no candidates');
-        return { processes, snapshotTs };
-    }
     // direction tag per process: L = listen only, O = outbound only, LO = both
     // aggregate identical name+direction+ports tuples with ×N to keep one line readable
     const counts = new Map();
@@ -485,7 +481,12 @@ export async function logNetworkActiveProcesses(opts = {}) {
         const label = ports ? `${p.name} ${dir}:${ports}` : `${p.name} ${dir}`;
         counts.set(label, (counts.get(label) || 0) + 1);
     }
-    const items = [...counts.entries()].map(([label, n]) => n > 1 ? `${label} ×${n}` : label);
-    log.info(`networkActiveProcesses @ scan: ${items.join(' | ')}`);
-    return { processes, snapshotTs };
+    const summary = processes.length
+        ? [...counts.entries()].map(([label, n]) => n > 1 ? `${label} ×${n}` : label).join(' | ')
+        : '';
+    if (summary !== (opts.prevSummary ?? null)) {
+        if (summary) log.warn(`networkActiveProcesses @ scan: ${summary}`);
+        else         log.info('networkActiveProcesses @ scan: no candidates');
+    }
+    return { processes, snapshotTs, summary };
 }
