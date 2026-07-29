@@ -1456,14 +1456,6 @@ import config from "../../../src/utils/config.js";
         try { if (!fs.existsSync(this.config.tempdirectory)){ fs.mkdirSync(this.config.tempdirectory); }
         }catch (e){ log.error(e)}
 
-        //  this is the logfile path try to copy the logfile to the examdirectory before making the zip file
-        let logfilepath = platformDispatcher.logfile;
-        if (fs.existsSync(logfilepath)){
-            try {
-                fs.copyFileSync(logfilepath, join(this.config.examdirectory, 'next-exam-student.log'));
-            } catch (e){ log.error('communicationhandler @ sendToTeacher: could not copy logfile to examdirectory'); }
-        }
-
         let zipfilename = this.multicastClient.clientinfo.name.concat('.zip')
         let servername = this.multicastClient.clientinfo.servername
         let serverip = this.multicastClient.clientinfo.serverip
