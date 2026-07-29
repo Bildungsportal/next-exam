@@ -226,7 +226,7 @@ class IpcHandler {
             return { sender: 'server', message: t('general.ok'), status: 'success' }
         })
 
-        /** Merges flags into student.status for one token or all; sendexam+sendlog; fetchfiles+files queues client download; msofficeshare; restorefocus; print/group/kick/materials; spellcheck if activatePrivateSpellcheck key present; may remove kicked student after timestamp gate. */
+        /** Merges flags into student.status for one token or all; sendexam+sendlog; fetchfiles+files queues client download; msofficeshare; restorefocus; print/group/kick/materials; spellcheck if activatePrivateSpellcheck key present; kick: reachable=flag+7s timeout drop, offline=immediate drop. */
         ipcMain.handle('setStudentStatus', (_event, payload) => {
             const p = payload || {}
             const servername = p.servername
@@ -311,15 +311,28 @@ class IpcHandler {
                     if (typeof msofficeshare !== 'undefined') {
                         student.status.msofficeshare = msofficeshare
                     }
-                    if (kicked) {
-                        student.status.kicked = true
-                    }
                     if (getmaterials) {
                         student.status.getmaterials = true
                     }
-                    const now = Date.now()
-                    if (now - 20000 > student.timestamp && student.status.kicked) {
-                        mcServer.studentList = mcServer.studentList.filter((el) => el.token !== studenttoken)
+                    if (kicked) {
+                        const now = Date.now()
+                        const reachable = now - 20000 <= student.timestamp
+                        if (reachable) {
+                            // keep entry so online student can collect kick; drop if never polled (~1 update cycle)
+                            student.status.kicked = true
+                            const token = studenttoken
+                            const srv = servername
+                            setTimeout(() => {
+                                const mc = this.config.examServerList[srv]
+                                if (!mc) return
+                                const s = mc.studentList.find((el) => el.token === token)
+                                if (s?.status?.kicked) {
+                                    mc.studentList = mc.studentList.filter((el) => el.token !== token)
+                                }
+                            }, 7000)
+                        } else {
+                            mcServer.studentList = mcServer.studentList.filter((el) => el.token !== studenttoken)
+                        }
                     }
                 }
             }

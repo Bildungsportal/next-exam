@@ -2054,6 +2054,7 @@ computed: {
 
                 //update widgets list here - we keep our own independent widgetlist (aka studentlist) for drag&drop 
                 for (let student of this.studentlist) {
+                    if (student.status?.kicked) continue  // hide immediately; server entry stays until collect/timeout
                     let studentWidget = this.studentwidgets.filter( el => el.token ===  student.token)  // get widget with the same token
                     if ( studentWidget.length > 0){  //studentwidget exists -> update it
                         for (let i = 0; i < this.studentwidgets.length; i++){  // we cant use (for .. of) or forEach because it creates a workingcopy of the original object
@@ -2175,9 +2176,9 @@ computed: {
                 }
             }
                 
-            //remove studentwidget from widgetslist if student was removed
+            //remove studentwidget from widgetslist if student was removed or kicked (pending collect)
             for (let widget of this.studentwidgets) { //find student in studentwidgets list  
-                let studentExists = this.studentlist.filter( el => el.token ===  widget.token).length === 0 ? false : true  // now check if a widget has a student in studentlist otherwise remove it
+                let studentExists = this.studentlist.some(el => el.token === widget.token && !el.status?.kicked)
                 if (!studentExists && widget.token.includes('csrf')){ //if the student the widget belongs to does not exist (and the widget actually represents a student - token starting with csrf)
                     for (let i = 0; i < this.studentwidgets.length; i++){  // we cant use (for .. of) or forEach because it creates a workingcopy of the original object
                             if (widget.token == this.studentwidgets[i].token){ 
