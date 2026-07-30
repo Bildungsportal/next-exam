@@ -358,7 +358,8 @@
         "winKioskSetupText": "Next-Exam can be set up as a locked-down kiosk on this Windows PC (separate user, USB drives blocked, profile wiped after each exam).",
         "winKioskSetupTitle": "Windows kiosk mode",
         "wlanNopermissionsText": "Windows requires location permissions to retrieve WLAN information. Please enable location services in Privacy & Security settings.",
-        "wlanNopermissionsTitle": "Location permission required"
+        "wlanNopermissionsTitle": "Location permission required",
+        "wlanQualityUnavailable": "Wifi-Quality not available"
     },
     "submissionSign": {
         "askText": "A signature password lets you verify later that your submission was not altered.",

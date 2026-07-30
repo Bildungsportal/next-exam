@@ -360,7 +360,8 @@
         "winKioskSetupText": "Next-Exam kann auf diesem Windows-PC als abgesicherter Kiosk-Modus eingerichtet werden (separater Benutzer, USB-Sticks blockiert, Profil wird nach jeder Prüfung gelöscht).",
         "winKioskSetupTitle": "Windows Kiosk-Modus",
         "wlanNopermissionsText": "Windows benötigt Standortberechtigungen, um WLAN-Informationen abzurufen. Bitte aktiviere die Positionsdienste in den Datenschutz- und Sicherheitseinstellungen.",
-        "wlanNopermissionsTitle": "Standortberechtigung erforderlich"
+        "wlanNopermissionsTitle": "Standortberechtigung erforderlich",
+        "wlanQualityUnavailable": "WLAN-Qualität nicht verfügbar"
     },
     "submissionSign": {
         "askText": "Mit einem Signatur-Passwort kannst du später prüfen, ob deine Abgabe unverändert ist.",

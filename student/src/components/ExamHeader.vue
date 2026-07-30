@@ -76,6 +76,11 @@
                 <img v-else :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostipDisplay" :alt="wlanInfo.quality+'%'" src="/img/svg/network-wireless-connected-00.svg" width="24" height="24" style="vertical-align: bottom;" />
             </div>
 
+            <!-- WLAN Quality not available -->
+            <div v-else-if="showWlanNoQualityInfo" class="me-2">
+                <img :title="$t('student.wlanQualityUnavailable')+' \nIP: '+hostipDisplay" :alt="$t('student.wlanQualityUnavailable')" src="/img/svg/network-wireless-connected-no-quality-info.svg" width="24" height="24" style="vertical-align: bottom;" />
+            </div>
+
             <!-- WLAN permission not available -->
             <div v-else-if="showWlanNoPermissions" class="me-2">
                 <img :title="$t('student.wlanNopermissionsText')" :alt="$t('student.wlanNopermissionsText')" src="/img/svg/network-wireless-disconnected.svg" width="24" height="24" >
@@ -209,6 +214,9 @@
       },
       showWlanQuality() {
         return this.hasActiveWlan && this.wlanInfo?.quality != null;
+      },
+      showWlanNoQualityInfo() {
+        return this.hasActiveWlan && this.wlanInfo?.quality == null;
       },
       showWlanNoPermissions() {
         return this.wlanInfo?.message === 'nopermissions';
