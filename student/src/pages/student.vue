@@ -189,10 +189,10 @@
                 <div v-if="bipToken" class="input-group  mb-1">
                     <span class="input-group-text col-3" style="width:135px;"
                           id="inputGroup-sizing-lg">{{ $t("student.name") }}</span>
-                    <span v-if="username" class="input-group-text col-3" style="width:200px;" id="inputGroup-sizing-lg"> {{
+                    <span v-if="username" class="input-group-text col-3" style="width:200px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="inputGroup-sizing-lg" :title="username">{{
                             username
-                        }} </span>
-                    <span v-else class="input-group-text col-3 " style="width:200px;"
+                        }}</span>
+                    <span v-else class="input-group-text col-3 " style="width:200px;max-width:200px;"
                           id="inputGroup-sizing-lg">  </span>
                 </div>
                 <div class="input-group  mb-1">
@@ -257,11 +257,11 @@
                                                                                        :id="server.servername" type="button"
                                                                                        name="register" class="btn btn-sm btn-secondary"
                                                                                        value="restricted"/>
-                                <!-- not logged in, bip server, exam closed/offline (only if not restricted) --> <input v-if="server.bip && !server.requireBiP && server.examStatus && server.examStatus !== 'open'" style="width:200px;"
+                                <!-- not logged in, bip server, not joinable (closed/offline or no LAN teacher) --> <input v-if="server.bip && !server.requireBiP && !isBipExamLanJoinable(server)" style="width:200px;"
                                                                                                                       :id="server.servername" type="button"
                                                                                                                       name="register" class="btn btn-sm btn-secondary"
-                                                                                                                      :value="server.examStatus"/>
-                                <!-- not logged in, bip server, BiP NOT required --> <input v-if="server.bip && !server.requireBiP && (!server.examStatus || server.examStatus === 'open')" style="width:200px;"
+                                                                                                                      :value="(server.examStatus && server.examStatus !== 'open') ? server.examStatus : 'offline'"/>
+                                <!-- not logged in, bip server, open and teacher on LAN --> <input v-if="isBipExamLanJoinable(server)" style="width:200px;"
                                                                                            :id="server.servername" type="button"
                                                                                            name="register" class="btn btn-sm btn-info"
                                                                                            :value="$t('student.register')"
@@ -790,6 +790,12 @@ export default {
                 const serverKey = s.id ?? s.servername;
                 return serverKey === examKey || s.servername === exam.examName;
             }) || null;
+        },
+
+        // BiP Anmelden only when portal says open and teacher is reachable on LAN
+        isBipExamLanJoinable(server) {
+            return !!(server?.bip && !server.requireBiP && server.examStatus === 'open'
+                && server.serverip && server.reachable !== false);
         },
 
         /**
@@ -1328,12 +1334,15 @@ export default {
                         examStatus: exam.examStatus,
                         ...(typeof exam.requireBiP !== 'undefined' ? { requireBiP: !!exam.requireBiP } : {}),
                     };
+                    if (!updatedServer.serverip) {
+                        updatedServer.reachable = false;
+                    }
                     newServerlist.push(updatedServer);
                 } else {
                     const newServer = {
                         id: exam.id,
                         servername: exam.examName,
-                        reachable: true,
+                        reachable: false,
                         serverport: this.serverApiPort,
                         timestamp: Date.now(),
                         bip: true,
