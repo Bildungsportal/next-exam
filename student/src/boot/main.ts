@@ -62,7 +62,6 @@ export default defineBoot(async ( { app, router } ) => {
         window.ipcRenderer = capacitorIpcRenderer
     }
 
-    LoggingBridge.init(window);
     // Electron: MulticastClient lives in main; renderer only needs a clientinfo stub for NavigationHandler.
     if (!isIOS()) {
         const mc = { clientinfo: {} };

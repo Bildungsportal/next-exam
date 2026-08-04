@@ -24,56 +24,70 @@
 
 import {isElectronWindow, isIOS} from '../types/platform.ts'
 
-let log = null;
+let electronLogger = null;
 if (isElectronWindow()) {
-    import("electron-log").then(mod => { log = mod.default; });
+    import("electron-log").then(mod => {
+        electronLogger = mod.default;
+    });
+}
+
+let iosLogger = null;
+if (isIOS()) {
+    import("../plugins/logging").then(mod => { iosLogger = mod.LoggingHandler; });
+}
+
+function stringify(...message) {
+    return message.map(m => typeof m === 'object' ? JSON.stringify(m) : String(m)).join(' ')
 }
 
 // class wraps logging for electron and capacitor
 export class LoggingBridge {
-    constructor() {
-        this.targetWindow = null;
-    }
-
-    init(window) {
-        this.targetWindow = window;
-    }
-
     error(...message) {
-        const win = this.targetWindow
-
-        if (isElectronWindow(win) && log) {
-            log.error(...message)
+        const msg = stringify(...message)
+        if (isElectronWindow() && electronLogger) {
+            electronLogger.error(...message)
+        } else if (isIOS() && iosLogger) {
+            iosLogger.error({ message: msg })
         } else {
             console.error(...message)
         }
     }
 
     warn(...message) {
-        const win = this.targetWindow
-
-        if (isElectronWindow(win) && log) {
-            log.warn(...message)
+        if (isElectronWindow() && electronLogger) {
+            electronLogger.warn(...message)
+        } else if (isIOS() && iosLogger) {
+            iosLogger.warn({ message: stringify(...message) })
         } else {
             console.warn(...message)
         }
     }
 
-    info(...message) {
-        const win = this.targetWindow
+    log(...message) {
+        if (isElectronWindow() && electronLogger) {
+            electronLogger.log(...message)
+        } else if (isIOS() && iosLogger) {
+            iosLogger.log({ message: stringify(...message) })
+        } else {
+            console.log(message)
+        }
+    }
 
-        if (isElectronWindow(win) && log) {
-            log.info(...message)
+    info(...message) {
+        if (isElectronWindow() && electronLogger) {
+            electronLogger.info(...message)
+        } else if (isIOS() && iosLogger) {
+            iosLogger.info({ message: stringify(...message) })
         } else {
             console.info(...message)
         }
     }
 
     debug(...message) {
-        const win = this.targetWindow
-
-        if (isElectronWindow(win) && log) {
-            log.debug(...message)
+        if (isElectronWindow() && electronLogger) {
+            electronLogger.debug(...message)
+        } else if (isIOS() && iosLogger) {
+            iosLogger.debug({ message: stringify(...message) })
         } else {
             console.debug(...message)
         }

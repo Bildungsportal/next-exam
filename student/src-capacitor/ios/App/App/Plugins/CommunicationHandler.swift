@@ -8,6 +8,7 @@ import Foundation
 final class CommunicationHandler {
 
     static let shared = CommunicationHandler()
+    private let log = LoggingHandler.shared
     private init() {}
 
     // MARK: - Dependencies
@@ -42,7 +43,7 @@ final class CommunicationHandler {
         )
         updateScheduler?.start()
     }
-    
+
     func initialize(assessmentHandler: AssessmentHandler) {
         self.assessmentHandler = assessmentHandler
     }
@@ -54,8 +55,6 @@ final class CommunicationHandler {
     // MARK: - Heartbeat Loop
 
     func requestUpdate() async {
-        //log(.info, "communicationhandler @ requestUpdate: Starting to request update")
-
         guard let mc = multicastClient else { return }
 
         timer += 1
@@ -71,7 +70,7 @@ final class CommunicationHandler {
         // Connection lost — no server signal for 5 consecutive cycles (25 s)
         if mc.beaconsLost >= 5 {
             if !mc.kicked {
-                log(.warn, "communicationhandler @ requestUpdate: Connection to Teacher lost! Removing registration.")
+                log?.warn("communicationhandler @ requestUpdate: Connection to Teacher lost! Removing registration.")
                 mc.beaconsLost = 0
                 resetConnection()
             }
@@ -87,7 +86,7 @@ final class CommunicationHandler {
         let payload: [String: Any] = ["clientinfo": mc.clientinfo.asDictionary]
 
         guard let url = URL(string: "https://\(serverip):\(Config.serverApiPort)/server/control/update") else {
-            log(.error, "communicationhandler @ requestUpdate: Invalid URL")
+            log?.error("communicationhandler @ requestUpdate: Invalid URL")
             return
         }
 
@@ -100,8 +99,8 @@ final class CommunicationHandler {
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: payload)
         } catch {
-            log(.error, "communicationhandler @ requestUpdate: JSON serialization failed – \(error.localizedDescription)")
-            return	
+            log?.error("communicationhandler @ requestUpdate: JSON serialization failed – \(error.localizedDescription)")
+            return
         }
 
         Task { [weak self, weak mc] in
@@ -109,57 +108,49 @@ final class CommunicationHandler {
 
             do {
                 let (data, _) = try await self.urlSession.data(for: request)
-                
-                //print("multicastclient @ messageReceived: ", String(data: data, encoding: .utf8) ?? "Unable to decode data as UTF-8")
 
-                /*guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-                    mc.beaconsLost += 1
-                    return
-                }*/
-                
                 let updateDto: Update
                 do {
                     updateDto = try JSONDecoder().decode(Update.self, from: data)
                 } catch let DecodingError.keyNotFound(key, context) {
                     let path = context.codingPath.map { $0.stringValue }.joined(separator: " → ")
-                    log(.error, "multicastclient @ messageReceived: missing key '\(key.stringValue)' at path '\(path)' – \(context.debugDescription)")
+                    log?.error("multicastclient @ messageReceived: missing key '\(key.stringValue)' at path '\(path)' – \(context.debugDescription)")
                     mc.beaconsLost += 1
                     return
                 } catch let DecodingError.typeMismatch(type, context) {
                     let path = context.codingPath.map { $0.stringValue }.joined(separator: " → ")
-                    log(.error, "multicastclient @ messageReceived: type mismatch for type '\(type)' at path '\(path)' – \(context.debugDescription)")
+                    log?.error("multicastclient @ messageReceived: type mismatch for type '\(type)' at path '\(path)' – \(context.debugDescription)")
                     mc.beaconsLost += 1
                     return
                 } catch let DecodingError.valueNotFound(type, context) {
                     let path = context.codingPath.map { $0.stringValue }.joined(separator: " → ")
-                    log(.error, "multicastclient @ messageReceived: value not found for type '\(type)' at path '\(path)' – \(context.debugDescription)")
+                    log?.error("multicastclient @ messageReceived: value not found for type '\(type)' at path '\(path)' – \(context.debugDescription)")
                     mc.beaconsLost += 1
                     return
                 } catch let DecodingError.dataCorrupted(context) {
                     let path = context.codingPath.map { $0.stringValue }.joined(separator: " → ")
-                    log(.error, "multicastclient @ messageReceived: data corrupted at path '\(path)' – \(context.debugDescription)")
+                    log?.error("multicastclient @ messageReceived: data corrupted at path '\(path)' – \(context.debugDescription)")
                     mc.beaconsLost += 1
                     return
                 } catch {
-                    log(.error, "multicastclient @ messageReceived: JSON decode failed – \(error)")
+                    log?.error("multicastclient @ messageReceived: JSON decode failed – \(error)")
                     mc.beaconsLost += 1
                     return
                 }
 
                 let status = updateDto.status
-                //log(.info, "communicationhandler @ update recieved")
-                
+
                 if status == "error" {
                     let message = updateDto.message
 
                     if message == "notavailable" {
-                        self.log(.warn, "communicationhandler @ requestUpdate: Exam Instance not found!")
+                        log?.warn("communicationhandler @ requestUpdate: Exam Instance not found!")
                         mc.beaconsLost = 5
                     } else if message == "removed" {
-                        self.log(.warn, "communicationhandler @ requestUpdate: Student registration not found!")
+                        log?.warn("communicationhandler @ requestUpdate: Student registration not found!")
                         await self.kickStudent()
                     } else {
-                        self.log(.warn, "communicationhandler @ requestUpdate: \(mc.beaconsLost) Heartbeat lost..")
+                        log?.warn("communicationhandler @ requestUpdate: \(mc.beaconsLost) Heartbeat lost..")
                         mc.beaconsLost += 1
                     }
 
@@ -168,12 +159,12 @@ final class CommunicationHandler {
                     mc.clientinfo.printrequest = false
                     await self.processUpdatedServerstatus(serverstatus: updateDto.serverstatus!, studentstatus: updateDto.studentstatus!)
                 } else {
-                    log(.error, "communicationhandler @ unknown status \(status)")
+                    log?.error("communicationhandler @ unknown status \(status)")
                 }
 
             } catch {
                 mc.beaconsLost += 1
-                self.log(.error, "communicationhandler @ requestUpdate: (\(mc.beaconsLost)) \(error.localizedDescription)")
+                log?.error("communicationhandler @ requestUpdate: (\(mc.beaconsLost)) \(error.localizedDescription)")
             }
         }
     }
@@ -181,7 +172,6 @@ final class CommunicationHandler {
     // MARK: - Server Status Processing
 
     private func processUpdatedServerstatus(serverstatus: ServerStatus, studentstatus: StudentStatus) async {
-        //log(.info, "communicationhandler @ processUpdatedServerstatus")
         guard let mc = multicastClient else { return }
         mc.serverstatus = serverstatus
 
@@ -201,7 +191,7 @@ final class CommunicationHandler {
         }
         return false
     }
-    
+
     private func handleExamSections(serverstatus: ServerStatus) async {
         guard let mc = multicastClient else { return }
 
@@ -238,9 +228,8 @@ final class CommunicationHandler {
 
     /// Handles screenshot interval changes, and exam start/end transitions.
     private func handleGlobalServerStatus(serverstatus: ServerStatus) async {
-        //log(.info, "communicationhandler @ handleGlobalServerStatus")
         guard let mc = multicastClient else { return }
-        
+
         // MARK: - Screenlock
         /*if serverstatus.screenslocked && !mc.clientinfo.screenlock {
             activateScreenlock()
@@ -253,11 +242,11 @@ final class CommunicationHandler {
         let screenshotinterval = serverstatus.screenshotinterval
         let intervalMs = screenshotinterval * 1000
         if mc.clientinfo.screenshotinterval != intervalMs {
-            log(.info, "communicationhandler @ processUpdatedServerstatus: ScreenshotInterval changed to \(intervalMs)")
+            log?.info("communicationhandler @ processUpdatedServerstatus: ScreenshotInterval changed to \(intervalMs)")
             mc.clientinfo.screenshotinterval = intervalMs
 
             if intervalMs == 0 {
-                log(.info, "communicationhandler @ processUpdatedServerstatus: ScreenshotInterval disabled!")
+                log?.info("communicationhandler @ processUpdatedServerstatus: ScreenshotInterval disabled!")
             }
 
             ScreenshotHandler.shared.applyConfig(intervalMs: intervalMs)
@@ -269,20 +258,20 @@ final class CommunicationHandler {
             let examtype = serverstatus.examSections[lockedSection]?.examtype
 
             if _startExamRunning {
-                log(.info, "communicationhandler @ processUpdatedServerstatus: startExam already running, skip duplicate")
+                log?.info("communicationhandler @ processUpdatedServerstatus: startExam already running, skip duplicate")
                 return
             }
             if examtype == "localvm" && localVmStartState != "idle" {
-                log(.info, "communicationhandler @ processUpdatedServerstatus: localvm start suppressed (state=\(localVmStartState))")
+                log?.info("communicationhandler @ processUpdatedServerstatus: localvm start suppressed (state=\(localVmStartState))")
                 return
             }
 
-            log(.info, "communicationhandler @ processUpdatedServerstatus: exammode activated")
+            log?.info("communicationhandler @ processUpdatedServerstatus: exammode activated")
             //killScreenlock()
             await startExam(serverstatus)
 
         } else if !serverstatus.exammode && mc.clientinfo.exammode {
-            log(.info, "communicationhandler @ processUpdatedServerstatus: exammode deactivated")
+            log?.info("communicationhandler @ processUpdatedServerstatus: exammode deactivated")
             //killScreenlock()
             await endExam()
         }
@@ -293,7 +282,7 @@ final class CommunicationHandler {
             let keepFixUi = st == "missing" || st == "hash_mismatch" || st == "error"
 
             if !keepFixUi, let currentState = st {
-                log(.info, "communicationhandler @ processUpdatedServerstatus: localvm exammode off -> clearing transient vm state (\(currentState))")
+                log?.info("communicationhandler @ processUpdatedServerstatus: localvm exammode off -> clearing transient vm state (\(currentState))")
                 mc.clientinfo.localVMState = nil
                 mc.clientinfo.localVMHost = nil
             }
@@ -307,9 +296,9 @@ final class CommunicationHandler {
 
     /// Starts exam mode: determines section/type, begins assessment lockdown, notifies renderer.
     private func startExam(_ serverstatus: ServerStatus) async {
-        log(.info, "communicationhandler @ startExam: starting exam")
+        log?.info("communicationhandler @ startExam: starting exam")
         if _startExamRunning {
-            log(.info, "communicationhandler @ startExam: already running, skip duplicate")
+            log?.info("communicationhandler @ startExam: already running, skip duplicate")
             return
         }
         _startExamRunning = true
@@ -324,14 +313,14 @@ final class CommunicationHandler {
         let effectiveSection = mc.clientinfo.lockedSection
 
         guard let section = serverstatus.examSections[effectiveSection] else {
-            log(.error, "communicationhandler @ startExam: no exam section for index \(effectiveSection)")
+            log?.error("communicationhandler @ startExam: no exam section for index \(effectiveSection)")
             return
         }
         let examtype = section.examtype
 
         // LocalVM not supported on iOS
         if examtype == "localvm" {
-            log(.warn, "communicationhandler @ startExam: localvm examtype not supported on iOS")
+            log?.warn("communicationhandler @ startExam: localvm examtype not supported on iOS")
             return
         }
 
@@ -340,21 +329,21 @@ final class CommunicationHandler {
             if assessmentHandler?.isLocked() == false {
                 let locked = await assessmentHandler?.startSession() ?? false
                 if !locked {
-                    log(.warn, "communicationhandler @ startExam: assessment mode declined or failed")
+                    log?.warn("communicationhandler @ startExam: assessment mode declined or failed")
                     return
                 }
             }
             mc.clientinfo.exammode = true
             mc.clientinfo.examtype = examtype
-            log(.info, "communicationhandler @ startExam: creating exam view (type=\(examtype))")
+            log?.info("communicationhandler @ startExam: creating exam view (type=\(examtype))")
         } else {
             // Reconnect / section switch — exam view already active
-            log(.info, "communicationhandler @ startExam: reconnecting into active exam session")
+            log?.info("communicationhandler @ startExam: reconnecting into active exam session")
         }
 
         IPCBridge.shared.send("startExam", serverstatus.asDictionary)
     }
-    
+
     public func gracefullyEndExam() {
         Task { await endExam() }
     }
@@ -364,7 +353,7 @@ final class CommunicationHandler {
         guard let mc = multicastClient else { return }
         mc.clientinfo.exammode      = false
         mc.clientinfo.localLockdown = false
-        log(.info, "communicationhandler @ endExam: ending exam")
+        log?.info("communicationhandler @ endExam: ending exam")
         IPCBridge.shared.send("endExam")
         await assessmentHandler?.endSession()
     }
@@ -384,25 +373,10 @@ final class CommunicationHandler {
 
     private func kickStudent() async {
         guard let mc = multicastClient else { return }
-        log(.warn, "communicationhandler @ kickStudent: Student got kicked by Teacher")
+        log?.warn("communicationhandler @ kickStudent: Student got kicked by Teacher")
         mc.kicked = false
         mc.beaconsLost = 0
         await endExam()
         resetConnection()
-    }
-
-    // MARK: - Logging
-
-    private enum LogLevel { case debug, info, warn, error }
-
-    private func log(_ level: LogLevel, _ message: String) {
-        let tag: String
-        switch level {
-        case .debug:  tag = "[DEBUG] "
-        case .info:  tag = "[INFO] "
-        case .warn:  tag = "[WARN] "
-        case .error: tag = "[ERROR]"
-        }
-        print("CommunicationHandler \(tag) \(message)")
     }
 }
