@@ -361,7 +361,7 @@ export default {
             this.autoEventListener(document.querySelector("#preview"), "click", this._onPreviewClick);
 
         });
-        if (isElectronWindow(window)) {
+        if (isElectronWindow()) {
             this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
             this.hostip = await window.ipcRenderer.invoke('checkhostip')
         }
@@ -494,7 +494,7 @@ export default {
 
         // Attach guest webview navigation lock for the current forms URL.
         async setupFormsWebviewBlocking() {
-            if (!isElectronWindow(window) || !this.formsUrl) return;
+            if (!isElectronWindow() || !this.formsUrl) return;
             const webview = this.$refs.wvmain || document.getElementById('formswebview');
             if (!webview?.getWebContentsId) return;
             const guestId = webview.getWebContentsId();

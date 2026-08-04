@@ -7,6 +7,7 @@ import NetworkExtension
 
 @objc(NetworkPlugin)
 public class NetworkPlugin: CAPPlugin, CAPBridgedPlugin {
+    private let log = LoggingHandler.shared
     public let identifier      = "NetworkPlugin"
     public let jsName          = "network"
     public let pluginMethods: [CAPPluginMethod] = []
@@ -104,7 +105,7 @@ public class NetworkPlugin: CAPPlugin, CAPBridgedPlugin {
     }
     
     private func setPerferredInterface(preferredName: String) {
-        print("setPerferredInterface \(preferredName)")
+        log?.debug("setPerferredInterface \(preferredName)")
         if let preferredInterface = self.interfaces.first(where: { $0.name == preferredName }) {
             self.preferredInterface = preferredInterface
             Config.hostip = preferredInterface.address
@@ -117,16 +118,16 @@ public class NetworkPlugin: CAPPlugin, CAPBridgedPlugin {
 
         let status = await locationDelegate.requestIfNeeded()
         guard status == .authorizedWhenInUse || status == .authorizedAlways else {
-            print("getWlanInfo nopermissions")
+            log?.debug("getWlanInfo nopermissions")
             return noPerms
         }
 
         guard let network = await fetchCurrentNetwork() else {
-            print("getWlanInfo nointerface")
+            log?.debug("getWlanInfo nointerface")
             return ["ssid": NSNull(), "bssid": NSNull(), "quality": NSNull(), "message": "nointerface"]
         }
         
-        print("getWlanInfo \(network.ssid) \(network.bssid)")
+        log?.debug("getWlanInfo \(network.ssid) \(network.bssid)")
 
         return [
             "ssid":    network.ssid as Any,

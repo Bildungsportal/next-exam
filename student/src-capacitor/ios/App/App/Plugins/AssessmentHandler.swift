@@ -4,6 +4,7 @@ import AutomaticAssessmentConfiguration
 
 @objc(AssessmentHandler)
 public class AssessmentHandler: CAPPlugin, CAPBridgedPlugin {
+    private let log = LoggingHandler.shared
     public let identifier      = "AssessmentPlugin"
     public let jsName          = "assessment"
     public let pluginMethods: [CAPPluginMethod] = []
@@ -29,18 +30,18 @@ public class AssessmentHandler: CAPPlugin, CAPBridgedPlugin {
     /// Starts assessment lock. Returns true when locked, false if declined/failed.
     func startSession() async -> Bool {
         #if targetEnvironment(simulator)
-        log(.info, "assessmenthandler @ start session skipped (simulator)")
+        log?.info("assessmenthandler @ start session skipped (simulator)")
         lockedState = true
         return true
         #else
         if assessmentSession != nil {
-            log(.info, "assessmenthandler @ start session deferred (waiting for previous session to end)")
+            log?.info("assessmenthandler @ start session deferred (waiting for previous session to end)")
             await endSession()
         }
 
         return await withCheckedContinuation { continuation in
             self.startContinuation = continuation
-            log(.info, "assessmenthandler @ start session")
+            log?.info("assessmenthandler @ start session")
             let config = AEAssessmentConfiguration()
             config.allowsSpellCheck = false
             config.allowsDictation = false
@@ -57,19 +58,19 @@ public class AssessmentHandler: CAPPlugin, CAPBridgedPlugin {
     /// Ends assessment lock. Returns when the session is fully torn down.
     func endSession() async {
         #if targetEnvironment(simulator)
-        log(.info, "assessmenthandler @ end session skipped (simulator)")
+        log?.info("assessmenthandler @ end session skipped (simulator)")
         lockedState = false
         return
         #else
         guard assessmentSession != nil else { return }
-        log(.info, "assessmenthandler @ end session")
+        log?.info("assessmenthandler @ end session")
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             self.endContinuation = continuation
             self.assessmentSession?.end()
         }
         #endif
     }
-    
+
     @objc func isLocked() -> Bool {
         return self.lockedState
     }
@@ -92,7 +93,7 @@ extension AssessmentHandler: AEAssessmentSessionDelegate {
         _ session: AEAssessmentSession,
         failedToBeginWithError error: Error
     ) {
-        log(.error, "assessmenthandler @ failed to begin: \(error.localizedDescription)")
+        log?.error("assessmenthandler @ failed to begin: \(error.localizedDescription)")
         assessmentSession = nil
         lockedState = false
         startContinuation?.resume(returning: false)
@@ -120,18 +121,5 @@ extension AssessmentHandler: AEAssessmentSessionDelegate {
         endContinuation?.resume()
         endContinuation = nil
         notifyListeners("sessionDidEnd", data: [:])
-    }
-    
-    private enum LogLevel { case debug, info, warn, error }
-
-    private func log(_ level: LogLevel, _ message: String) {
-        let tag: String
-        switch level {
-        case .debug:  tag = "[DEBUG] "
-        case .info:  tag = "[INFO] "
-        case .warn:  tag = "[WARN] "
-        case .error: tag = "[ERROR]"
-        }
-        print("AssessmentHandler \(tag) \(message)")
     }
 }

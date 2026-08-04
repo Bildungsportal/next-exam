@@ -5,8 +5,7 @@
 
 import { isElectronWindow } from '../types/platform';
 import { examApiFetch } from 'next-exam-shared/examApiFetch.js';
-
-const log = { info: (...a) => console.log(...a), warn: (...a) => console.warn(...a), error: (...a) => console.error(...a) };
+import loggingBridge from "./loggingBridge.js";
 
 const SCREENSHOT_MAX_WIDTH = 1200;
 
@@ -55,7 +54,7 @@ async function captureAndUploadFromIpc(config) {
   try {
     const result = await window.ipcRenderer.invoke('capture-screenshot-frame');
     if (!result?.screenshotBase64) {
-      log.warn('screenshotCapture @ captureAndUploadFromIpc: empty frame');
+      loggingBridge.warn('screenshotCapture @ captureAndUploadFromIpc: empty frame');
       return false;
     }
     const { screenshotBase64 } = result;
@@ -77,12 +76,12 @@ async function captureAndUploadFromIpc(config) {
       body: JSON.stringify(payload),
     });
     if (!res.ok) {
-      log.warn('screenshotCapture @ captureAndUploadFromIpc: upload response', res.status, res.statusText);
+      loggingBridge.warn('screenshotCapture @ captureAndUploadFromIpc: upload response', res.status, res.statusText);
       return false;
     }
     return true;
   } catch (err) {
-    log.error('screenshotCapture @ captureAndUploadFromIpc:', err?.message);
+    loggingBridge.error('screenshotCapture @ captureAndUploadFromIpc:', err?.message);
     return false;
   }
 }
@@ -101,7 +100,7 @@ async function captureAndUpload(config, sharedRef) {
   try {
     const result = captureFrameFromVideo(video);
     if (!result) {
-      log.warn('screenshotCapture @ captureAndUpload: captureFrameFromVideo returned null');
+      loggingBridge.warn('screenshotCapture @ captureAndUpload: captureFrameFromVideo returned null');
       return false;
     }
     const { screenshotBase64 } = result;
@@ -128,12 +127,12 @@ async function captureAndUpload(config, sharedRef) {
       body: JSON.stringify(payload),
     });
     if (!res.ok) {
-      log.warn('screenshotCapture @ captureAndUpload: upload response', res.status, res.statusText);
+      loggingBridge.warn('screenshotCapture @ captureAndUpload: upload response', res.status, res.statusText);
       return false;
     }
     return true;
   } catch (err) {
-    log.error('screenshotCapture @ captureAndUpload: capture/upload error', err?.message);
+    loggingBridge.error('screenshotCapture @ captureAndUpload: capture/upload error', err?.message);
     return false;
   }
 }
@@ -152,7 +151,7 @@ function stopSharedStream(sharedRef) {
 export function resetDisplayStream() {
   stopSharedStream(sharedRef);
   initAttempted = false;
-  log.info('screenshotCapture @ resetDisplayStream: stream reset, will re-acquire on next connect');
+  loggingBridge.info('screenshotCapture @ resetDisplayStream: stream reset, will re-acquire on next connect');
 }
 
 let intervalId = null;
@@ -178,7 +177,7 @@ async function acquireDisplayStream() {
     video.muted = true;
     await new Promise((resolve, reject) => {
       video.onloadedmetadata = () => video.play().then(() => {
-        log.info('screenshotCapture @ acquireDisplayStream: video resolution', video.videoWidth + 'x' + video.videoHeight);
+        loggingBridge.info('screenshotCapture @ acquireDisplayStream: video resolution', video.videoWidth + 'x' + video.videoHeight);
         try {
           // Prefer displaySurface (monitor vs window) over brittle resolution heuristics when available.
           const track = stream.getVideoTracks?.()?.[0];
@@ -199,7 +198,7 @@ async function acquireDisplayStream() {
           const screenWidth = (window.screen?.width || 0) * dpr;
           const screenHeight = (window.screen?.height || 0) * dpr;
           if (screenWidth && screenHeight) {
-            log.info('screenshotCapture @ acquireDisplayStream: primary screen resolution (hw)', screenWidth + 'x' + screenHeight, 'dpr', dpr);
+            loggingBridge.info('screenshotCapture @ acquireDisplayStream: primary screen resolution (hw)', screenWidth + 'x' + screenHeight, 'dpr', dpr);
             const widthDiff = Math.abs(video.videoWidth - screenWidth);
             const heightDiff = Math.abs(video.videoHeight - screenHeight);
             const widthRel = widthDiff / screenWidth;
@@ -207,7 +206,7 @@ async function acquireDisplayStream() {
             const threshold = 0.1;
             if (widthRel > threshold || heightRel > threshold) {
               fullDesktopLikely = false;
-              log.warn('screenshotCapture @ acquireDisplayStream: video vs screen resolution differ by more than 10% – likely not full desktop capture');
+              loggingBridge.warn('screenshotCapture @ acquireDisplayStream: video vs screen resolution differ by more than 10% – likely not full desktop capture');
             } else {
               fullDesktopLikely = true;
             }
@@ -221,7 +220,7 @@ async function acquireDisplayStream() {
     });
     return { stream, video };
   } catch (err) {
-    log.warn('screenshotCapture @ acquireDisplayStream: getDisplayMedia failed', err?.message);
+    loggingBridge.warn('screenshotCapture @ acquireDisplayStream: getDisplayMedia failed', err?.message);
     return null;
   }
 }
@@ -255,14 +254,14 @@ export async function initDisplayStreamOnce() {
   if (acquired) {
     sharedRef.stream = acquired.stream;
     sharedRef.video = acquired.video;
-    log.info('screenshotCapture @ initDisplayStreamOnce: display stream initialized');
+    loggingBridge.info('screenshotCapture @ initDisplayStreamOnce: display stream initialized');
   } else {
     initAttempted = false;
     if (linuxKioskRunningInCage) {
       setCageWindowCaptureFallback(true);
-      log.info('screenshotCapture @ initDisplayStreamOnce: using capturePage fallback in Cage');
+      loggingBridge.info('screenshotCapture @ initDisplayStreamOnce: using capturePage fallback in Cage');
     } else {
-      log.warn('screenshotCapture @ initDisplayStreamOnce: display stream not available');
+      loggingBridge.warn('screenshotCapture @ initDisplayStreamOnce: display stream not available');
     }
   }
 }
@@ -313,7 +312,7 @@ function applyConfig(config) {
   const ms = config.screenshotinterval;
 
   if (useWindowCaptureFallback) {
-    log.info('screenshotCapture @ applyConfig: starting capturePage interval', ms, 'ms');
+    loggingBridge.info('screenshotCapture @ applyConfig: starting capturePage interval', ms, 'ms');
     intervalId = setInterval(() => {
       window.ipcRenderer.invoke('getScreenshotConfig').then((cfg) => {
         if (!cfg?.serverip || cfg.clientinfo?.localLockdown) return;
@@ -324,7 +323,7 @@ function applyConfig(config) {
             if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
               if (intervalId) clearInterval(intervalId);
               intervalId = null;
-              log.warn('screenshotCapture @ applyConfig: capturePage paused after', MAX_CONSECUTIVE_FAILURES, 'failures');
+              loggingBridge.warn('screenshotCapture @ applyConfig: capturePage paused after', MAX_CONSECUTIVE_FAILURES, 'failures');
             }
           }
         });
@@ -334,10 +333,10 @@ function applyConfig(config) {
     return;
   }
 
-  log.info('screenshotCapture @ applyConfig: starting interval using existing stream', ms, 'ms');
+  loggingBridge.info('screenshotCapture @ applyConfig: starting interval using existing stream', ms, 'ms');
 
   if (!hasActiveScreenshotStream()) {
-    log.warn('screenshotCapture @ applyConfig: no active stream, interval not started');
+    loggingBridge.warn('screenshotCapture @ applyConfig: no active stream, interval not started');
     applyInFlight = false;
     return;
   }
@@ -350,7 +349,7 @@ function applyConfig(config) {
         if (intervalId) clearInterval(intervalId);
         intervalId = null;
         stopSharedStream(sharedRef);
-        log.warn('screenshotCapture @ applyConfig: stream ended, screenshot capture disabled until restart');
+        loggingBridge.warn('screenshotCapture @ applyConfig: stream ended, screenshot capture disabled until restart');
         return;
       }
       captureAndUpload(cfg, sharedRef).then((ok) => {
@@ -360,7 +359,7 @@ function applyConfig(config) {
           if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
             if (intervalId) clearInterval(intervalId);
             intervalId = null;
-            log.warn('screenshotCapture @ applyConfig: screenshot upload paused after', MAX_CONSECUTIVE_FAILURES, 'failures (stream kept; resumes on screenshot-config)');
+            loggingBridge.warn('screenshotCapture @ applyConfig: screenshot upload paused after', MAX_CONSECUTIVE_FAILURES, 'failures (stream kept; resumes on screenshot-config)');
           }
         }
       });
@@ -374,10 +373,10 @@ function applyConfig(config) {
  */
 export function initScreenshotScheduler() {
   if (!isElectronWindow(window)) {
-    log.info('screenshotCapture @ initScreenshotScheduler: not Electron, skip');
+    loggingBridge.info('screenshotCapture @ initScreenshotScheduler: not Electron, skip');
     return;
   }
-  log.info('screenshotCapture @ initScreenshotScheduler: registering screenshot-config listener and fetching getScreenshotConfig');
+  loggingBridge.info('screenshotCapture @ initScreenshotScheduler: registering screenshot-config listener and fetching getScreenshotConfig');
 
   // macOS / Cage use capturePage; only getDisplayMedia platforms need a pre-warmed stream.
   if (!useWindowCaptureFallback) {
@@ -393,9 +392,9 @@ export function initScreenshotScheduler() {
     if (config?.serverip && config.screenshotinterval > 0 && !config.clientinfo?.localLockdown) {
       applyConfig(config);
     } else {
-      log.info('screenshotCapture @ initScreenshotScheduler: not starting interval yet (need serverip, interval > 0, no localLockdown)');
+      loggingBridge.info('screenshotCapture @ initScreenshotScheduler: not starting interval yet (need serverip, interval > 0, no localLockdown)');
     }
   }).catch((err) => {
-    log.error('screenshotCapture @ initScreenshotScheduler: getScreenshotConfig failed', err?.message);
+    loggingBridge.error('screenshotCapture @ initScreenshotScheduler: getScreenshotConfig failed', err?.message);
   });
 }

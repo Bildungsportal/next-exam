@@ -50,6 +50,10 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Next-Exam needs your location to display the current Wi-Fi network name.</string>
 </dict>

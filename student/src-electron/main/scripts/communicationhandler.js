@@ -1050,7 +1050,6 @@ import config from "../../../src/utils/config.js";
      * @param serverstatus contains information about exammode, examtype, and other settings from the teacher instance
      */
     async startExam(serverstatus){
-        log.info('communicationhandler @ startExam: start');
         if (this._endExamRunning) {
             log.debug('communicationhandler @ startExam: endExam still running, defer');
             return;

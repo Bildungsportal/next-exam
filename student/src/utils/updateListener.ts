@@ -7,7 +7,7 @@ class UpdateListener {
     infoStore: any = null;
 
     async init(): Promise<void> {
-        console.log("updateListener @ init: starting...");
+        loggingBridge.info("updateListener @ init: starting...");
 
         this.infoStore = useInfoStore();
         await this.infoStore.updateInfo();

@@ -60,6 +60,8 @@ final class SchedulerService {
 @objc(MulticastClient)
 public final class MulticastClient: CAPPlugin, CAPBridgedPlugin {
 
+    private let log = LoggingHandler.shared
+
     // MARK: CAPBridgedPlugin requirements
 
     public let identifier    = "MulticastClient"
@@ -113,7 +115,7 @@ public final class MulticastClient: CAPPlugin, CAPBridgedPlugin {
      * construction immediately wires up the socket.
      */
     public override func load() {
-        //pluginLog(.info, "MulticastClient loaded – starting multicast listener")
+        //log?.info( "MulticastClient loaded – starting multicast listener")
         startMulticast()
         IPCBridge.shared.handle("getinfoasync") { [weak self] _ throws -> Any? in
             guard let self else { throw PluginError.notInitialized }
@@ -277,8 +279,8 @@ public final class MulticastClient: CAPPlugin, CAPBridgedPlugin {
                 self.clientinfo.focus      = true
                 self.clientinfo.pin        = pin
                 
-                print("ipchandler @ register: successfully registered at \(servername) @ \(serverip) as \(clientname)")
-                print("ipchandler @ register: successfully registered, response: ", response)
+                log?.info("ipchandler @ register: successfully registered at \(servername) @ \(serverip) as \(clientname)")
+                log?.debug("ipchandler @ register: successfully registered, response: \(response)")
                 
                 // Notify so screenshot scheduler can start immediately on successful connect
                 NotificationCenter.default.post(
@@ -341,7 +343,7 @@ public final class MulticastClient: CAPPlugin, CAPBridgedPlugin {
                 errorMessage = "The request timed out"
             }
             
-            print("ipchandler @ register: \(errorMessage)")
+            log?.error("ipchandler @ register: \(errorMessage)")
             
 #if os(macOS)
             // On macOS, permission issues can sometimes block network access.
@@ -532,14 +534,14 @@ public final class MulticastClient: CAPPlugin, CAPBridgedPlugin {
 
     private func startMulticast() {
         guard socketFD < 0 else {
-            pluginLog(.info, "multicastclient @ startMulticast: listener already running")
+            log?.info( "multicastclient @ startMulticast: listener already running")
             return
         }
 
         // ── 1. Create UDP socket ───────────────────────────────────────────
         socketFD = socket(AF_INET, SOCK_DGRAM, 0)
         guard socketFD >= 0 else {
-            pluginLog(.error, "multicastclient @ startMulticast: socket() failed – \(errnoString())")
+            log?.error( "multicastclient @ startMulticast: socket() failed – \(errnoString())")
             return
         }
 
@@ -564,7 +566,7 @@ public final class MulticastClient: CAPPlugin, CAPBridgedPlugin {
         }
 
         guard bindResult == 0 else {
-            pluginLog(.error, "multicastclient @ startMulticast: bind() failed – \(errnoString())")
+            log?.error( "multicastclient @ startMulticast: bind() failed – \(errnoString())")
             Darwin.close(socketFD)
             socketFD = -1
             return
@@ -590,9 +592,9 @@ public final class MulticastClient: CAPPlugin, CAPBridgedPlugin {
 
         if setsockopt(socketFD, IPPROTO_IP, IP_ADD_MEMBERSHIP,
                       &mreq, socklen_t(MemoryLayout<ip_mreq>.size)) != 0 {
-            pluginLog(.error, "Multicast join failed: \(errnoString())")
+            log?.error( "Multicast join failed: \(errnoString())")
         } else {
-            pluginLog(.info,
+            log?.info(
                 "UDP MC Client bound to 0.0.0.0:\(AppConfig.multicastClientPort) " +
                 "and joined \(AppConfig.multicastServerAddr)")
         }
@@ -626,7 +628,7 @@ public final class MulticastClient: CAPPlugin, CAPBridgedPlugin {
 
         Darwin.close(socketFD)
         socketFD = -1
-        pluginLog(.info, "multicastclient: socket closed")
+        log?.info( "multicastclient: socket closed")
     }
 
     // MARK: - Receive Loop
@@ -663,7 +665,7 @@ public final class MulticastClient: CAPPlugin, CAPBridgedPlugin {
                 if errno == EBADF || errno == EINVAL || errno == ENOTSOCK { return }
                 // EINTR = signal interrupted; just retry
                 if errno != EINTR {
-                    pluginLog(.error, "multicastclient @ receiveLoop: \(errnoString())")
+                    log?.error( "multicastclient @ receiveLoop: \(errnoString())")
                 }
 
             default:
@@ -683,7 +685,7 @@ public final class MulticastClient: CAPPlugin, CAPBridgedPlugin {
     private func messageReceived(data: Data, senderIP: String, senderPort: Int) {
         
         guard var info = try? JSONDecoder().decode(ServerInfo.self, from: data) else {
-            pluginLog(.error, "multicastclient @ messageReceived: JSON decode failed")
+            log?.error( "multicastclient @ messageReceived: JSON decode failed")
             return
         }
         
@@ -703,7 +705,7 @@ public final class MulticastClient: CAPPlugin, CAPBridgedPlugin {
             guard let self else { return }
 
             if self.isNewExamInstance(info) {
-                self.pluginLog(.info,
+                log?.info(
                     "multicastclient @ messageReceived: " +
                     "Adding new Exam Instance \"\(info.servername)\" to Serverlist")
                 self._examServerList.append(info)
@@ -753,7 +755,7 @@ public final class MulticastClient: CAPPlugin, CAPBridgedPlugin {
 
                 if nowMs - 16_000 > ts {
                     let removed = self._examServerList[i]
-                    self.pluginLog(.warn,
+                    log?.warn(
                         "multicastclient @ isDeprecatedInstance: " +
                         "Removing inactive server '\(removed.servername)' from list")
                     self._examServerList.remove(at: i)
@@ -771,19 +773,6 @@ public final class MulticastClient: CAPPlugin, CAPBridgedPlugin {
     }
 
     // MARK: - Helpers
-
-    private enum LogLevel { case info, warn, error }
-
-    private func pluginLog(_ level: LogLevel, _ message: String) {
-        let tag: String
-        switch level {
-        case .info:  tag = "[INFO] "
-        case .warn:  tag = "[WARN] "
-        case .error: tag = "[ERROR]"
-        }
-        // Replace with CAPLog or os.Logger in production
-        print("MulticastClient \(tag) \(message)")
-    }
 
     private func errnoString() -> String {
         String(cString: strerror(errno))

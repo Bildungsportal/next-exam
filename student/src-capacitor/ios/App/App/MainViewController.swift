@@ -14,6 +14,9 @@ class MainViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(MulticastClient())
         bridge?.registerPluginInstance(AssessmentHandler())
         bridge?.registerPluginInstance(ScreenshotRecorder())
+        let loggingHandler = LoggingHandler()
+        bridge?.registerPluginInstance(loggingHandler)
+        LoggingHandler.shared = loggingHandler
         
         // Save Capacitor's delegate, then replace with self
         originalNavigationDelegate = webView?.navigationDelegate

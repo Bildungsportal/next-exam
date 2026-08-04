@@ -58,7 +58,7 @@ public final class IPCBridge {
 
     public func send(_ channel: String, _ payload: Any? = nil) {
         guard let plugin = IPCPlugin.shared else {
-            print("[IPCBridge] send() called before plugin loaded")
+            LoggingHandler.shared?.warn("IPCBridge send() called before plugin loaded")
             return
         }
         plugin.send(channel: channel, payload: payload)

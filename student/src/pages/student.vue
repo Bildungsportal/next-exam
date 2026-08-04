@@ -440,7 +440,7 @@ export default {
         showCageKioskInstallBtn() {
             const k = this.platformKiosk;
             // displayServer set to 'windows' on win32 by ipchandler so the same gate works for both OSes
-            return isElectronWindow(window) && k.displayServer !== 'n/a' && !k.runningInCage && k.needsCageKioskSetup;
+            return isElectronWindow() && k.displayServer !== 'n/a' && !k.runningInCage && k.needsCageKioskSetup;
         },
         kioskI18nPrefix() {
             // win32 uses winKioskSetup* keys, linux keeps the legacy cageSetup* keys
@@ -634,7 +634,7 @@ export default {
 
         async maybeOfferCageKioskSetup() {
             const k = this.platformKiosk;
-            if (!isElectronWindow(window) || this.development) return;
+            if (!isElectronWindow() || this.development) return;
             if (k.displayServer === 'windows') return;
             if (k.runningInCage || !k.needsCageKioskSetup) return;
             if (localStorage.getItem('next-exam-cage-kiosk-setup-dismissed') === '1') return;
@@ -643,7 +643,7 @@ export default {
 
         async maybeShowWinKioskSessionInfo() {
             const k = this.platformKiosk;
-            if (!isElectronWindow(window) || this.development) return;
+            if (!isElectronWindow() || this.development) return;
             if (!k.runningInCage || k.displayServer !== 'windows') return;
             if (this.activeDialog) return;
             if (sessionStorage.getItem('next-exam-win-kiosk-session-info') === '1') return;

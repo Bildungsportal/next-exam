@@ -6,6 +6,7 @@ import CryptoKit
 final class ScreenshotHandler {
 
     static let shared = ScreenshotHandler()
+    private let log = LoggingHandler.shared
     private init() {}
 
     // MARK: - State
@@ -31,7 +32,7 @@ final class ScreenshotHandler {
             name: Notification.Name("screenshot-config"),
             object: nil
         )
-        log(.info, "screenshotCapture @ initialize")
+        log?.info("screenshotCapture @ initialize")
     }
 
     deinit {
@@ -59,26 +60,26 @@ final class ScreenshotHandler {
         consecutiveFailures = 0
 
         guard intervalMs > 0 else {
-            log(.info, "screenshotCapture @ applyConfig: interval disabled")
+            log?.info("screenshotCapture @ applyConfig: interval disabled")
             return
         }
-        
-        
+
+
         guard let mc = multicastClient
         else {
-            log(.info, "screenshotCapture @ applyConfig: no mc, skip")
+            log?.info("screenshotCapture @ applyConfig: no mc, skip")
             return
         }
-        
-        log(.info, "screenshotCapture @ applyConfig: mc.clientinfo.serverip = \(mc.clientinfo.serverip)")
+
+        log?.info("screenshotCapture @ applyConfig: mc.clientinfo.serverip = \(mc.clientinfo.serverip)")
 
         guard let serverip = mc.clientinfo.serverip, !serverip.isEmpty
         else {
-            log(.info, "screenshotCapture @ applyConfig: no serverip, skip")
+            log?.info("screenshotCapture @ applyConfig: no serverip, skip")
             return
         }
 
-        log(.info, "screenshotCapture @ applyConfig: starting interval \(intervalMs) ms")
+        log?.info("screenshotCapture @ applyConfig: starting interval \(intervalMs) ms")
         scheduler = SchedulerService(
             action: { [weak self] in await self?.tick() },
             intervalMs: Double(intervalMs)
@@ -162,25 +163,11 @@ final class ScreenshotHandler {
 
     private func handleFailure(_ reason: String) {
         consecutiveFailures += 1
-        log(.warn, "screenshotCapture @ tick: \(reason) (\(consecutiveFailures)/\(maxConsecutiveFailures))")
+        log?.warn("screenshotCapture @ tick: \(reason) (\(consecutiveFailures)/\(maxConsecutiveFailures))")
         if consecutiveFailures >= maxConsecutiveFailures {
             scheduler?.stop()
             scheduler = nil
-            log(.warn, "screenshotCapture @ tick: paused after \(maxConsecutiveFailures) consecutive failures")
+            log?.warn("screenshotCapture @ tick: paused after \(maxConsecutiveFailures) consecutive failures")
         }
-    }
-
-    // MARK: - Logging
-
-    private enum LogLevel { case info, warn, error }
-
-    private func log(_ level: LogLevel, _ message: String) {
-        let tag: String
-        switch level {
-        case .info:  tag = "[INFO] "
-        case .warn:  tag = "[WARN] "
-        case .error: tag = "[ERROR]"
-        }
-        print("ScreenshotCapture \(tag) \(message)")
     }
 }
