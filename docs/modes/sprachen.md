@@ -115,15 +115,3 @@ Hat die Lehrkraft LanguageTool aktiviert, erscheint ein Seitenbereich mit der Re
     ![Abgabe-Dialog](../img/student_sprache_abgabe_dialog.png){width="50%"}
     <figcaption>Abgabe-Dialog</figcaption>
 </figure>
-
-## Offene Screenshots
-
-| Dateiname | Beschreibung |
-|---|---|
-| `img/teacher_languages.png` | Teacher: Texteditor-Einstellungen in der Seitenleiste |
-| `img/student_abgesichert_sprache.png` | Texteditor im abgesicherten Modus |
-| `img/student_abgesichert_sprache_toolbar.png` | Symbolleiste des Texteditors |
-| `img/student_sprache_languagetool.png` | LanguageTool-Panel ohne Vorschläge |
-| `img/student_sprache_languagetool_vorschlaege.png` | LanguageTool-Panel mit Vorschlägen |
-| `img/student_sprache_abgabe.png` | Abgabe-Buttons im Editor |
-| `img/student_sprache_abgabe_dialog.png` | Dialog beim Senden der Abgabe |

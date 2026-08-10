@@ -88,11 +88,3 @@ Mit **Bildschirme sperren** dunkelt die Lehrkraft die Bildschirme aller Schüler
 </figure>
 
 Next-Exam sichert jede Prüfung im Arbeitsordner **EXAM-TEACHER** (Schülerarbeiten, Abgaben, Konfiguration). Auf der Startseite kann eine Prüfung per Klick auf den Namen **fortgesetzt** oder über das `x`-Symbol **gelöscht** werden.
-
-## Offene Screenshots
-
-| Dateiname | Beschreibung |
-|---|---|
-| `img/advanced_dashboard.png` | Startseite mit Liste lokaler Prüfungen |
-| `img/advanced_dashboard_exam.png` | Dashboard-Funktionen nach Prüfungsstart (Sperren usw.) |
-| `img/advanced_settings.png` | Dialog Erweiterte Einstellungen (Zahnrad) |

@@ -92,14 +92,3 @@ Jede:r Schüler:in arbeitet im abgesicherten Fenster an der eigenen Dokumentkopi
 ### Schüler:in
 
 Die Website öffnet sich im abgesicherten Fenster. Navigation ist nur innerhalb der erlaubten URL (und je nach Einstellung ihrer Subdomains/Unterpfade) möglich. Downloads aus der Prüfungsumgebung landen im Arbeitsordner; bei Scratch-Projekten wird der Arbeitsstand automatisch gesichert.
-
----
-
-## Offene Screenshots
-
-| Dateiname | Beschreibung |
-|---|---|
-| `img/web_eduvidual_teacher.png` | Teacher: Test-URL-Konfiguration Eduvidual/Moodle |
-| `img/web_forms_teacher.png` | Teacher: Forms-URL-Konfiguration |
-| `img/web_website_teacher.png` | Teacher: Website-URL mit SD/SF-Optionen |
-| `img/web_student.png` | Student: Abgesichertes Fenster mit geöffneter Prüfungsseite |

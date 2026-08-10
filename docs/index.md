@@ -59,11 +59,4 @@ Die Student-App dient den Schüler:innen zum Einstieg in die Prüfung. Name, Pin
 
 ---
 
-*Next-Exam Handbuch – Version 2.0.0*
-
-## Offene Screenshots
-
-| Dateiname | Beschreibung |
-|---|---|
-| `img/preview_teacher.png` | Teacher-App: Übersicht/Dashboard |
-| `img/student_exam_anmelden.png` | Student-App: Anmeldemaske |
+*Next-Exam Handbuch – Version 2.0.0 Prerelease*

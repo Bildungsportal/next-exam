@@ -38,10 +38,3 @@ Statt Name und Pincode manuell einzugeben, können sich Schüler:innen auch dire
 </figure>
 
 Ist **Bildungsportal Login erzwingen** aktiv, ist diese Anmeldeart verpflichtend.
-
-## Offene Screenshots
-
-| Dateiname | Beschreibung |
-|---|---|
-| `img/bip_teacher.png` | Teacher: Bildungsportal-Tab mit Prüfungsliste |
-| `img/bip_student.png` | Student: Anmeldung über das Bildungsportal |

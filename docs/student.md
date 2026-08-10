@@ -83,12 +83,3 @@ Zum Verlassen des abgesperrten Modus ist die Eingabe des zuvor definierten Passw
 ## Kiosk-Modus einrichten
 
 Zusätzlich zur eigentlichen Prüfungsumgebung kann das Gerät auf Betriebssystemebene abgesichert werden (eigenes gesperrtes Benutzerkonto unter Windows bzw. eigene Kiosk-Sitzung unter Linux). Die entsprechende Schaltfläche **Kiosk-Modus einrichten** findet sich ebenfalls auf der Startseite – siehe [Kiosk-Modus](modes/kiosk.md).
-
-## Offene Screenshots
-
-| Dateiname | Beschreibung |
-|---|---|
-| `img/student_exam_anmelden.png` | Anmeldemaske mit Prüfungsliste, Name und Pincode |
-| `img/student_verbunden.png` | Statusanzeige nach erfolgreicher Anmeldung |
-| `img/loc_local_settings.png` | Dialog „Lokal absperren“ |
-| `img/loc_local_exit.png` | Passworteingabe beim Verlassen des lokalen Modus |

@@ -25,9 +25,3 @@ Nach dem Absichern öffnet sich die GeoGebra-Oberfläche im abgesicherten Vollbi
 - Einzelne GeoGebra-Funktionen sind aufgrund der restriktiven Prüfungsumgebung ausgeblendet.
 - **Materialien:** Von der Lehrkraft bereitgestellte Dateien und URLs sind über die Seitenleiste erreichbar; die **Spaltenansicht** (Splitview) zeigt Material und GeoGebra nebeneinander.
 - **Abgabe:** Die Arbeit wird laufend automatisch als GeoGebra-Datei (`.ggb`) gesichert; die Lehrkraft holt den Arbeitsstand über **Sicherung holen** ab (siehe oben). Über die Toolbar-Funktion **Kopie speichern unter** kann zusätzlich manuell eine Kopie mit eigenem Dateinamen angelegt werden (nur Buchstaben und Zahlen, max. 20 Zeichen).
-
-## Offene Screenshots
-
-| Dateiname | Beschreibung |
-|---|---|
-| `img/student_abgesichert_mathe.png` | GeoGebra-Oberfläche im abgesicherten Modus |

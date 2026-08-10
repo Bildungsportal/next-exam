@@ -18,10 +18,3 @@ Im Modus **RDP** greifen die Schüler:innen über den **RD Web Client** (HTML5) 
 Nach dem Absichern öffnet sich der RD Web Client im abgesicherten Fenster. Die Schüler:innen melden sich mit ihrem Domänen-Login an und arbeiten in der Remote-Sitzung. Das Verlassen der RDP-Oberfläche ist blockiert.
 
 Abgaben erfolgen innerhalb der Remote-Umgebung (z. B. Netzlaufwerk) gemäß den Vorgaben der Lehrkraft.
-
-## Offene Screenshots
-
-| Dateiname | Beschreibung |
-|---|---|
-| `img/rdp_teacher.png` | Teacher: RDP-URL-Konfiguration |
-| `img/rdp_student.png` | Student: RD Web Client im abgesicherten Fenster |

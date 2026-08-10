@@ -67,9 +67,3 @@ Ein Verlassen des Kiosk-Modus muss ebenfalls über **Next-Exam beenden** bestät
 
 Läuft ein Gerät im Kiosk-Modus, erscheint im entsprechenden Schüler:innen-Widget ein Schloss-Symbol mit dem Hinweis „Schüler:in läuft im Kiosk-Modus“. Eine Konfiguration oder ein Ausrollen des Kiosk-Modus über die Teacher-App ist nicht möglich – die Einrichtung erfolgt ausschließlich lokal am jeweiligen Schüler:innen-Gerät.
 
-## Offene Screenshots
-
-| Dateiname | Beschreibung |
-|---|---|
-| `img/kiosk_win_setup.png` | Student: Dialog „Windows Kiosk-Modus“ |
-| `img/kiosk_linux_setup.png` | Student: Dialog „Linux Kiosk-Modus (Cage)“ |

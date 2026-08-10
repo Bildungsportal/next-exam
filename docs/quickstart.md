@@ -43,9 +43,3 @@ Je nach Modus geben die Schüler:innen ihre Arbeit direkt ab (Senden/Drucken), z
 2. Über **Prüfung verlassen** den Prüfungsserver beenden.
 
 Die Prüfung bleibt lokal gespeichert und kann später über **Prüfung fortsetzen** wieder aufgenommen werden.
-
-## Offene Screenshots
-
-| Dateiname | Beschreibung |
-|---|---|
-| `img/quickstart.png` | Überblicksgrafik: Ablauf einer Prüfung |

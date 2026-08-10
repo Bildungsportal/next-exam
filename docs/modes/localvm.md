@@ -38,10 +38,3 @@ Ablauf beim Absichern:
 3. **VM-Start:** Die VM startet und wird im Vollbild per VNC angezeigt („Status: startet …“ → „Status: läuft“). Bei Verbindungsfehlern versucht Next-Exam automatisch eine Neuverbindung.
 
 Innerhalb der VM steht ein Austauschordner bereit, über den Arbeitsdateien mit dem Prüfungsordner synchronisiert und an die Lehrkraft übertragen werden.
-
-## Offene Screenshots
-
-| Dateiname | Beschreibung |
-|---|---|
-| `img/localvm_teacher.png` | Teacher: LocalVM-Konfiguration mit Boot-Optionen und Auflösung |
-| `img/localvm_student.png` | Student: VM-Ansicht im Vollbild / Download-Status |

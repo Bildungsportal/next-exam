@@ -64,12 +64,3 @@ Nach dem Absichern öffnet sich das PDF-Formular im Vollbild:
 
 - **Arbeit an Lehrperson senden:** Erzeugt aus dem ausgefüllten Formular ein signiertes PDF und überträgt es an den Teacher (finale Abgabe über **Finale Abgabe an Lehrperson senden**).
 - **drucken:** Sendet eine Druckanfrage an die Lehrperson bzw. druckt direkt bei freigegebenem autonomem Druck.
-
-## Offene Screenshots
-
-| Dateiname | Beschreibung |
-|---|---|
-| `img/activesheets_source_pdf.png` | Beispiel eines extern erstellten Formular-PDFs mit Textfeldern und Checkboxen |
-| `img/activesheets_teacher.png` | Teacher: PDF-Auswahl und Vorschau mit Formularfeldern |
-| `img/activesheets_correction.png` | Teacher: Korrekturansicht mit Annotationen und Autocorrect |
-| `img/activesheets_student.png` | Student: Ausfüllbares PDF-Formular im abgesicherten Modus |
