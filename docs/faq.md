@@ -15,6 +15,10 @@ Die Firewall muss die Anwendung zulassen. Wird die Prüfung nicht automatisch ge
 
 Stimmen die Programmversionen von Teacher und Student nicht überein, wird die Anmeldung mit der Meldung **„Die Programmversionen stimmen nicht überein“** verweigert. In diesem Fall auf allen Geräten dieselbe Version installieren (Hinweis in der Student-App: Version zu alt / zu neu).
 
+### Eigener Build kann nicht mit einem Release verbinden
+
+Selbst kompilierte oder anderweitig nicht-offizielle Builds von Next-Exam können nicht mit einem offiziellen Release verbunden werden. Das ist keine Fehlfunktion, sondern beabsichtigt: Offizielle Release-Builds und eigene/fremde Builds sind grundsätzlich nicht miteinander kompatibel.
+
 ### Welche Ports werden von Next-Exam verwendet?
 
 - Die **Teacher-API** nutzt Port **22422 (TCP)**.
