@@ -1,0 +1,30 @@
+/* Seitenmenü- und Textlinks in derselben Farbe wie die "Inhaltsverzeichnis"-Überschrift */
+.md-typeset a,
+.md-nav__link {
+  color: var(--md-default-fg-color--light) !important;
+}
+
+/* Aktiver Menüeintrag und Link-Hover in der grünen Akzentfarbe */
+.md-typeset a:hover,
+.md-nav__link:hover,
+.md-nav__item .md-nav__link--active,
+.md-nav--primary .md-nav__item--active > .md-nav__link {
+  color: var(--md-accent-fg-color) !important;
+}
+
+/* Ausnahme: Überschriften im linken Menü (oberste Ebene, mit oder ohne Untermenü)
+   bleiben immer grau, auch wenn aktiv oder gehovert */
+.md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link,
+.md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link:hover {
+  color: var(--md-default-fg-color--light) !important;
+}
+
+/* Screenshots/Bilder immer zentrieren, unabhängig von <figure>-Wrapper */
+.md-typeset img {
+  display: block;
+  margin: 0 auto;
+}
+
+.md-typeset figure {
+  text-align: center;
+}

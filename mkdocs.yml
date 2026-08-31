@@ -9,43 +9,69 @@ nav:
   - Fehlerbehandlung - FAQ: faq.md
   - Bekannte Probleme: issues.md
   - Datenschutzrichtlinie: privacy-policy.md
+site_description: Handbuch für die Next-Exam Prüfungsumgebung (Version 2.0.0)
+site_author: Next-Exam Team
+docs_dir: docs
+site_dir: site
 
 theme:
   name: material
+  language: de
   custom_dir: overrides
   favicon: img/favicon.png
+  logo: img/favicon.png
   palette:
-    # Palette toggle for light mode
     - scheme: default
-      primary: green
+      primary: blue grey
+      accent: green
       toggle:
         icon: material/brightness-7
-        name: Switch to dark mode
-    # Palette toggle for dark mode
+        name: Dunkelmodus aktivieren
     - scheme: slate
+      primary: indigo
+      accent: indigo
       toggle:
         icon: material/brightness-4
-        name: Switch to light mode
+        name: Hellmodus aktivieren
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+    - content.code.copy
+
 plugins:
-  - glightbox
-  - with-pdf:
-      author: DPU-Team
-      copyright: Bundesministerium für Bildung
-      cover_title: Next-Exam
-      cover_subtitle: Handbuch
+  - search
+  - glightbox:
+      touchNavigation: true
+      loop: false
+      effect: zoom
+      zoomable: true   
+
+extra_css:
+  - stylesheets/extra.css
 
 markdown_extensions:
+  - admonition
   - attr_list
   - md_in_html
-  - pymdownx.blocks.caption
-  - toc:
-      toc_depth: 2
+  - pymdownx.details
+  - pymdownx.superfences
 
-extra:
-  consent:
-    title: Cookie consent
-    description: >-
-      We use cookies to recognize your repeated visits and preferences, as well
-      as to measure the effectiveness of our documentation and whether users
-      find what they're searching for. With your consent, you're helping us to
-      make our documentation better.
+nav:
+  - Startseite: index.md
+  - Quickstart: quickstart.md
+  - Teacher: teacher.md
+  - Student: student.md
+  - Prüfungsmodi:
+    - Mathematik (GeoGebra): modes/mathematik.md
+    - Sprachen (Texteditor): modes/sprachen.md
+    - Active Sheets: modes/activesheets.md
+    - Online-Modi: modes/online.md
+    - RDP: modes/rdp.md
+    - Lokale VM: modes/localvm.md
+  - Erweiterte Funktionen: advanced.md
+  - Bildungsportal: bildungsportal.md
+  - Kiosk-Modus: modes/kiosk.md
+  - FAQ: faq.md
+  - Bekannte Probleme: issues.md

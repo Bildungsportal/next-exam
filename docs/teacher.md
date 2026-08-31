@@ -1,232 +1,192 @@
 # Teacher – Grundlegende Funktionen
 
-## Prüfungen anlegen
+Die Teacher-App legt Prüfungen an, verwaltet die verbundenen Schüler:innen-Geräte und überwacht die laufende Prüfung.
 
-> Der `Prüfungsname` kann frei gewählt werden. Der Arbeitsordner am Desktop beinhaltet alle archivierten Arbeiten und Abgaben sowie die Prüfungsordner und die Prüfungs-Konfiguration.
+---
 
+## Prüfungsserver starten
+
+Auf der Startseite stehen zwei Tabs zur Verfügung: **Lokale Prüfung** und **Bildungsportal**. Im Tab **Lokale Prüfung** wird die Prüfung direkt in der Teacher-App konfiguriert (siehe unten); im Tab **Bildungsportal** wird eine bereits im österreichischen Bildungsportal vorbereitete Prüfung geladen – siehe [Bildungsportal](bildungsportal.md).
+
+<div class='grid' markdown>
 <figure markdown="span">
-    ![Exam-Name](img/teacher_exam_name.png){width="50%"}
-    <figcaption>Prüfung anlegen, Prüfungsserver starten</figcaption>
+    ![Prüfung anlegen](img/teacher_pruefung_starten_local.png){width="100%"}
+    <figcaption>Lokale Prüfung erstellen und starten</figcaption>
 </figure>
+<figure markdown="span">
+    ![Am Bildungsportal anmelden](img/teacher_pruefung_starten_bip.png){width="100%"}
+    <figcaption>Prüfung über das Bildungsportal starten</figcaption>
+</figure>
+</div>
+
+
+### Prüfungsname
+
+Der **Prüfungsname** kann frei gewählt werden. Erlaubt sind die Zeichen a–z, A–Z, 0–9, `-` und `_` (max. 20 Zeichen). Für jede Prüfung wird im Arbeitsverzeichnis **EXAM-TEACHER** ein eigener Prüfungsordner mit allen Sicherungen, Abgaben und der Prüfungskonfiguration angelegt.
 
 ### Passwort festlegen (optional)
 
-> Ein `Passwort` kann festgelegt werden, um zu verhindern, dass Schüler:innen die Prüfung bei Verbindungsverlust ohne Kenntnis des `Passwort`-Wertes verlassen können.
+Über den Schalter **Erweitert** kann ein **Passwort** (mit Bestätigung) festgelegt werden. Schüler:innen können den abgesicherten Modus auch bei Verbindungsverlust nicht ohne dieses Passwort verlassen.
+
+!!! warning "Standardkennwort"
+    Wird kein eigenes Passwort festgelegt, verwendet Next-Exam das Standardkennwort **`next-exam`**. Für sensible Prüfungen sollte daher immer ein individuelles Passwort vergeben werden.
 
 ### Backupverzeichnis festlegen (optional)
 
-> Das `Backupverzeichnis` kann individuell gewählt werden (z. B. Netzwerkordner, USB-Stick). Hier werden die Prüfungsdaten zusätzlich zum Arbeitsordner gespeichert.
+Im erweiterten Modus kann zusätzlich ein **Backupverzeichnis** gewählt werden (z. B. Netzwerkordner oder USB-Stick). Dort wird eine Kopie des Arbeitsverzeichnisses abgelegt.
 
+<!-- SCREENSHOT: teacher_exam_advanced -->
 <figure markdown="span">
-    ![Exam-Name](img/teacher_exam_advanced.png){width="50%"}
-    <figcaption>Passwort, Backupverzeichnis</figcaption>
+    ![Erweiterte Startoptionen](img/teacher_exam_advanced.png){width="50%"}
+    <figcaption>Passwort und Backupverzeichnis (Erweitert)</figcaption>
 </figure>
+
+### Netzwerkschnittstelle wählen
+
+Besitzt der Rechner mehrere aktive Netzwerkschnittstellen (z. B. LAN und WLAN), fragt Next-Exam beim Start nach der bevorzugten Schnittstelle. Über diese Schnittstelle wird der Prüfungsserver im Netzwerk bekannt gemacht.
+
+### Prüfung fortsetzen
+
+Unter **Lokale Prüfungen** werden alle bereits angelegten Prüfungen aufgelistet. Ein Klick auf den Prüfungsnamen setzt die Prüfung mit allen Einstellungen und Daten fort. Das `x`-Symbol löscht den lokalen Prüfungsordner. Prüfungen aus nicht kompatiblen Programmversionen werden entsprechend markiert.
 
 ---
 
 ## Dashboard
 
-Das Teacher-Dashboard bietet eine Übersicht über alle verbundenen Schüler:innen-Geräte und stellt alle prüfungsrelevanten Informationen dar.  
-Es ermöglicht sowohl die Konfiguration der Prüfung als auch die Verwaltung der Schüler:innen.
+Das Dashboard bietet eine Übersicht über alle verbundenen Geräte und stellt alle prüfungsrelevanten Informationen und Aktionen bereit.
 
+<!-- SCREENSHOT: teacher_dashboard-01 -->
 <figure markdown="span">
-    ![Exam-Name](img/teacher_dashboard-01.png){width="50%"}
-    <figcaption>Dashboard</figcaption>
+    ![Dashboard](img/teacher_dashboard-01.png){width="80%"}
+    <figcaption>Next-Exam Teacher – Dashboard</figcaption>
 </figure>
 
-Der automatisch generierte `Pincode` wird von den Schüler:innen benötigt, um der Prüfung beizutreten. Sollte die Prüfung nicht erscheinen, kann alternativ die `Server-Adresse` eingegeben werden.
+- **Pincode:** Der automatisch generierte vierstellige Pincode wird von den Schüler:innen zur Anmeldung benötigt. Über **Pincode ändern** kann er angepasst werden; **Anmeldeinformationen anzeigen** blendet Pincode und Server-Adresse groß ein.
+- **Server-Adresse:** Wird die Prüfung im Netzwerk nicht automatisch gefunden, geben die Schüler:innen diese Adresse manuell ein.
+- **Status der Geräte:** Jedes verbundene Gerät erscheint als Widget mit Namen, Screenshot und Statusanzeigen (verbunden/offline, abgesichert, Fokus verloren, Virtualisierung erkannt, Remote-Assistant-Warnung u. a.).
+- **Sitzplan:** Die Widgets können per Drag & Drop angeordnet werden; alternativ sortiert **Student Widgets alphabetisch sortieren** automatisch.
+- **Server-Log:** Über das Log-Symbol lässt sich das Server-Protokoll ein- und ausblenden.
 
 ---
 
-## Prüfungsmodi
+## Schüler:innen-Widget
 
-> Next-Exam ermöglicht verschiedene Prüfungsvarianten.
-
+<!-- SCREENSHOT: teacher_student_widget -->
 <figure markdown="span">
-    ![Exam-Name](img/teacher_dashboard-02.png){width="50%"}
-    <figcaption>Prüfungsmodi</figcaption>
+    ![Student-Widget](img/teacher_student_widget.png){width="50%"}
+    <figcaption>Student-Widget mit Einzelaktionen</figcaption>
 </figure>
 
-Verfügbare Prüfungsmodi:
+Über das Widget stehen pro Schüler:in folgende Funktionen zur Verfügung:
 
-- `Mathematik` – mit GeoGebra-Integration  
-- `Sprachen` – Texteditor mit erweiterten Features  
-- `Eduvidual/Moodle` – LMS-Test im Kiosk-Modus  
-- `Google Forms` – Formular im Kiosk-Modus  
-- `Microsoft 365` – Online-Versionen von Word, Excel usw.  
-- `Website` – Beliebige Webseite im Kiosk-Modus  
-- `RDP` – RD Web Client
+- **Info / Details:** Detailansicht mit Live-Screenshot und Einzelaktionen.
+- **Sicherung holen:** Aktuellen Arbeitsstand (Backup und Log-Dateien) der Person anfordern.
+- **Datei senden:** Einzelne Dateien gezielt an diese Person übertragen.
+- **Screenshot speichern:** Aktuellen Screenshot im Ordner `screenshots` ablegen.
+- **Gerät absichern / freigeben:** Abgesicherten Modus für dieses eine Gerät starten oder beenden.
+- **A / B:** Gruppenzuweisung (sofern Gruppen aktiviert sind, siehe [Erweiterte Funktionen](advanced.md#gruppen-ab)).
+- **Verbindung trennen (Kick):** Person vom Prüfungsserver entfernen. Liegt noch keine Abgabe (PDF) vor, warnt Next-Exam davor.
+- **Arbeitsordner bereinigen:** Arbeitsordner auf dem Gerät der Person leeren.
 
-> Die Auswahl des `Prüfungsmodus` erfolgt über das gleichnamige Dropdown-Feld. Je nach Modus erscheint ein angepasstes Konfigurationsfenster.  
-> Änderungen der Konfiguration über das Zahnrad-Symbol (oben rechts) sind nur möglich, solange die Prüfung noch nicht gestartet wurde.
+Zusätzliche Symbole erscheinen bei Ereignissen wie eingegangener Abgabe, erkannter virtualisierter Arbeitsumgebung, belegtem LanguageTool-Port oder dem Versuch, den abgesicherten Modus zu verlassen.
 
 ---
 
-## Modusspezifische Einstellungen
+## Prüfungsmodus wählen
 
-### Sprachen
-
+<!-- SCREENSHOT: teacher_dashboard-02 -->
 <figure markdown="span">
-    ![Exam-Name](img/teacher_languages.png){width="50%"}
-    <figcaption>Prüfungsmodus "Sprachen" – Konfiguration</figcaption>
+    ![Prüfungsmodus wählen](img/teacher_dashboard-02.png){width="50%"}
+    <figcaption>Auswahl des Prüfungsmodus</figcaption>
 </figure>
 
-> Einstellungen wie Korrekturrand, Schriftart, Zeilenabstand und Schriftgröße betreffen sowohl den Editor als auch das erzeugte Abgabe-PDF.  
-> Audiodateien können ausgewählt und deren erlaubte Abspielversuche begrenzt werden.  
-> Zusätzliche Hilfsmittel wie Webseiten oder Dateien (z. B. Wörterbuch) werden im Bereich `Prüfungsmaterialien` definiert.  
-> Eine passive Rechtschreibhilfe über `LanguageTool` kann aktiviert und konfiguriert werden.
+Die Auswahl erfolgt über das Dropdown **Prüfungsmodus**:
 
-### Mathematik
+- **Mathematik** – GeoGebra Suite/Classic ([Details](modes/mathematik.md))
+- **Sprachen** – Texteditor ([Details](modes/sprachen.md))
+- **Active Sheets** – interaktive PDF-Formulare ([Details](modes/activesheets.md))
+- **Eduvidual / Moodle**, **Forms**, **Website**, **Microsoft365** – Online-Modi ([Details](modes/online.md))
+- **RDP** – RD Web Client ([Details](modes/rdp.md))
+- **LocalVM** – lokale virtuelle Maschine ([Details](modes/localvm.md))
 
-> Schüler:innen arbeiten mit GeoGebra Classic/Suite.  
-> Zusätzliche Hilfsmittel (z. B. Formelsammlung) werden über `Prüfungsmaterialien` bereitgestellt.
-
-### Eduvidual/Moodle
-
-Next-Exam übernimmt die Absicherung des Moodle-Tests.  
-Alle prüfungsrelevanten Einstellungen erfolgen direkt in Moodle.
-
-### Webseiten
-
-Im Webseiten-Modus kann jede gewünschte Seite abgesichert angezeigt werden  
-(z. B. digi4school.at, lms.at, scratch.mit.edu).
-
-### Google Forms
-
-Google Forms können direkt in einem abgesicherten Kiosk-Modus geöffnet werden.
-
-### Microsoft365
-
-Nach dem Login wird ein .docx- bzw. .xlsx-Template bereitgestellt.  
-Für jede:n Schüler:in wird automatisch eine Kopie im OneDrive der Lehrperson erzeugt – inklusive individueller Bearbeitungslinks.
-
-### RDP
-
-Über ein Windows Remote Desktop Gateway kann auf einen Windows-Server oder virtuelle Maschinen zugegriffen werden.
-
-> Als Lehrperson ist der `Domainnamen (URL)` des Servers anzugeben.  
-> Schüler:innen melden sich mit ihrem Domänen-Login an.  
-> Auf dem Server muss der RD Web Client installiert sein.
+Je nach Modus erscheinen in der Seitenleiste die modusspezifischen Einstellungen (z. B. Test-URL, Texteditor-Optionen, PDF-Auswahl). Über das **Zahnrad-Symbol** (oben rechts) sind die **erweiterten Einstellungen** der Prüfung erreichbar (Abschnitte, Gruppen, Zeitlimits, Sicherheitsfunktionen – siehe [Erweiterte Funktionen](advanced.md)).
 
 ---
 
-## Prüfung starten
+## Prüfungsmaterialien definieren
 
-Der grüne Button `Geräte absichern` startet die Prüfung.  
-Schüler:innen-Endgeräte wechseln in den abgesicherten Modus.
-
----
-
-## Prüfungsmaterialien und URLs
-
-### Prüfungsmaterialien bereitstellen
-
+<!-- SCREENSHOT: teacher_pruefungsmaterialien -->
 <figure markdown="span">
-    ![Exam-Name](img/teacher_pruefungsmaterialien.png){width="50%"}
+    ![Prüfungsmaterialien](img/teacher_pruefungsmaterialien.png){width="50%"}
     <figcaption>Prüfungsmaterialien – Übersicht</figcaption>
 </figure>
 
-> Materialien (Textdokumente, PDFs, Formelsammlungen, Wörterbücher, Audiodateien, Bilder) sowie URLs werden über das `+`-Icon hinzugefügt.
+Im Bereich **Prüfungsmaterialien** werden Dateien (PDFs, Bilder, Audiodateien, GeoGebra-Dateien u. a.) und URLs festgelegt, die während der Prüfung verfügbar sein sollen.
 
+<!-- SCREENSHOT: teacher_pruefungsmaterialien_dialog -->
 <figure markdown="span">
-    ![Exam-Name](img/teacher_pruefungsmaterialien_dialog.png){width="50%"}
+    ![Materialien-Dialog](img/teacher_pruefungsmaterialien_dialog.png){width="50%"}
     <figcaption>Dialog zum Hinzufügen von Materialien</figcaption>
 </figure>
 
-> Die Auswahl erfolgt im Dialogfenster.  
-> Mit `OK` wird das neue `Prüfungsmaterial` der Liste hinzugefügt.  
-> Einträge können über das `X` wieder entfernt werden.
-
-### Gruppen- und Einzelschüler-Zuweisung
-
-> Der Bereich `Gruppen` steht nur zur Verfügung, wenn Gruppen aktiviert wurden  
-> (siehe *Erweiterte Funktionen*).
-
-Materialien werden in Base64 an die Clients übertragen und nicht lokal gespeichert.  
-Änderungen sind auch während der Prüfung möglich.
+- Materialien werden über das `+`-Symbol hinzugefügt und über das `x` wieder entfernt.
+- Sind **Gruppen** aktiviert, können Materialien getrennt für Gruppe A und B zugewiesen werden.
+- Manche Modi verlangen ein Pflichtmaterial (z. B. Test-URL bei Eduvidual, PDF bei Active Sheets). Unvollständig konfigurierte Prüfungsabschnitte verhindern das Absichern der Geräte.
+- Materialien werden direkt an die Clients übertragen; Änderungen sind auch während der Prüfung möglich (Schüler:innen laden sie über „Materialien aktualisieren“ nach).
 
 ---
 
-## Dateien bereitstellen
+## Prüfung starten, Geräte absichern, Prüfung beenden
 
-Next-Exam bietet mehrere Möglichkeiten zum Dateiversand:
-
-> Über die Sidebar können Dateien an alle Schüler:innen gesendet werden.  
-> Über den Dateimanager können Backups an einzelne Personen übermittelt werden.  
-> Gesendete Dateien stehen auch im abgesicherten Modus zur Verfügung.
-
-### Sicherungen zurücksenden
-
-Der Dateimanager erlaubt das gezielte Senden einzelner Dateien an bestimmte Schüler:innen – z. B. `.bak`-Dateien des Editors.
-
----
-
-## Schüler verwalten
-
-### Sitzplan
-
-Das Dashboard fungiert als Sitzplan.  
-Schüler:innen können per Drag & Drop neu positioniert werden.
-
-### Student-Widget
-
+<!-- SCREENSHOT: teacher_dashboard-03 -->
 <figure markdown="span">
-    ![Exam-Name](img/teacher_student_widget.png){width="50%"}
-    <figcaption>Student-Widgets</figcaption>
+    ![Prüfungssteuerung](img/teacher_dashboard-03.png){width="50%"}
+    <figcaption>Geräte absichern / freigeben</figcaption>
 </figure>
 
-Über das Student-Widget lassen sich Einstellungen für einzelne Schüler:innen vornehmen:
-
-- `Info`: Detailansicht (Freischalten, Entfernen, Dateiversand, Abgaben)  
-- `A` / `B`: Gruppenzuweisung (sofern aktiviert)  
-- `X`: Prüfung für die Person beenden  
-- `Papierkorb`: Arbeitsordner der Person bereinigen  
-- `Zauberstab`: Rechtschreibhilfe aktivieren  
-- Rote Dokumentensymbole: Anzahl erstellter Dateien
-
-Weitere Symbole erscheinen bei:
-
-- Abgabeversand  
-- Nutzung einer `Virtualisierten Arbeitsumgebung`  
-- Verlassen der Prüfung
+- **Geräte absichern** (grün): Startet den abgesicherten Prüfungsmodus auf allen verbundenen Geräten. Die Schüler:innen-Geräte wechseln in den Kiosk-/Prüfungsmodus mit der gewählten Prüfungsumgebung.
+- **Geräte freigeben** (rot): Beendet den abgesicherten Modus auf allen Geräten. Einzelne Geräte lassen sich über das Widget gezielt absichern oder freigeben.
+- **Bildschirme sperren / freigeben:** Dunkelt die Bildschirme aller Schüler:innen ab, z. B. für Ansagen.
+- **Prüfung verlassen:** Beendet den Prüfungsserver. Bestehende Verbindungen werden getrennt; abgesicherte Schüler:innen können offline weiterarbeiten. Hat eine noch verbundene Person keine Abgabe im Prüfungsordner, erscheint eine Warnung.
 
 ---
 
-## Abgaben einsehen und sichern
+## Abgaben verwalten
 
-Der Dateimanager (Schaltfläche `Ordner öffnen`) erlaubt das Einsehen und Verwalten aller Abgaben.
+### Abgabenübersicht
 
+Die Schaltfläche **Abgabenübersicht** öffnet eine Tabelle aller eingegangenen Abgaben mit Schüler:in, Datei, Prüfungsabschnitt und Datum. So ist auf einen Blick ersichtlich, von wem bereits eine finale Abgabe vorliegt.
+
+### Sicherungen anfordern
+
+- **Sicherung holen** fordert von allen Geräten den aktuellen Arbeitsstand an (Sicherungskopien und Log-Dateien).
+- Über die **Automatische Sicherung** (Backup-Intervall in Minuten) geschieht dies regelmäßig ohne Zutun – siehe [Erweiterte Funktionen](advanced.md#erweiterte-sicherheitsfunktionen).
+- **Letzte Abgaben zusammenfassen** erzeugt eine Sammel-PDF der jeweils neuesten Abgaben aller Schüler:innen.
+
+---
+
+## Prüfungsprotokoll (Event Log)
+
+Die Schaltfläche **Event Log öffnen** zeigt das detaillierte Prüfungsprotokoll:
+
+- **Allgemeines Protokoll:** Serverstart/-stopp, Prüfungsstart/-ende sowie die beim Prüfungsstart aktiven Einstellungen (Modus, Materialien, Gruppen, LanguageTool …).
+- **Schüler-Protokoll:** Pro Person werden Anmeldungen, Re-Logins, Offline-Phasen, Fokus-Verluste, Virtualisierungs- und Netzwerk-App-Erkennungen, Abgaben und Druckanfragen aufgezeichnet.
+- Das Protokoll kann als **Druckansicht** ausgegeben und damit archiviert werden.
+
+---
+
+## Abgaben herunterladen / Arbeitsordner öffnen
+
+<!-- SCREENSHOT: teacher_filemanager -->
 <figure markdown="span">
-    ![Exam-Name](img/teacher_filemanager.png){width="50%"}
-    <figcaption>Dateimanager</figcaption>
+    ![Dateimanager](img/teacher_filemanager.png){width="70%"}
+    <figcaption>Dateimanager mit Prüfungsordner</figcaption>
 </figure>
 
-### Verwaltung der Prüfungsabgaben
+Die Schaltfläche **Ordner öffnen** startet den integrierten Dateimanager mit dem lokalen Prüfungsordner:
 
-- Einsicht des Schülerfortschritts  
-- Archivierung und Download  
-- Automatische Archivierung mit Timestamp  
-- Zusammenfassung der neuesten Abgaben als PDF  
-  > Hinweis: Derzeit enthält das PDF nur die jeweils letzte eingereichte Datei. Dieses Verhalten wird zukünftig verbessert.
-
-### Abgabe
-
-Abgegebene Dateien befinden sich im Ordner `ABGABE`:
-
-- Finale Abgabe mit Nummerierung und Namenskennzeichnung  
-- Automatischer Versand an den Teacher  
-- Automatische Ablage
-
-### Direktdruck
-
-- Möglichkeit zum Sofortdruck durch Schüler:innen  
-- Auswahl eines Standarddruckers
-
----
-
-## Prüfung beenden
-
-Die Prüfung wird über die rote Schaltfläche **„Gerät freigeben“** beendet.  
-Das Schüler:innen-Gerät verlässt den abgesicherten Modus und zeigt die Meldung:
-
-> *„Wollen Sie die Anwendung Next-Exam beenden?“*
+- Pro Schüler:in ein Ordner mit allen geholten Sicherungen (mit Zeitstempel).
+- Finale Abgaben liegen im Ordner `ABGABE` (nummeriert und mit Namen gekennzeichnet).
+- Dateien können in der Vorschau angesehen, extern geöffnet, gedruckt oder gezielt an einzelne Schüler:innen zurückgesendet werden (z. B. Editor-Sicherungen beim Gerätetausch).
+- Verschlüsselte Abgaben (NXE1) lassen sich über **PDF entschlüsseln** öffnen; signierte Abgaben können validiert werden (siehe [Erweiterte Funktionen](advanced.md#signierte-pdfs-validieren)).
+- Über die Sidebar-Funktion **Dateien senden** können Dateien an alle Schüler:innen verteilt werden (pdf, jpg, mp3, htm, ggb, png, gif, wav, ogg). Gesendete Dateien stehen auch im abgesicherten Modus zur Verfügung.

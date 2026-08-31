@@ -1,85 +1,85 @@
-# Student - Grundlegende Funktionen
+# Student – Grundlegende Funktionen
 
-## Prüfung starten aus Sicht der Schüler:innen
-In der Student-Version von Next-Exam werden im Netzwerk gefundene Prüfungen automatisch angezeigt. Diese können im Feld `Name` einen frei wählbaren, eindeutigen Benutzernamen angeben und dem `Pincode` des Teacher-Dashboards beitreten.
+Die Student-App verbindet das Schüler:innen-Gerät mit dem Prüfungsserver der Lehrkraft und führt die Prüfung im abgesicherten Modus durch.
+
+---
+
+## Prüfung finden
+
+Nach dem Start sucht Next-Exam Student automatisch im lokalen Netzwerk nach aktiven Prüfungen und listet sie unter **Prüfungen** auf. Die gewünschte Prüfung wird angeklickt; danach werden **Name** und der von der Lehrkraft mitgeteilte **Pincode** eingegeben.
+
+<!-- SCREENSHOT: student_exam_anmelden -->
 <figure markdown="span">
-    ![Exam-Name](img/student_exam_anmelden.png){width="50%"}
-    <figcaption>bei Prüfung anmelden</figcaption>
+    ![Bei Prüfung anmelden](img/student_exam_anmelden.png){width="50%"}
+    <figcaption>Bei einer Prüfung anmelden</figcaption>
 </figure>
 
-### Verbindung mit dem Prüfungsserver herstellen
-Durch Klick auf die Schaltfläche `anmelden` wird die Verbindung zum Prüfungsserver hergestellt.
-Sollte die Prüfung nicht automatisch in der Student-Version erscheinen, kann über den Schieber `Manuell suchen` das Feld `Server-Adresse` eingeblendet werden und die Adresse entsprechend dem Teacher-Dashboard eingegeben werden.
+## Manuelle Serveradresse eingeben
 
-## Prüfung starten
-Wird `Geräte absichern` durch die korrespondierende Teacher-Version ausgeführt, werden die verbundenen Student-Geräte in den Prüfungsmodus versetzt.
+Erscheint die Prüfung nicht automatisch (z. B. wegen Firewall oder getrennter Netzsegmente), wird über den Schalter **Manuell suchen** das Feld **Server-Adresse** eingeblendet. Dort wird die im Teacher-Dashboard angezeigte Adresse eingetragen.
 
-## Prüfung durchführen
-> In der Teacher-Version von Next-Exam können unterschiedliche Prüfungsmodi gewählt werden. Dementsprechend ändert sich auch die Oberfläche der Student-Version beim Durchführen der Prüfung.
+## Anmelden
 
-### Mathematik-Prüfung durchführen
-Wird eine Mathematik-Prüfung gestartet, steht in der Student-Version eine abgesicherte Version von GeoGebra® zur Verfügung.
+Ein Klick auf **anmelden** stellt die Verbindung her:
+
+- Der **Name** wird automatisch normalisiert (Kleinschreibung) und muss innerhalb der Prüfung eindeutig sein – ist er bereits vergeben, erscheint eine Fehlermeldung.
+- Der **Pincode** besteht aus genau vier Ziffern.
+- Bei abweichenden Programmversionen von Teacher und Student wird die Anmeldung verweigert („Die Programmversionen stimmen nicht überein“). In diesem Fall dieselbe Version wie am Prüfungsserver installieren.
+
+!!! warning "Mehrere Monitore"
+    Mehrere angeschlossene Monitore sind für die Prüfung nicht zulässig; zusätzliche Bildschirme müssen vor dem Start getrennt werden.
+
+Nach erfolgreicher Anmeldung erscheint der Hinweis, auf die Aktivierung des Prüfungsmodus durch die Lehrperson zu warten.
+
+<!-- SCREENSHOT: student_verbunden -->
 <figure markdown="span">
-    ![Exam-Name](img/student_abgesichert_mathe.png){width="50%"}
-    <figcaption>Mathematikprüfung mit GeoGebra®</figcaption>
+    ![Verbunden](img/student_verbunden.png){width="50%"}
+    <figcaption>Erfolgreich mit dem Prüfungsserver verbunden</figcaption>
 </figure>
 
-#### GeoGebra® Version wechseln
-> Mit den Schaltflächen `Suite` und `Classic` kann in die gewünschte Version von Geogebra gewechselt werden. In der aktuellen Next-Exam-Version wird Geogebra 6.0.899.
+## Verbindungsstatus
 
-### Sprachen-Prüfung durchführen
-Wird eine Sprachen-Prüfung gestartet, öffnet sich in der Student-Version ein abgesicherter Texteditor.
+Die App zeigt den aktuellen Verbindungszustand an:
+
+- **verbunden** – die Verbindung zum Prüfungsserver besteht.
+- **Verbindung unterbrochen / offline** – die Verbindung ist abgerissen. Im abgesicherten Modus kann trotzdem weitergearbeitet werden; Sicherungen werden nach dem Wiederverbinden übertragen. Ändert sich die eigene IP-Adresse, weist ein Hinweis darauf hin, **Neu verbinden** zu nutzen.
+- **Kein Prüfungsserver an der angegebenen Adresse / Server API nicht erreichbar** – unter der eingegebenen Adresse antwortet kein Next-Exam-Server (Adresse prüfen, Firewall beachten).
+
+## Anmeldung über das Bildungsportal
+
+Statt Name und Pincode manuell einzugeben, kann sich die Prüfungsperson auch über das österreichische **Bildungsportal** anmelden – siehe [Bildungsportal](bildungsportal.md#als-schulerin-anmelden). Next-Exam übernimmt dabei automatisch den Namen aus dem Portal-Konto und verbindet die Person mit der passenden, von der Lehrkraft vorbereiteten Prüfung. Hat die Lehrkraft **Bildungsportal Login erzwingen** aktiviert, ist diese Anmeldeart verpflichtend.
+
+## Gruppen A/B
+
+Hat die Lehrkraft Gruppen aktiviert, zeigt die Student-App die eigene Gruppenzugehörigkeit (**A** oder **B**) im Kopfbereich an. Materialien und Modus-Einstellungen können sich je nach Gruppe unterscheiden.
+
+## Prüfungsmodus wird durch die Lehrkraft aktiviert
+
+Den Prüfungsmodus (Mathematik, Sprachen, Web, Active Sheets …) wählt ausschließlich die Lehrkraft. Sobald sie **Geräte absichern** auslöst, wechselt das Gerät in den abgesicherten Modus und öffnet die entsprechende Prüfungsumgebung – siehe die einzelnen [Prüfungsmodi](modes/mathematik.md). Der abgesicherte Modus darf nie ohne Freigabe durch die Lehrperson verlassen werden; ein Verlassen wird der Lehrkraft gemeldet.
+
+## Lokal absperren
+
+Wenn einzelne Geräte ohne Teacher-Instanz abgesichert werden sollen, steht auf der Startseite die Funktion **Lokal absperren** zur Verfügung. Im Dialog werden festgelegt:
+
+- **Prüfungsmodus:** Sprachen (Texteditor) oder Mathematik (GeoGebra)
+- **Name** der arbeitenden Person
+- **Passwort** (mit Bestätigung) – wird zum Verlassen des abgesperrten Modus benötigt
+- Bei Sprachen zusätzlich: **LanguageTool aktivieren**, **Vorschläge zeigen** und die Sprache der Rechtschreibhilfe
+
+<!-- SCREENSHOT: loc_local_settings -->
 <figure markdown="span">
-    ![Exam-Name](img/student_abgesichert_sprache.png){width="50%"}
-    <figcaption>LanguageTool ohne Vorschläge</figcaption>
+    ![Lokal absperren](img/loc_local_settings.png){width="50%"}
+    <figcaption>Dialog „Lokal absperren“</figcaption>
 </figure>
 
-#### Text verfassen
-Der Texteditor stellt über die Symbolleiste Formatierungsmöglichkeiten und Befehle bereit.
+Zum Verlassen des abgesperrten Modus ist die Eingabe des zuvor definierten Passworts notwendig.
+
+<!-- SCREENSHOT: loc_local_exit -->
 <figure markdown="span">
-    ![Exam-Name](img/student_abgesichert_sprache_toolbar.png){width="50%"}
-    <figcaption>LanguageTool ohne Vorschläge</figcaption>
-</figure>
-
-> Folgende Optionen können über die Symbolleiste erreicht werden:
-
-- `sichern` - Symbol ... speichert den aktuellen Text ab.
-- `rückgängig` - Symbol ... widerruft die letzte Änderung.
-- `wiederherstellen` - Symbol ... stellt widerrufene Änderungen wieder her.
-- `löschen` - Symbol ... entfernt den markierten Text.
-- `fett`, `kursiv`, `unterstrichen` - Symbole ... stellen die Schrift auf die entsprechenden Formatierungen um.
-- `h1` ... `h6` - Symbole ... wenden die entsprechenden Formatvorlagen für Überschriften an.
-- `hochstellen`, `tiefstellen` - Symbole ... stellen die Schrift auf die entsprechenden Formatierungen um.
-- `ungeordnete Liste`, `geordnete Liste` - Symbole ... versehen Absätze mit Aufzählungszeichen bzw. Nummerierungen.
-- `code` - Symbole ... formatieren speziell für HTML- oder Programmiercode-Bereiche.
-- `linksbündig`, `zentriert`, `rechtsbündig` - Symbole ... beeinflussen die Textausrichtung.
-- `Textfarbe` - Symbol ... passt die Farbe des Textes an.
-
-#### Rechtschreibhilfe
-Wenn in der Teacher-Version `LanguageTool aktivieren` angehakt wurde, erscheint in der Student-Version der entsprechende Seitenbereich, über den Rechtschreibhilfen in Anspruch genommen werden können.
-
-##### LanguageTool
-> Wurde lediglich `LanguageTool aktivieren` in der Teacher-Version angehakt, werden mögliche Rechtschreibfehler angezeigt.
-<figure markdown="span">
-    ![Exam-Name](img/student_sprache_languagetool.png){width="50%"}
-    <figcaption>LanguageTool ohne Vorschläge</figcaption>
-</figure>
-
-##### LanguageTool mit Vorschlägen
-> Wurde `LanguageTool aktivieren` und `Vorschläge anzeigen` in der Teacher-Version angehakt, werden mögliche Rechtschreibfehler und entsprechende Verbesserungsvorschläge angezeigt.
-<figure markdown="span">
-    ![Exam-Name](img/student_sprache_languagetool_vorschlaege.png){width="50%"}
-    <figcaption>LanguageTool mit Vorschlägen</figcaption>
-</figure>
-
-## Client lokal absperren
-Wenn einzelne Computer abgesperrt werden sollen und eine Steuerung über eine Teacher-Instanz nicht notwendig ist, kann die Funktion "Lokal absperren" verwendet werden. Am Dashboard befindet sich dafür ein Button "Lokal absperren". Die Modi Mathematik und Sprachen mit grundlegenden Einstellungsmöglichkeiten sind vorhanden.
-<figure markdown="span">
-    ![Exam-Name](img/loc_local_settings.png){width="50%"}
-    <figcaption>Client lokal absperren</figcaption>
-</figure>
-Um den abgesperrten Modus verlassen zu können, ist die Eingabe des vorher definierten Passwortes notwendig.
-<figure markdown="span">
-    ![Exam-Name](img/loc_local_exit.png){width="50%"}
+    ![Passworteingabe](img/loc_local_exit.png){width="50%"}
     <figcaption>Passworteingabe beim Verlassen</figcaption>
 </figure>
+
+## Kiosk-Modus einrichten
+
+Zusätzlich zur eigentlichen Prüfungsumgebung kann das Gerät auf Betriebssystemebene abgesichert werden (eigenes gesperrtes Benutzerkonto unter Windows bzw. eigene Kiosk-Sitzung unter Linux). Die entsprechende Schaltfläche **Kiosk-Modus einrichten** findet sich ebenfalls auf der Startseite – siehe [Kiosk-Modus](modes/kiosk.md).
