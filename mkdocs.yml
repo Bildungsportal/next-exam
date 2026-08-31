@@ -1,14 +1,5 @@
 site_name: Next-Exam Handbuch
 site_url: https://bildungsportal.github.io/next-exam/
-nav:
-  - Quickstart Guide: quickstart.md
-  - Home: index.md
-  - Teacher - Grundlagen: teacher.md
-  - Student - Grundlagen: student.md
-  - Erweiterte Funktionen: advanced.md
-  - Fehlerbehandlung - FAQ: faq.md
-  - Bekannte Probleme: issues.md
-  - Datenschutzrichtlinie: privacy-policy.md
 site_description: Handbuch für die Next-Exam Prüfungsumgebung (Version 2.0.0)
 site_author: Next-Exam Team
 docs_dir: docs
@@ -75,3 +66,4 @@ nav:
   - Kiosk-Modus: modes/kiosk.md
   - FAQ: faq.md
   - Bekannte Probleme: issues.md
+  - Datenschutzrichtlinie: privacy-policy.md
