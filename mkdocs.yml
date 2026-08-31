@@ -8,6 +8,7 @@ nav:
   - Erweiterte Funktionen: advanced.md
   - Fehlerbehandlung - FAQ: faq.md
   - Bekannte Probleme: issues.md
+  - Datenschutzrichtlinie: privacy-policy.md
 
 theme:
   name: material
