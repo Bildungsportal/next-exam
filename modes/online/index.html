@@ -1,0 +1,1617 @@
+<!DOCTYPE html><html lang="de" class="no-js"><head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Handbuch für die Next-Exam Prüfungsumgebung (Version 2.0.0)">
+      
+      
+        <meta name="author" content="Next-Exam Team">
+      
+      
+        <link rel="canonical" href="https://bildungsportal.github.io/next-exam/modes/online/">
+      
+      
+        <link rel="prev" href="../activesheets/">
+      
+      
+        <link rel="next" href="../rdp/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../img/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Online-Modi - Next-Exam Handbuch</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  <link href="../../assets/stylesheets/glightbox.min.css" rel="stylesheet"><script src="../../assets/javascripts/glightbox.min.js"></script><style id="glightbox-style">
+            html.glightbox-open { overflow: initial; height: 100%; }
+            .gslide-title { margin-top: 0px; user-select: text; }
+            .gslide-desc { color: #666; user-select: text; }
+            .gslide-image img { background: white; }
+            .gscrollbar-fixer { padding-right: 15px; }
+            .gdesc-inner { font-size: 0.75rem; }
+            body[data-md-color-scheme="slate"] .gdesc-inner { background: var(--md-default-bg-color); }
+            body[data-md-color-scheme="slate"] .gslide-title { color: var(--md-default-fg-color); }
+            body[data-md-color-scheme="slate"] .gslide-desc { color: var(--md-default-fg-color); }
+        </style></head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="green">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#online-modi" class="md-skip">
+          Zum Inhalt
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Kopfzeile">
+    <a href="../.." title="Next-Exam Handbuch" class="md-header__button md-logo" aria-label="Next-Exam Handbuch" data-md-component="logo">
+      
+  <img src="../../img/favicon.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Next-Exam Handbuch
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Online-Modi
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="green" aria-label="Dunkelmodus aktivieren" type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dunkelmodus aktivieren" for="__palette_1" hidden="">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo" aria-label="Hellmodus aktivieren" type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Hellmodus aktivieren" for="__palette_0" hidden="">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Suche" placeholder="Suche" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required="">
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"></path></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Suche">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Zurücksetzen" aria-label="Zurücksetzen" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix="">
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Suche wird initialisiert
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Hauptnavigation" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Startseite
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../quickstart/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Quickstart
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../teacher/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Teacher
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../student/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Student
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../mathematik/" class="md-tabs__link">
+          
+  
+  
+  Prüfungsmodi
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../advanced/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Erweiterte Funktionen
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../bildungsportal/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Bildungsportal
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../kiosk/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Kiosk-Modus
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../faq/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  FAQ
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../issues/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Bekannte Probleme
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../privacy-policy/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Datenschutzrichtlinie
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Next-Exam Handbuch" class="md-nav__button md-logo" aria-label="Next-Exam Handbuch" data-md-component="logo">
+      
+  <img src="../../img/favicon.png" alt="logo">
+
+    </a>
+    Next-Exam Handbuch
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix="">
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Startseite
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../teacher/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Teacher
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../student/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Student
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked="">
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Prüfungsmodi
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Prüfungsmodi
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mathematik/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mathematik (GeoGebra)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sprachen/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sprachen (Texteditor)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../activesheets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Active Sheets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Online-Modi
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Online-Modi
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Inhaltsverzeichnis">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Inhaltsverzeichnis
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+      
+        <li class="md-nav__item">
+  <a href="#eduvidual-moodle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Eduvidual / Moodle
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Eduvidual / Moodle">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lehrkraft" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lehrkraft
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#schulerin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schüler:in
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#seb-kompatibilitatsmodus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SEB-Kompatibilitätsmodus
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#google-forms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Google Forms
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Google Forms">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lehrkraft_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lehrkraft
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#schulerin_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schüler:in
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#microsoft-forms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Microsoft Forms
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Microsoft Forms">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lehrkraft_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lehrkraft
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#schulerin_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schüler:in
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#microsoft-365" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Microsoft 365
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Microsoft 365">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lehrkraft_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lehrkraft
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#schulerin_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schüler:in
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#website" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Website
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Website">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lehrkraft_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lehrkraft
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#schulerin_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schüler:in
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../rdp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RDP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../localvm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lokale VM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../advanced/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Erweiterte Funktionen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bildungsportal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bildungsportal
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../kiosk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Kiosk-Modus
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../issues/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bekannte Probleme
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../privacy-policy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Datenschutzrichtlinie
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Inhaltsverzeichnis">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Inhaltsverzeichnis
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+      
+        <li class="md-nav__item">
+  <a href="#eduvidual-moodle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Eduvidual / Moodle
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Eduvidual / Moodle">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lehrkraft" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lehrkraft
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#schulerin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schüler:in
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#seb-kompatibilitatsmodus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SEB-Kompatibilitätsmodus
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#google-forms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Google Forms
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Google Forms">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lehrkraft_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lehrkraft
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#schulerin_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schüler:in
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#microsoft-forms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Microsoft Forms
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Microsoft Forms">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lehrkraft_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lehrkraft
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#schulerin_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schüler:in
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#microsoft-365" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Microsoft 365
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Microsoft 365">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lehrkraft_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lehrkraft
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#schulerin_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schüler:in
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#website" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Website
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Website">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#lehrkraft_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lehrkraft
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#schulerin_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schüler:in
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="online-modi">Online-Modi</h1>
+<p>In den <strong>Online-Modi</strong> zeigt Next-Exam eine Webanwendung (Moodle-Test, Formular, Office-Web-App, beliebige Website) im abgesicherten Vollbild an. Die Schüler:innen können die Prüfungsseite nicht verlassen: Navigation ist auf die erlaubten Adressen beschränkt, Tastenkombinationen und Browser-Navigation sind blockiert, und ein Verlassen des Fensters wird der Lehrkraft gemeldet.</p>
+<p>Alle inhaltlichen Einstellungen (Fragen, Bewertung, Zeitlimits des Tests) erfolgen in der jeweiligen Plattform – Next-Exam übernimmt die Absicherung.</p>
+<hr>
+<h2 id="eduvidual-moodle">Eduvidual / Moodle</h2>
+<h3 id="lehrkraft">Lehrkraft</h3>
+<ol>
+<li>Prüfungsmodus <strong>Eduvidual / Moodle</strong> wählen.</li>
+<li>Unter <strong>Test URL</strong> die vollständige URL des Moodle-Tests eintragen (<strong>Test URL wählen</strong>). Läuft die Moodle-Instanz unter einer anderen Domain als eduvidual.at, wird diese Domain aus der URL übernommen.</li>
+<li>Bei aktivierten Gruppen kann für Gruppe A und B je eine eigene Test-URL hinterlegt werden.</li>
+<li>Optional kann ein bereits für den <strong>Safe Exam Browser (SEB)</strong> konfiguriertes Moodle-Quiz genutzt werden – siehe <a href="#seb-kompatibilitatsmodus">SEB-Kompatibilitätsmodus</a> unten.</li>
+</ol>
+<h3 id="schulerin">Schüler:in</h3>
+<p>Nach dem Absichern öffnet sich der Moodle-Test im abgesicherten Fenster. Die Schüler:innen melden sich mit ihrem Moodle-Konto an und absolvieren den Test. Navigation außerhalb der Testseite ist blockiert; Zoom-Funktionen stehen zur Verfügung.</p>
+<h3 id="seb-kompatibilitatsmodus">SEB-Kompatibilitätsmodus</h3>
+<p>Mit dem <strong>Safe Exam Browser (SEB) Kompatibilitätsmodus</strong> kann ein bereits für SEB konfiguriertes Moodle-Quiz mit Next-Exam durchgeführt werden:</p>
+<ul>
+<li><strong>SEB-Konfiguration:</strong> Eine aus Moodle heruntergeladene oder mit dem SEB Configuration Tool erstellte Konfigurationsdatei auswählen.</li>
+<li><strong>Entschlüsselungspasswort:</strong> Falls die Konfiguration verschlüsselt ist, das Passwort angeben.</li>
+<li><strong>Browser Exam Key (BEK):</strong> Für höhere Sicherheit den im SEB Configuration Tool (Tab „Exam“) angezeigten Key hier und im Moodle-Quiz hinterlegen.</li>
+</ul>
+<hr>
+<h2 id="google-forms">Google Forms</h2>
+<h3 id="lehrkraft_1">Lehrkraft</h3>
+<ol>
+<li>Prüfungsmodus <strong>Forms</strong> wählen.</li>
+<li>Unter <strong>Forms URL</strong> den Schüler:innen-Link zum Formular eintragen: In Google Forms über <strong>Teilen → „Link für Antwortende kopieren“</strong> und diesen Link einfügen.</li>
+</ol>
+<h3 id="schulerin_1">Schüler:in</h3>
+<p>Das Formular öffnet sich im abgesicherten Fenster und wird direkt ausgefüllt und abgesendet.</p>
+<div class="admonition note">
+<p class="admonition-title">Google-Account</p>
+<p>Je nach Formular-Einstellung („Anmeldung erforderlich“) benötigen die Schüler:innen einen Google-Account. Für anonyme Prüfungen das Formular ohne Anmeldepflicht konfigurieren.</p>
+</div>
+<hr>
+<h2 id="microsoft-forms">Microsoft Forms</h2>
+<h3 id="lehrkraft_2">Lehrkraft</h3>
+<ol>
+<li>Prüfungsmodus <strong>Forms</strong> wählen (derselbe Modus wie Google Forms).</li>
+<li>Unter <strong>Forms URL</strong> den Teilnahme-Link eintragen: In Microsoft Forms über <strong>„Antworten sammeln“ → „Link kopieren“</strong> und diesen Link einfügen.</li>
+</ol>
+<h3 id="schulerin_2">Schüler:in</h3>
+<p>Wie bei Google Forms öffnet sich das Formular im abgesicherten Fenster; das Neuladen des Formulars verwirft alle bisherigen Eingaben und wird daher mit einer Rückfrage abgesichert.</p>
+<hr>
+<h2 id="microsoft-365">Microsoft 365</h2>
+<h3 id="lehrkraft_3">Lehrkraft</h3>
+<ol>
+<li>Prüfungsmodus <strong>Microsoft365</strong> wählen.</li>
+<li>Mit dem Microsoft-Konto der Lehrkraft anmelden.</li>
+<li>Über <strong>Datei hochladen</strong> eine <code>.docx</code>- oder <code>.xlsx</code>-Datei als Template auswählen. Für jede:n angemeldete:n Schüler:in wird automatisch eine Kopie im OneDrive der Lehrkraft angelegt und ein individueller Bearbeitungslink erzeugt.</li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title">Consent im Tenant</p>
+<p>Je nach Sicherheitsrichtlinie des verwendeten Microsoft-Tenants kann bei der Anmeldung eine Freigabe (Consent) durch eine:n Tenant-Administrator:in erforderlich sein, bevor die Lehrkraft sich anmelden kann.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Nach Unterbrechungen</p>
+<p>Wird die Prüfung fortgesetzt bzw. der Server neu gestartet, muss sich die Lehrkraft erneut mit der Microsoft-Cloud verbinden und die Office-Datei erneut auswählen, bevor die Schüler:innen die Verbindung wieder aufnehmen können.</p>
+</div>
+<h3 id="schulerin_3">Schüler:in</h3>
+<p>Jede:r Schüler:in arbeitet im abgesicherten Fenster an der eigenen Dokumentkopie in der Office-Web-App (Word/Excel online). Die Arbeit wird laufend in OneDrive gespeichert; die Lehrkraft hat über ihr OneDrive Zugriff auf alle Dokumente.</p>
+<hr>
+<h2 id="website">Website</h2>
+<h3 id="lehrkraft_4">Lehrkraft</h3>
+<ol>
+<li>Prüfungsmodus <strong>Website</strong> wählen.</li>
+<li>Unter <strong>Website-URL</strong> die erlaubte Adresse eintragen (<strong>URL wählen</strong>), z. B. digi4school.at, lms.at oder scratch.mit.edu.</li>
+<li>Optional die Navigation weiter einschränken:<ul>
+<li><strong>Subdomains blockieren (SD):</strong> Nur die exakte Domain erlauben, alle Subdomains blockieren.</li>
+<li><strong>Andere Pfade blockieren (SF):</strong> Navigation nur innerhalb des angegebenen URL-Pfads erlauben.</li>
+</ul>
+</li>
+<li>Bei aktivierten Gruppen je URL für Gruppe A und B.</li>
+</ol>
+<h3 id="schulerin_4">Schüler:in</h3>
+<p>Die Website öffnet sich im abgesicherten Fenster. Navigation ist nur innerhalb der erlaubten URL (und je nach Einstellung ihrer Subdomains/Unterpfade) möglich. Downloads aus der Prüfungsumgebung landen im Arbeitsordner; bei Scratch-Projekten wird der Arbeitsstand automatisch gesichert.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden="">
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"></path></svg>
+  Zurück zum Seitenanfang
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright" style="
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  color: white;
+  background: var(--md-primary-fg-color);
+  border-top: 1px solid var(--md-default-fg-color--lighter);
+  padding: 0.5rem 1rem;
+  text-align: center;
+  z-index: 100;
+">
+Handbuch 2026 - basierend auf der Next-Exam-Version: 2.0.0 PRERELEASE
+</div>
+<!-- Platz für Footer schaffen - Abstand zum Text-->
+<style>
+.md-main {
+  padding-bottom: 3rem; /* Höhe des Footers */
+}
+</style>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "In Zwischenablage kopiert", "clipboard.copy": "In Zwischenablage kopieren", "search.result.more.one": "1 weiteres Suchergebnis auf dieser Seite", "search.result.more.other": "# weitere Suchergebnisse auf dieser Seite", "search.result.none": "Keine Suchergebnisse", "search.result.one": "1 Suchergebnis", "search.result.other": "# Suchergebnisse", "search.result.placeholder": "Suchbegriff eingeben", "search.result.term.missing": "Es fehlt", "select.version": "Version ausw\u00e4hlen"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  
+<script id="init-glightbox">const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});
+document$.subscribe(()=>{ lightbox.reload(); });
+</script></body></html>
