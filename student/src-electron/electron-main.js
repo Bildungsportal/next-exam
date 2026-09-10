@@ -1,0 +1,454 @@
+/**
+ * @license GPL LICENSE
+ * Copyright (c) 2021 Thomas Michael Weissel
+ * 
+ * This program is free software: you can redistribute it and/or modify it 
+ * under the terms of the GNU General Public License as published by the Free Software Foundation,
+ * either version 3 of the License, or any later version.
+ * 
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ * 
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+ * You should have received a copy of the GNU General Public License along with this program.
+ * If not, see <http://www.gnu.org/licenses/>
+ */
+
+
+/**
+ * This is the ELECTRON main file that actually opens the electron window
+ */
+import platformDispatcher from './main/scripts/platformDispatcher.js';
+import { getLinuxCageDetectionLogLines } from './main/scripts/cageDetect.js';
+import { getWindowsKioskDetectionLogLines, syncAllowedKioskAppsClientinfo } from './main/scripts/win/windowsKioskSetup.js';
+import chalk from 'chalk';
+import { inspect } from 'util';
+import log from 'electron-log';
+import { app, BrowserWindow, powerSaveBlocker, nativeTheme, globalShortcut, Tray, Menu, dialog, session, desktopCapturer } from 'electron'
+import config from '../src/utils/config.js';
+import multicastClient from './main/scripts/multicastclient.js'
+import { resetExamApiConnections } from './main/scripts/examApiFetch.js'
+import path from 'path'
+import fs from 'fs'
+import { X509Certificate } from 'node:crypto'
+import { wipeKioskUserFiles } from './main/scripts/win/windowsKioskSetup.js'
+import * as fsExtra from 'fs-extra';
+import ip from 'ip'
+import { gateway4sync } from 'default-gateway';
+import WindowHandler from './main/scripts/windowhandler.js'
+import CommHandler from './main/scripts/communicationhandler.js'
+import IpcHandler from './main/scripts/ipchandler.js'
+import { updateSystemTray } from './main/scripts/traymenu.js'
+import JreHandler from './main/scripts/jre-handler.js';
+import { checkParentProcess } from './main/scripts/checkparent.js';
+
+import { stopProxy } from './main/scripts/vncproxy.js';
+import { stopAssessmentSession } from './main/scripts/assessmentSession.js';
+import { initErrorHandling } from './main/scripts/errorHandling.js';
+import { syncClientDisplayInfo } from './main/scripts/displayInfo.js';
+import { execSync } from 'child_process';
+
+const e2eServerApiPort = Number(process.env.NXE_E2E_SERVER_API_PORT);
+if (Number.isInteger(e2eServerApiPort)) config.serverApiPort = e2eServerApiPort;
+
+
+// Reject debugger switches before Chromium opens a CDP or Node inspector endpoint.
+if (!config.development && process.argv.some(arg => /^--(?:inspect(?:-brk)?|remote-debugging-(?:port|pipe))(?:=|$)/.test(arg))) {
+    app.quit();
+    process.exit(0);
+}
+
+
+
+app.commandLine.appendSwitch('lang', 'de');
+app.commandLine.appendSwitch('enable-unsafe-swiftshader');
+app.commandLine.appendSwitch('log-level', '3'); // 3 = WARN, 2 = ERROR, 1 = INFO
+
+if (process.platform === 'linux'){
+    app.commandLine.appendSwitch('disable-features', 'VaapiVideoDecoder,OutOfProcessRasterization,CanvasOopRasterization'); // disable fragile GPU features
+    app.commandLine.appendSwitch('disable-zero-copy');
+    // Fallback when chrome-sandbox is not configured (e.g. Debian without unprivileged_userns_clone)
+    //app.commandLine.appendSwitch('no-sandbox');
+}
+else if (process.platform === 'darwin'){
+    app.commandLine.appendSwitch('enable-features', 'Metal,CanvasOopRasterization');  // macos only
+}
+else if (process.platform === 'win32'){
+    // WGC CreateForMonitor can fail in a loop and spam stderr; use DXGI capturer instead
+    // + keep renderer timers running while system is idle (fetchInfo/serverlist froze on idle -> server vanished)
+    app.commandLine.appendSwitch('disable-features', 'WebRtcAllowWgcScreenCapturer,WebRtcAllowWgcWindowCapturer,WebRtcAllowWgcDesktopCapturer,IntensiveWakeUpThrottling');
+    app.commandLine.appendSwitch('disable-renderer-backgrounding');
+    app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+    app.commandLine.appendSwitch('disable-background-timer-throttling');
+}
+
+
+
+
+
+log.initialize(); // initialize the logger for any renderer process
+log.eventLogger.startLogging();
+log.errorHandler.startCatching();
+log.transports.file.resolvePathFn = () => { return platformDispatcher.logfile  }
+
+// Objects (e.g. electron-log event payloads) print as [object Object] via join(); certificate payloads
+// are huge, so reduce them to url + error and inspect anything else shallowly.
+const formatLogData = (data) => (Array.isArray(data) ? data : [data])
+    .map(part => {
+        if (typeof part !== 'object' || part === null) return String(part)
+        if (part.certificate) return `${part.url || ''} ${part.error || ''}`.trim()
+        return inspect(part, { depth: 2, breakLength: Infinity })
+    })
+    .join(' ');
+
+log.transports.console.format = (message) => {
+    // Always return an array, not strings!
+    switch (message.level) {
+      case 'info': return [chalk.green(formatLogData(message.data))];
+      case 'warn': return [chalk.yellow(formatLogData(message.data))];
+      case 'error': return [chalk.red(formatLogData(message.data))];
+      case 'debug': return [chalk.blue(formatLogData(message.data))];
+      case 'verbose': return [chalk.magenta(formatLogData(message.data))];
+      default:     return [formatLogData(message.data)];
+    }
+};
+
+log.verbose()
+log.verbose(`main: -------------------`)
+log.verbose(`main: starting Next-Exam Student "${config.version} ${config.info}" (${process.platform})${config.development ? ' (devmode on)' : ''}`)
+log.verbose(`main: -------------------`)
+log.info(`main: Logfilelocation at ${platformDispatcher.logfile}`)
+platformDispatcher.messages.forEach(message => { log.debug(message) });
+
+// log electron version and other platform information
+log.debug(`main: Electron version: ${process.versions.electron}`)
+log.debug(`main: Chromium version: ${process.versions.chrome}`)
+log.debug(`main: Node version: ${process.versions.node}`)
+log.debug(`main: V8 version: ${process.versions.v8}`)
+log.debug(`main: OS: ${process.platform} ${process.getSystemVersion()}`)
+log.debug(`main: Arch: ${process.arch}`)
+log.debug(`main: Desktop: ${platformDispatcher.desktopName}`)
+log.debug(`main: Display server: ${platformDispatcher.displayServer}`)
+for (const line of getLinuxCageDetectionLogLines()) log.debug(line);
+for (const line of getWindowsKioskDetectionLogLines()) log.debug(line);
+syncAllowedKioskAppsClientinfo(multicastClient.clientinfo);
+if (platformDispatcher.runningUnderMacRosetta) {
+    log.warn('main: Intel (x64) build running under Rosetta on Apple Silicon — install the arm64 build');
+}
+
+
+
+
+
+WindowHandler.init(multicastClient, config)  // mainwindow, examwindow
+CommHandler.init(multicastClient, config)    // starts "beacon" intervall and fetches information from the teacher - acts on it (startexam, stopexam, sendfile, getfile)
+IpcHandler.init(multicastClient, config, WindowHandler, CommHandler)  //controll all Inter Process Communication
+initErrorHandling(log, WindowHandler);
+JreHandler.init();
+
+// Prevents Electron from creating the default menu
+Menu.setApplicationMenu(null);
+
+
+if (!app.requestSingleInstanceLock()) {  // allow only one instance of the app per client
+    log.warn("main @ singleinstance: next-exam already running.")
+    app.quit()
+    process.exit(0)
+}
+
+app.on('second-instance', () => {
+    log.warn("main @ singleinstance: prevented second start of next-exam. Restoring existing Next-Exam window.")
+    if (WindowHandler.mainwindow) {
+        if (WindowHandler.mainwindow.isMinimized() || !WindowHandler.mainwindow.isVisible()) {
+            WindowHandler.showFromTray()
+            WindowHandler.mainwindow.restore()
+        } 
+        WindowHandler.mainwindow.focus() // Focus on the main window if the user tried to open another
+    }
+})
+
+
+/**
+ * additional config settings and path checks
+ */
+
+const __dirname = import.meta.dirname;
+
+config.homedirectory = platformDispatcher.homedirectory;
+config.workdirectory = platformDispatcher.workdirectory;
+config.tempdirectory = platformDispatcher.tempdirectory;
+config.examdirectory = config.workdirectory    // we need this variable setup even if we do not connect to a teacher instance
+
+
+if (!fs.existsSync(config.workdirectory)){ fs.mkdirSync(config.workdirectory, { recursive: true }); }
+if (!fs.existsSync(config.tempdirectory)){ fs.mkdirSync(config.tempdirectory, { recursive: true }); }
+if (process.platform === 'win32') {
+    const lnk = path.join(platformDispatcher.desktopPath, `${config.clientdirectory}.lnk`);
+    const t = config.workdirectory.replace(/'/g, "''"), l = lnk.replace(/'/g, "''");
+    try { execSync(`powershell -NoProfile -Command "$s=New-Object -ComObject WScript.Shell;$x=$s.CreateShortcut('${l}');$x.TargetPath='${t}';$x.Save()"`, { windowsHide: true }); }
+    catch (e) { log.error("main @ desktop-link: can't create .lnk") }
+} else {
+    const linkPath = path.join(platformDispatcher.desktopPath, config.clientdirectory);
+    try { fs.unlinkSync(linkPath); } catch {}
+    try { if (!fs.existsSync(linkPath)) fs.symlinkSync(config.workdirectory, linkPath); } catch (e) { log.error("main @ create-symlink: can't create symlink"); }
+}
+
+
+try { //bind to the correct interface
+    const { gateway, interface: iface} = gateway4sync(); 
+    config.hostip = ip.address(iface)    // this returns the ip of the interface that has a default gateway..  should work in MOST cases.  probably provide "ip-options" in UI ?
+    config.gateway = true
+}
+ catch (e) {
+   log.error("main @ gateway4sync: unable to determine default gateway")
+   config.hostip = ip.address() 
+   log.info(`main: IP ${config.hostip}`)
+   config.gateway = false
+ }
+
+
+fsExtra.emptyDirSync(config.tempdirectory)  // clean temp directory
+
+
+
+
+
+
+
+if (process.platform === 'win32') app.setAppUserModelId(app.getName());
+
+// Resolve a safe unique path for an exam download inside the student workfolder.
+const resolveExamDownloadPath = (workDir, rawName) => {
+    const base = path.basename(String(rawName || 'download').trim());
+    if (!base || base === '.' || base === '..' || base.includes('\0')) return null;
+    const root = path.resolve(workDir);
+    let candidate = path.resolve(path.join(root, base));
+    const rel = path.relative(root, candidate);
+    if (rel.startsWith('..') || path.isAbsolute(rel)) return null;
+    if (!fs.existsSync(candidate)) return candidate;
+    const { name, ext } = path.parse(base);
+    for (let i = 1; i < 1000; i++) {
+        candidate = path.resolve(path.join(root, `${name} (${i})${ext}`));
+        if (!fs.existsSync(candidate)) return candidate;
+    }
+    return null;
+};
+
+// Auto-save webview downloads to workfolder during exam mode (no native save dialog).
+const boundExamDownloadSessions = new WeakSet();
+const bindExamDownloadHandler = (sess) => {
+    if (!sess || boundExamDownloadSessions.has(sess)) return;
+    boundExamDownloadSessions.add(sess);
+    sess.on('will-download', (_event, item) => {
+        if (!multicastClient?.clientinfo?.exammode) return;
+        const examDir = config.examdirectory || config.workdirectory;
+        const savePath = resolveExamDownloadPath(examDir, item.getFilename());
+        if (!savePath) {
+            item.cancel();
+            return;
+        }
+        item.setSavePath(savePath);
+        item.once('done', (_e, state) => {
+            if (state !== 'completed') return;
+            log.info(`main @ exam-download: saved ${path.basename(savePath)}`);
+            WindowHandler.mainWin()?.webContents?.send('exam-download-complete', { filename: path.basename(savePath) });
+        });
+    });
+};
+
+app.on('session-created', (_event, sess) => bindExamDownloadHandler(sess));
+
+app.on('window-all-closed', async () => {  // last window closed – clear storage here to avoid Linux segfault in before-quit
+    clearInterval( CommHandler.updateStudentIntervall )
+    if (WindowHandler.checkWindowInterval?.stop) WindowHandler.checkWindowInterval.stop()
+    if (CommHandler.updateScheduler?.stop) CommHandler.updateScheduler.stop()
+    if (multicastClient.refreshExamsScheduler?.stop) multicastClient.refreshExamsScheduler.stop()
+    // ensure any running vncproxy-helper child is terminated before quit
+    try { stopProxy() } catch (err) { log.warn('main @ window-all-closed: stopProxy failed', err) }
+    WindowHandler.mainwindow = null
+
+    try {
+        await session.defaultSession.clearStorageData({}); // clear cookies, cache, localStorage etc. while session still valid
+    } catch (err) {
+        log.error('main @ window-all-closed: Error clearing storage:', err);
+    }
+    app.quit();
+});
+
+app.on('will-quit', () => {  // if window is closed
+    if (process.platform === 'darwin') {
+        stopAssessmentSession().catch((err) => log.warn('main @ will-quit: stopAssessmentSession', err));
+    }
+    if (process.platform === 'win32' && platformDispatcher.runningInCage) {
+        wipeKioskUserFiles({ workdirectory: config.workdirectory }); // win32 kiosk: wipe workdir + standard user folders before quit so the next student starts fresh.
+    }
+})
+
+app.on('activate', () => {
+    const allWindows = BrowserWindow.getAllWindows()
+    if (allWindows.length) { allWindows[0].focus() } 
+    else { WindowHandler.createMainWindow() }
+})
+
+/**
+ * Check if the app was started from within a browser and quit if detected
+ */
+async function runParentProcessCheck() {
+    try {
+        const result = await checkParentProcess();
+        if (!result.success) {
+            log.error('main @ checkParent:', result.error);
+            return;
+        }
+
+        if (result.foundBrowser) {
+            log.warn('main @ checkParent: The app was started directly from a browser');
+            dialog.showMessageBoxSync(WindowHandler.mainwindow, {
+                type: 'question',
+                buttons: ['OK'],
+                title: 'Terminate Program',
+                message: 'Unerlaubter Programmstart aus einem Webbrowser erkannt.\nNext-Exam wird beendet!',
+            });
+            WindowHandler.mainwindow.allowexit = true;
+            app.quit();
+        } else {
+            log.info('main @ checkparent: Parent Process Check OK');
+        }
+    } catch (error) {
+        log.error('main @ checkParent error:', error);
+    }
+}
+
+/** Install the Teacher certificate verifier again to clear Chromium's cached decisions. */
+function installTeacherCertificateVerifier() {
+    session.defaultSession.setCertificateVerifyProc((request, callback) => {
+        let fingerprint = request.certificate?.fingerprint
+        try { fingerprint = new X509Certificate(request.certificate.data).fingerprint256 } catch {}
+        callback(multicastClient.isTeacherCertificateAllowed(request.hostname, fingerprint) ? 0 : -3);
+    });
+}
+
+// Accept a cached certificate failure only after the Teacher fingerprint was explicitly trusted.
+app.on('certificate-error', (event, _webContents, url, _error, certificate, callback) => {
+    let fingerprint = certificate?.fingerprint
+    try { fingerprint = new X509Certificate(certificate.data).fingerprint256 } catch {}
+    let hostname = ''
+    try { hostname = new URL(url).hostname } catch {}
+    if (!multicastClient.isTeacherCertificateAllowed(hostname, fingerprint)) return callback(false)
+    event.preventDefault()
+    callback(true)
+})
+
+app.whenReady()
+.then(async ()=>{
+
+    syncClientDisplayInfo(multicastClient.clientinfo);
+
+    nativeTheme.themeSource = 'light'  // prevent theme settings from being adopted from windows
+    bindExamDownloadHandler(session.defaultSession);
+    session.defaultSession.setUserAgent(`Next-Exam/${config.version} (${config.info}) ${process.platform} mit SEB-Kompatibilitätsmodus`);  // set user agent for all sessions
+    installTeacherCertificateVerifier();
+    multicastClient.onTeacherCertificateAccepted = async () => {
+        installTeacherCertificateVerifier();
+        resetExamApiConnections();   // drop pooled TLS sockets pinned to the previous certificate
+        await session.defaultSession.closeAllConnections();
+    };
+    
+    // Kiosk (Linux cage OR Win32 AssignedAccess): no system picker available; auto-grant the
+    // first source. Linux cage limits to windows (cage shows one window). Win32 grants screen.
+    // Non-kiosk: useSystemPicker:true so the OS dialog appears as usual.
+    if (platformDispatcher.runningInCage) {
+        const types = process.platform === 'linux' ? ['window'] : ['screen'];
+        session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
+            desktopCapturer.getSources({ types }).then((sources) => {
+                if (!sources.length) {
+                    log.warn(`main @ setDisplayMediaRequestHandler (kiosk ${types[0]}): no sources`);
+                    callback(null);
+                    return;
+                }
+                let picked = sources[0];
+                if (process.platform === 'linux') {
+                    const nextExam = sources.find((s) => /next-exam|next exam/i.test(s.name));
+                    if (nextExam) picked = nextExam;
+                }
+                callback({ video: picked });
+            }).catch((err) => {
+                log.warn('main @ setDisplayMediaRequestHandler (kiosk):', err?.message || err);
+                callback(null);
+            });
+        }, { useSystemPicker: false });
+    } else {
+        // Non-kiosk: system picker must win. On macOS, never override the picker by forcing sources[0].
+        if (process.platform === 'darwin') {
+            session.defaultSession.setDisplayMediaRequestHandler((_request, callback) => {
+                callback(null);
+            }, { useSystemPicker: true });
+        } else {
+            // Use system picker when available; fallback to first screen (non-macOS).
+            session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
+                // thumbnailSize 0: capturing a preview of every screen is what fails on native
+                // wayland ("Failed to get sources"); we only need the source id here.
+                desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 0, height: 0 } }).then((sources) => {
+                    try {
+                        if (sources.length > 0) {
+                            callback({ video: sources[0] });
+                        } else {
+                            log.warn('main @ setDisplayMediaRequestHandler: no screen sources available');
+                            callback(null);
+                        }
+                    } catch (e) {
+                        log.warn('main @ setDisplayMediaRequestHandler: exception in handler', e?.message || e);
+                        callback(null);
+                    }
+                }).catch((err) => {
+                    log.warn('main @ setDisplayMediaRequestHandler:', err?.message || err);
+                    callback(null);
+                });
+            }, { useSystemPicker: true });
+        }
+    }
+    
+    /******* Create main window *******/
+    WindowHandler.createMainWindow()
+
+
+    if (config.hostip == "127.0.0.1") { config.hostip = false }
+    if (config.hostip) { multicastClient.init(config.gateway)  } //multicast client only tracks other exam instances on the network
+
+    const allowTray = !platformDispatcher._isGNOME(); // GNOME hides legacy tray
+    if (!config.development){
+        powerSaveBlocker.start('prevent-display-sleep')   // prevent the device from going to sleep
+        if (allowTray) { updateSystemTray('de'); }        // skip tray on GNOME
+        else { log.info('main @ tray: GNOME detected, skipping system tray'); }
+        
+        if (!platformDispatcher.runningInCage) {  // Skip in Win/Linux kiosk
+            runParentProcessCheck();  // check if the app was started from within a browser and quit if detected
+        }
+    }
+    if (config.development){
+        globalShortcut.register('CommandOrControl+Shift+G', () => {  if (global && global.gc){ global.gc({type:'mayor',execution: 'async'}); global.gc({type:'minor',execution: 'async'});  }});
+        // Window-scoped (Wayland-safe); only in development — no DevTools shortcut otherwise
+        const mainWin = WindowHandler.mainwindow
+        if (mainWin) {
+            mainWin.webContents.on('before-input-event', (event, input) => {
+                const mod = process.platform === 'darwin' ? input.meta : input.control
+                if (input.type === 'keyDown' && mod && input.shift && input.key.toLowerCase() === 't') {
+                    event.preventDefault()
+                    mainWin.webContents.toggleDevTools()
+                }
+            })
+        }
+    }
+
+    //these are some shortcuts we try to capture
+    globalShortcut.register('CommandOrControl+R', () => {});
+    globalShortcut.register('F5', () => {});  //reload page
+    globalShortcut.register('CommandOrControl+Shift+R', () => {});
+    globalShortcut.register('Alt+F4', () => {});  //exit app
+    globalShortcut.register('CommandOrControl+W', () => {});
+    globalShortcut.register('CommandOrControl+Q', () => {});  //quit
+    globalShortcut.register('CommandOrControl+D', () => {});  //show desktop
+    globalShortcut.register('CommandOrControl+L', () => {});  //lockscreen
+    globalShortcut.register('CommandOrControl+P', () => {});  //change screen layout
+})

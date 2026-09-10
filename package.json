@@ -1,0 +1,18 @@
+{
+  "scripts": {
+    "build:all": "cd teacher && npm run prebuild && npx quasar build -m electron --skip-pkg && cd ../student && npm run prebuild && npx quasar build -m electron --skip-pkg",
+    "dev": "npm exec --prefix teacher -- concurrently \"npm --prefix teacher run dev\" \"npm exec --prefix student -- cross-env NXE_ELECTRON_INSPECT_PORT=5859 npm --prefix student run dev -- -p 9301\"",
+    "dev:ios": "npm exec --prefix teacher -- concurrently \"npm --prefix teacher run dev\" \"npm exec --prefix student -- cross-env NXE_ELECTRON_INSPECT_PORT=5859 npm --prefix student run dev:ios -- -p 9301\"",
+    "test:e2e": "npm run build:all && npx playwright test e2e/*",
+    "install:dependencies": "npm install && cd teacher && npm install && cd ../student && npm install",
+    "test:ios": "cd student && npm run build:ios && cd .. && node e2e/capacitor-sprachen.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "electron": "41.10.3"
+  },
+  "allowScripts": {
+    "electron@41.10.3": true,
+    "fsevents@2.3.2": true
+  }
+}

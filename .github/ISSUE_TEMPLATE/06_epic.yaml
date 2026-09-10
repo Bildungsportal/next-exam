@@ -1,0 +1,27 @@
+name: Epic
+description: Erstelle eine neue Epic für Themengebiete und größere Vorhaben.
+type: Epic
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Bitte trage alle relevanten Informationen für deine Epic rund um Next-Exam ein. Hilfetexte und Beispiele unterstützen dich beim Ausfüllen.**
+  - type: textarea
+    id: description
+    attributes:
+      label: Beschreibung
+      description: Beschreibe das Ziel und den Umfang der Epic.
+      placeholder: |
+        Beispiel:
+        Diese Epic umfasst alle Aufgaben rund um die Digitalisierung der Prüfungsorganisation und -durchführung im Rahmen des Projekts Next-Exam.
+    validations:
+      required: true
+  - type: input
+    id: design-link
+    attributes:
+      label: Link zu Designs
+      description: Füge, falls vorhanden, einen Link zum Design, Mockup oder pädagogischen Konzept hinzu.
+      placeholder: https://www.figma.com/file/123456/Next-Exam-Pruefungskonzept
+    validations:
+      required: false
