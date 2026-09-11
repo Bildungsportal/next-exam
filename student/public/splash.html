@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Splash Screen</title>
+<style>
+body, html {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(33, 37, 41, 0.404); /* Or any color you prefer */
+  overflow: hidden; /* This will hide any overflow */
+  color:rgb(238, 238, 238)
+}
+
+.centered {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: row; /* Explicitly state that the flex direction is a row */
+  text-align: center;
+}
+
+.centered img {
+  width: 128px;
+  height: 128px;
+  object-fit: contain;
+  transition: transform 1s;
+}
+
+.centered .text-entrance {
+  /* Initial state off the screen */
+  transform: translateX(100%);
+  /* Animate to a state where it's in its final position */
+  animation: slide-in 1s forwards;
+  /* Non-serif font, 3 times bigger than default */
+  font-family: 'Arial', sans-serif;
+  font-size: 2rem; /* This assumes the base font size is 16px */
+  white-space: nowrap; /* Ensure the text doesn't wrap */
+}
+
+@keyframes slide-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+
+</style>
+</head>
+<body>
+<div class="centered">
+  <img id="icon" src="./icons/icon.png" alt="App Icon">
+  <div id="text" class="text-entrance">Next-Exam</div>
+</div>
+<script>
+// Simple script to add a class to the image when the text has entered
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('text').addEventListener('animationend', function() {
+    document.getElementById('icon').style.transform = 'translateX(-50%)';
+  });
+});
+</script>
+</body>
+</html>

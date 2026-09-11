@@ -1,0 +1,40 @@
+name: Action Point
+description: Thema oder offener Punkt zum Projekt Next-Exam festhalten.
+type: Action Point
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Nutze dieses Template, um offene Fragen, Ideen oder Action Points in Next-Exam festzuhalten. Beschreibe möglichst klar das Thema und füge beteiligte Personen sowie relevante Informationen hinzu.**
+  - type: textarea
+    id: description
+    attributes:
+      label: Beschreibung des Action Points
+      description: Was soll diskutiert werden? Worum geht es konkret?
+      placeholder: |
+        Beispiel:
+        In Next-Exam soll entschieden werden, ob künftig für alle Prüfungen ein anonymisierter Bewertungsmodus eingeführt wird.
+    validations:
+      required: true
+  - type: textarea
+    id: stakeholders
+    attributes:
+      label: Beteiligte / Ansprechpartner:innen
+      description: Wer sollte an der Diskussion teilnehmen oder informiert werden? (z. B. GitHub-Handles oder Rollen)
+      placeholder: |
+        Beispiel:
+        @max @team-admin @entwickler
+    validations:
+      required: false
+  - type: textarea
+    id: references
+    attributes:
+      label: Weitere Informationen / Links
+      description: Ergänzende Links, Dokumente, Referenzen, Kontext oder verwandte Issues
+      placeholder: |
+        Beispiel:
+        - Link zum Spezifikationsdokument
+        - Ähnliches Issue: #42
+    validations:
+      required: false
