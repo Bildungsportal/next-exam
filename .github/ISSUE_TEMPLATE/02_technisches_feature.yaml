@@ -1,0 +1,55 @@
+name: Technisches Feature
+description: Beschreibe ein neues technisches Feature oder eine technische Erweiterung für Next-Exam.
+type: Technisches Feature
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Bitte trage alle relevanten Informationen für dieses technische Feature in Next-Exam ein. Die Beispiele in jedem Feld helfen dir beim Ausfüllen.**
+  - type: textarea
+    id: technical-feature-description
+    attributes:
+      label: Beschreibung
+      description: Beschreibe das technische Feature klar und verständlich. Was soll technisch geändert oder verbessert werden?
+      placeholder: |
+        Beispiel:
+        Refactoring des Moduls zur Auswertung von Multiple-Choice-Fragen, um die Codebasis zu vereinfachen und die Wartbarkeit zu erhöhen.
+    validations:
+      required: true
+  - type: textarea
+    id: technical-acceptance-criteria
+    attributes:
+      label: Akzeptanzkriterien
+      description: Definiere die Kriterien, wann das technische Feature als fertig gilt. Nutze „GIVEN WHEN THEN“ für technische Anforderungen.
+      placeholder: |
+        Beispiel:
+        - GIVEN der Auswertungsprozess für Multiple-Choice-Fragen,
+        - WHEN eine Prüfung ausgewertet wird,
+        - THEN erfolgt die Auswertung fehlerfrei und der Quellcode entspricht aktuellen Clean Code Standards.
+    validations:
+      required: true
+  - type: textarea
+    id: implementation-details
+    attributes:
+      label: Implementierungsdetails
+      description: Hinweise zur technischen Umsetzung, Architektur, Schnittstellen, Libraries etc.
+      placeholder: |
+        Beispiel:
+        - Strukturierung der Auswertungslogik in einzelne Funktionen.
+        - Entfernen von Redundanzen und vereinfachen von komplexen Schleifen.
+        - Bestehende Unit-Tests an die neue Struktur anpassen.
+    validations:
+      required: false
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notizen, Risiken & Annahmen
+      description: Gibt es bekannte Risiken, technische Annahmen, Einschränkungen oder noch offene Fragen?
+      placeholder: |
+        Beispiel:
+        - Risiko: Unbeabsichtigte Fehler bei der Anpassung bestehender Funktionen.
+        - Annahme: Alle bisherigen Auswertungsfälle sind durch Tests abgedeckt.
+        - Noch zu klären: Abstimmung mit QA, ob zusätzliche Testfälle benötigt werden.
+    validations:
+      required: false

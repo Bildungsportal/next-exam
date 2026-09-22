@@ -1,0 +1,772 @@
+# Words that extend the spell checker. See ignore.txt for words that should be
+# completely ignored (i.e. not used to create suggestions).
+Alexi
+AutoCAD
+Avengers
+Beatles
+Bing
+Bouteflika
+Bérengeville
+Chicoutimi
+Chronopost
+Clermont
+Craigslist
+Desjardins
+Dussaud
+Dédé
+eBay
+Elisabeth
+Erasmus
+Excel
+Fortnite
+Futuroscope
+GitHub
+Gmail
+Gryffondor
+Hotmail
+Huawei
+Instagram
+iCloud
+iPad
+iPhone
+iPod
+iTunes
+Jackson
+Jerome
+Jira
+Katya
+LinkedIn
+Macintosh
+Marinette
+Marvel
+Mastercard
+mdr
+Mickael
+Minecraft
+Médiavision
+Outlook
+PACES
+Parcoursup
+Photoshop
+PowerPoint
+Quittebeuf
+RDV
+rdv
+Reddit
+Roussel
+Salesforce
+Schlumberger
+Seneca
+Shopify
+Skype
+Snapchat
+Spotify
+STP
+stp
+SVP
+svp
+SVT
+Team
+team
+Thanos
+Tremblay
+Twitch
+Vimeo
+WhatsApp
+Word
+Xbox
+Xiaomi
+Yahoo
+Zendesk
+dérapement
+dérapements
+WordPress
+Deliveroo
+Analytics
+Messenger
+Pinterest
+Engie
+Angular
+AdWords
+AdSense
+backend
+frontend
+BigQuery
+Clarins
+Fnac
+Nico
+Colissimo
+Qonto
+Facebook Ads
+LinkedIn Ads
+Google Ads
+Samsung Galaxy
+Ford Galaxy
+Google Maps
+Moodle
+Bédard
+1ère
+ok
+Ok
+Assécheur
+Assécheurs
+Edouard
+LeBlanc
+App
+Apps
+Accor
+Greta
+Ella
+Ellie
+Thyssenkrupp
+Sephora #name
+Joe Biden #name
+Nyon #name
+Morges #name
+Gainsbourg #name
+HelloFresh #name
+Freebox #name
+Starbucks
+Dropbox
+Barbie
+Trello
+Sun Microsystems
+Télécom
+télécom
+Vianney
+Saudi Aramco
+Alipay
+Stadia
+Black Friday
+Brexit
+Dumont
+Brampton
+AliExpress
+Cdiscount
+COVID-19
+Guichard
+Email
+Emails
+email
+emails
+Batignolles #name
+Bélanger #name
+BPCE #name
+Bygmalion #name
+Bergame #name
+Covid-19
+Umberto #name
+Alkmaar #name
+Kévin #name
+Clèves #name
+Alassane #name
+Abitibi #name
+Chloë
+Scrum
+Ahuntsic-Cartierville
+Biscarrosse #name
+Anouar #name
+Annaëlle #name
+Chenonceaux #name
+Alessio #name
+Claudius #name
+mAh #unit
+mph #unit
+fps #unit
+Guérin #name
+coworking #eng
+e-book
+e-books
+Carrère
+Astérix #name
+Belfius #name
+Natalie #name
+déconfinement
+Sunrise
+Vidéotron
+Proximus
+Adalberto #name
+Agassi #name
+Archambault #name
+Arnault #name
+Santa Barbara #name
+Santa Fe #name
+Santa Cruz #name
+Santa Clarita #name
+Santa Marta
+2π
+Castorama #name
+4DX #name
+Bernier #name
+Aboubacar #name
+Caecilius #name
+Cornélius #name
+devops
+DevOps
+Telegram #name
+Classroom #name
+gaming #eng
+game #eng
+games #eng
+Louisbourg #name
+Montalieu-Vercieu #name
+Saskatoon
+responsive
+TV5Monde
+TV5 Monde
+scan
+Michaud #name
+codéthyline
+déconfiner
+climatogramme
+climatogrammes
+Evelina #name
+Crémieu #name
+covid
+COVID
+Covid
+covid-19
+COVID-19
+Covid-19
+corona
+tracking
+shooting
+fashion
+lead
+leads
+network
+networks
+firewall
+firewalls
+marketplace
+marketplaces
+Transatel
+Buckingham
+Bpifrance
+Évry-Courcouronnes
+SaaS
+Twingo
+Unsplash
+Camila
+curl
+Strauss-Kahn
+Teams #Microsoft Teams
+Lamontagne
+Traoré
+Pronote #name
+crowdfunding #eng
+consulting #eng
+Lévesque #name
+cookie
+cookies
+panel
+panels
+briefing
+briefings
+call #ca
+calls #ca
+kit
+kits
+green
+greens
+patch
+patchs
+patches
+bachelor
+bachelors
+drive
+drives
+coaching
+coach
+coachs
+coaches
+lead
+leads
+brainstorming
+fake news
+okay
+Lauzon #name
+bifidobacterium
+Gianni #name
+Kwame #name
+Jungkook #name
+Tancarville #name
+Tyson #name
+Drivy #name
+Amersfoort #name
+Anderson #name
+Cristina #name
+hydroxychloroquine
+NextRadioTV #name
+open market #eng
+open markets #eng
+story-board #eng
+story-boards #eng
+landing page #eng
+landing pages #eng
+insight #eng
+insights #eng
+snapshot #eng
+snapshots #eng
+top model #eng
+top models #eng
+e-cig #eng
+e-cigs #eng
+e-cigarette #eng
+e-cigarettes #eng
+display #eng
+displays #eng
+testing
+testings
+trading
+Bénichou #name
+Messaoudi #name
+Adriano #name
+Andréanne #name
+Armstrong #name
+Rachelle #name
+Traoré #name
+Kamasutra
+gamification #eng
+gamifications #eng
+open market #eng
+open markets #eng
+fund-raising #eng
+Duvernay #name
+McDonald
+sans
+mieux
+lors
+tandis
+Chaplin
+R&B
+Truffaut
+Viêtnam
+Iraq
+Cohn-Bendit
+Bouray-sur-Juine
+O'Connor
+Barnier
+Gilberto #name
+Legault #name
+e-learning
+Canva #name
+sneaker
+sneakers
+roadmap
+roadmaps
+chatbot
+chatbots
+hoodie
+hoodies
+Poliquin #name
+story
+stories
+Beaulieu #name
+ontarien
+ontariens
+ontarienne
+ontariennes
+Martinez #name
+setup
+setups
+horse power
+webmail
+webmails
+exchange
+Silva #name
+Charbonneau #name
+Elvis #name
+lithothérapie
+lithothérapies
+R&D
+Fairtrade Canada
+Leclair #name
+Dupuis #name
+Jakob #name
+Abdelhamid #name
+Malayalam
+Asturien
+quadriannuel
+quadriannuelle
+quadriannuels
+quadriannuelles
+Bayern Munich #name
+GNF #name
+Coulibaly #name
+Wix #name
+webmaster
+webmasters
+SNC
+laptop
+laptops
+SERP
+SERPs
+remarketing
+remarketings
+reconfinement
+reconfinements
+éco
+écos
+wow
+app
+apps
+andromaque
+andromaques
+Bouchard #name
+Biden #name
+Gervais #name
+cardio
+cardios
+Arsenault #name
+landing page #eng
+landing pages #eng
+Montcalm #name
+follower #eng
+followers #eng
+Sudbury #name
+Cayouette #name
+Gabriela #name
+Meximieux #name
+Deschamps #name
+démoussage
+démoussages
+Rodriguez #name
+disséminateur
+disséminateurs
+Angéline #name
+sexfriend #eng
+sexfriends #eng
+stream #eng
+streams #eng
+Laëtitia #name
+Cedric #name
+Laetitia #name
+Lewis #name
+Lopez #name
+Fernandez #name
+Evelyne #name
+crypto
+cryptos
+party #ca #eng
+partys #ca #eng
+Westboro #name
+Chadwick #name
+Windsor #name
+Barrhaven #name
+mm²
+cm²
+dm²
+m²
+km²
+mm³
+cm³
+dm³
+m³
+km³
+Blanchard #name
+Carpentier #name
+Sanchez #name
+Felix #name
+Gonzalez #name
+workshop #eng
+workshops #eng
+Daphnée #name
+Quidditch #name
+Abdellatif #name
+Abdessamad #name
+Hannedouche #name
+gambling #eng
+gameplay #eng
+backlog #eng
+backlogs #eng
+Chauvet #name
+Beaudoin #name
+corporate #eng
+corporates #eng
+Bergeron #name
+Cléante #name
+Messi #name
+Saclay #name
+backlink #eng
+backlinks #eng
+workflow #eng
+workflows #eng
+Erdogan #name
+Erdoğan #name
+Obélix #name
+Goscinny #name
+Uderzo #name
+Alfredo #name
+Lacroix #name
+Laporte #name
+Carmichael #name
+Percy #name
+Montfort #name
+Créon #name
+Booking #name
+Robertine #name
+onboarding #eng
+pécho
+copywriter
+copywriters
+Lamotte #name
+infanto-juvénile
+infanto-juvéniles
+cashback #eng
+slide #eng
+slides #eng
+check #eng
+checks #eng
+contronyme
+contronymes
+Libéria
+Nigéria
+Brunéi
+Sao
+Bélize
+Bélarus
+chapô
+Scholz #name
+Meloni #name
+Sunak #name
+cryptoactif
+cryptoactifs
+babtou
+babtous
+wokisme
+wokismes
+yodel
+gênance
+gênances
+halloumi
+konjac
+écoanxiété
+écoanxiétés
+chill #verb
+chillaient #verb
+chillais #verb
+chillait #verb
+chillant #verb
+chillent #verb
+chiller #verb
+chillera #verb
+chillerai #verb
+chillerai #verb
+chilleraient #verb
+chillerais #verb
+chillerait #verb
+chilleras #verb
+chillerez #verb
+chilleriez #verb
+chillerions #verb
+chillerons #verb
+chilleront #verb
+chillez #verb
+chilliez #verb
+chillions #verb
+chillons #verb
+psithurisme
+psithurismes
+covidé
+covidée
+covidés
+covidées
+reformulateur
+reformulateurs
+polysyndète
+polysyndètes
+homophonographe
+homophonographes
+canelé
+canelés
+milhassou
+milhassous
+mounassou
+mounassous
+Bagnères-de-Bigorre
+Ouvroir de Littérature Potentielle
+Raymond Queneau
+Oulipo
+synchise
+synchyse
+Salammbô
+quiz
+Lenorman
+Fontanier
+Nivelle
+Bourdaloue
+Jean-Jacques Goldman
+Électre
+Place de la Concorde
+Harfleur
+Lola Lafon
+quèsaco
+qu'èsaquo
+quésaco
+késaco
+késako
+kézako
+quès aco
+qu’es aco
+Coluche
+Get 27
+cultiste
+cultistes
+topissime
+topissimes
+Alain Rey
+template
+templates
+Boris Vian
+Père Goriot
+potron-jaquet
+potron-jacquet
+potron-minet
+minorquine
+minorquin
+Milka
+Jacques Brel
+waza-ari
+Rutebeuf
+Roman de Renart
+Annie Ernaux
+Mercedes Benz
+Ankh-Morpork
+ovni
+ovnis
+sida
+Jean-Loup Chiflet
+Namouna
+Tristesse d’Olympio
+Jean Echenoz
+La Henriade
+Pierre Dac
+Pierre Desproges
+Zazie
+Zidane
+Philippe Geluck
+Aubeterre-sur-Dronne
+aquaponie
+babka
+boboïser
+Bourvil
+ChocoSui’s
+Cinna
+crush
+Danette
+dévédé
+dilemnatique
+discordantiel
+Everglades
+flexoffice
+Francofolies
+ghosters
+ghosteurs
+ghosting
+GitHub
+glottophobie
+greenwashing
+homestaging
+K-Way
+Kärcher
+Kleenex
+Labello
+Lindt
+Longchamp
+Macronie
+mégenrer
+mégenrage
+néosémie
+Nicomède
+Nivéa
+Obsidian
+Orangina
+ozonicide
+Perrier
+phablette
+Polyeucte
+polyptote
+Post-It
+Puy-en-Velay
+Saint-Glinglin
+Sarkozysme
+soléciser
+Sopalin
+Stabilo
+Swiffer
+Tefal
+Tipp-Ex
+tzaricide
+webtoon
+wingfoil
+Yop
+Blaise Cendrars
+boules Quiès
+Erik Orsenna
+Henry Troyat
+James Prescott Joule
+John McAdam
+Joseph Ignace Guillotin
+Julien Gracq
+la dune du Pilat
+Louis de Béchameil
+mind map
+Oraison funèbre de Henriette-Anne d’Angleterre
+Philippe Noiret
+Raymond Devos
+René Etiemble
+Thomas Pesquet
+to-do list
+un persona
+buyer persona
+Yann Quéffélec
+Yves Montand
+Zone à Faible Émission
+deadname
+morinom
+deadnaming
+morinommage
+morinommer
+Vivendi
+Foy
+Colcott
+Plœuc
+offs
+pacemakeur
+pacemakeurs
+Virgin
+Ismène
+Sidaction
+automatiste
+automatistes
+automatiste
+automatistes
+abstractionniste
+abstractionnistes
+abstractionniste
+abstractionnistes
+making-of
+making-ofs
+Meslin-l’Évêque
+paris-brest
+L’Olympia
+Shangri-La
+Décath'
+Décath
+Monop'
+Monop
+Sarko
+Anne-So
+Caro
+Clém
+Gab
+Jen
+Ju
+Séb
+Seb
+Stéph
+Gillou
+Nath
+pédosexuel
+pédosexuels
