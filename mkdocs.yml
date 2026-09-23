@@ -25,11 +25,16 @@ theme:
         icon: material/brightness-4
         name: Hellmodus aktivieren
   features:
+    - toc.integrate
+    - navigation.instant
     - navigation.tabs
+    - navigation.indexes
     - navigation.sections
     - navigation.top
     - search.highlight
     - content.code.copy
+  hide:
+    - navigation
 
 plugins:
   - search
@@ -48,22 +53,15 @@ markdown_extensions:
   - md_in_html
   - pymdownx.details
   - pymdownx.superfences
+  - toc:
+      toc_depth: 2
 
 nav:
   - Startseite: index.md
-  - Quickstart: quickstart.md
-  - Teacher: teacher.md
-  - Student: student.md
-  - Prüfungsmodi:
-    - Mathematik (GeoGebra): modes/mathematik.md
-    - Sprachen (Texteditor): modes/sprachen.md
-    - Active Sheets: modes/activesheets.md
-    - Online-Modi: modes/online.md
-    - RDP: modes/rdp.md
-    - Lokale VM: modes/localvm.md
-  - Erweiterte Funktionen: advanced.md
+  - Für Lehrkräfte: teacher.md
+  - Prüfungsmodi: modes.md
+  - Für Schüler:innen: student.md
   - Bildungsportal: bildungsportal.md
-  - Kiosk-Modus: modes/kiosk.md
-  - FAQ: faq.md
-  - Bekannte Probleme: issues.md
-  - Datenschutzrichtlinie: privacy-policy.md
+  - Administration: admin.md
+  - Troubleshooting: issues.md
+
