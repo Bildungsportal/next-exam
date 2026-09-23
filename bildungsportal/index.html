@@ -1,0 +1,1052 @@
+<!DOCTYPE html><html lang="de" class="no-js"><head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Handbuch für die Next-Exam Prüfungsumgebung (Version 2.0.0)">
+      
+      
+        <meta name="author" content="Next-Exam Team">
+      
+      
+        <link rel="canonical" href="https://bildungsportal.github.io/next-exam/bildungsportal/">
+      
+      
+        <link rel="prev" href="../student/">
+      
+      
+        <link rel="next" href="../admin/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../img/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Bildungsportal - Next-Exam Handbuch</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  <link href="../assets/stylesheets/glightbox.min.css" rel="stylesheet"><script src="../assets/javascripts/glightbox.min.js"></script><style id="glightbox-style">
+            html.glightbox-open { overflow: initial; height: 100%; }
+            .gslide-title { margin-top: 0px; user-select: text; }
+            .gslide-desc { color: #666; user-select: text; }
+            .gslide-image img { background: white; }
+            .gscrollbar-fixer { padding-right: 15px; }
+            .gdesc-inner { font-size: 0.75rem; }
+            body[data-md-color-scheme="slate"] .gdesc-inner { background: var(--md-default-bg-color); }
+            body[data-md-color-scheme="slate"] .gslide-title { color: var(--md-default-fg-color); }
+            body[data-md-color-scheme="slate"] .gslide-desc { color: var(--md-default-fg-color); }
+        </style></head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="green">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#bildungsportal-bip-anleitung-fur-lehrpersonen" class="md-skip">
+          Zum Inhalt
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Kopfzeile">
+    <a href=".." title="Next-Exam Handbuch" class="md-header__button md-logo" aria-label="Next-Exam Handbuch" data-md-component="logo">
+      
+  <img src="../img/favicon.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Next-Exam Handbuch
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Bildungsportal
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="green" aria-label="Dunkelmodus aktivieren" type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Dunkelmodus aktivieren" for="__palette_1" hidden="">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo" aria-label="Hellmodus aktivieren" type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Hellmodus aktivieren" for="__palette_0" hidden="">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Suche" placeholder="Suche" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required="">
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"></path></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Suche">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Zurücksetzen" aria-label="Zurücksetzen" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix="">
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Suche wird initialisiert
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Hauptnavigation" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Startseite
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../teacher/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Für Lehrkräfte
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../modes/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Prüfungsmodi
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../student/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Für Schüler:innen
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Bildungsportal
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../admin/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Administration
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../issues/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Troubleshooting
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Next-Exam Handbuch" class="md-nav__button md-logo" aria-label="Next-Exam Handbuch" data-md-component="logo">
+      
+  <img src="../img/favicon.png" alt="logo">
+
+    </a>
+    Next-Exam Handbuch
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix="">
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Startseite
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../teacher/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Für Lehrkräfte
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Prüfungsmodi
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../student/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Für Schüler:innen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bildungsportal
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bildungsportal
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Inhaltsverzeichnis">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Inhaltsverzeichnis
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+      
+        <li class="md-nav__item">
+  <a href="#1-uberblick-auf-dem-dashboard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Überblick auf dem Dashboard
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-eine-neue-prufung-erstellen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Eine neue Prüfung erstellen
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-eine-prufung-bearbeiten" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Eine Prüfung bearbeiten
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-prufungsphase-andern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Prüfungsphase ändern
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-statusanzeige-im-dashboard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Statusanzeige im Dashboard
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-eine-prufung-loschen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Eine Prüfung löschen
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-berechtigungen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Berechtigungen
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-supportinformationen-notfallplan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Supportinformationen (Notfallplan)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-kurzubersicht-checkliste-fur-eine-neue-prufung" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Kurzübersicht / Checkliste für eine neue Prüfung
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../admin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Administration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../issues/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="bildungsportal-bip-anleitung-fur-lehrpersonen">Bildungsportal (BiP) - Anleitung für Lehrpersonen</h1>
+<p>Das österreichische <strong>Bildungsportal</strong> ist ein zweiter, alternativer Weg, eine Prüfung zu konfigurieren – zusätzlich zur lokalen Konfiguration direkt in der Teacher-App. Die Prüfung läuft dabei <strong>nicht im Bildungsportal selbst</strong>; das Portal liefert lediglich die Konfiguration (Prüfungsmodus, Materialien, Gruppen, Zuordnung der Schüler:innen), Next-Exam führt die Prüfung wie gewohnt lokal aus.</p>
+<ul>
+<li>Im Bildungsportal stehen dieselben Konfigurationsmöglichkeiten wie im Teacher-Dashboard zur Verfügung (z. B. Prüfungsmodus, Materialien, Gruppen).</li>
+<li>Prüfungen können im Vorfeld vollständig vorbereitet werden, inklusive <strong>Zuordnung der teilnehmenden Schüler:innen</strong>.</li>
+<li>Jeder Prüfungsmodus (Mathematik, Sprachen, Online-Modi, Active Sheets, RDP, Lokale VM) kann über das Bildungsportal konfiguriert werden – die BiP-Anmeldung ist also kein eigener Prüfungsmodus, sondern ein alternativer Konfigurationsweg.</li>
+</ul>
+<p>Diese Anleitung erklärt Schritt für Schritt, wie im BiP eine Prüfung anlegegt, konfiguriert und verwaltet werden kann.</p>
+<hr>
+<h2 id="1-uberblick-auf-dem-dashboard">1. Überblick auf dem Dashboard</h2>
+<p>Auf Ihrem Dashboard finden Sie den Block <strong>„Digitale Prüfungsumgebung Next-Exam“</strong>. Dort sehen Sie:</p>
+<!-- SCREENSHOT: bip_teacher -->
+<figure>
+    <a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/bip_widget.png" data-desc-position="bottom"><img alt="Bildungsportal-Tab" src="../img/bip_widget.png" width="100%"></a>
+    <figcaption>Widget am BiP-Dashboard</figcaption>
+</figure>
+<ul>
+<li><strong>Nächste oder laufende Prüfungen</strong> – alle Prüfungen, die Sie selbst erstellt haben oder bei denen Sie als Prüfer:in (Aufsicht) eingetragen sind.</li>
+<li><strong>Vergangene Prüfungen</strong> – bereits abgehaltene Prüfungen (können ein-/ausgeblendet werden).</li>
+<li>Zu jeder Prüfung sehen Sie Name, Datum sowie den aktuellen <strong>Status</strong> (siehe Abschnitt 5).</li>
+<li>Über den Button <strong>„Prüfung erstellen“</strong> legen Sie eine neue Prüfung an.</li>
+<li>Über <strong>„Supportinformation“</strong> gelangen Sie zum Notfallplan Ihrer Schule (siehe Abschnitt 8).</li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Lehrpersonen mit absolviertem Qualifizierungsseminar</p>
+<p>Falls an Ihrer Schule noch nicht genügend Lehrpersonen die vorgeschriebene Next-Exam-Schulung absolviert haben, wird im Block ein Warnhinweis angezeigt.</p>
+</div>
+<hr>
+<h2 id="2-eine-neue-prufung-erstellen">2. Eine neue Prüfung erstellen</h2>
+<ol>
+<li>Klicken Sie im Dashboard-Block auf <strong>„Prüfung erstellen“</strong>.</li>
+<li>Füllen Sie das Formular aus:</li>
+</ol>
+<figure>
+    <a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/bip_create-exam.png" data-desc-position="bottom"><img alt="Bildungsportal-Tab" src="../img/bip_create-exam.png" width="50%"></a>
+    <figcaption>Eine Prüfung anlegen</figcaption>
+</figure>
+<table>
+<thead>
+<tr>
+<th>Feld</th>
+<th>Erklärung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Prüfungsname</strong></td>
+<td>Pflichtfeld – Name der Prüfung</td>
+</tr>
+<tr>
+<td><strong>Next-Exam Version</strong></td>
+<td>Version der verwendeten Next-Exam-Software (Standard: 2.0.0.1)</td>
+</tr>
+<tr>
+<td><strong>Prüfungsdatum und Startzeit</strong></td>
+<td>Wann die Prüfung beginnt</td>
+</tr>
+<tr>
+<td><strong>Prüfungsdauer</strong></td>
+<td>Dauer in Minuten (Standard: 100)</td>
+</tr>
+<tr>
+<td><strong>Teilnahme nur mit BiP-Login</strong></td>
+<td>Legt fest, ob sich Teilnehmer:innen nur mit BiP-Zugang anmelden dürfen</td>
+</tr>
+<tr>
+<td><strong>Passwort zum Aussteigen bei Verbindungsabbruch</strong></td>
+<td>Optionales Passwort, mit dem Teilnehmer:innen die Prüfung bei Verbindungsabbruch vorzeitig verlassen können</td>
+</tr>
+<tr>
+<td><strong>Backup-Intervall</strong></td>
+<td>Wie oft automatisch ein Backup der Arbeit erstellt wird (in Minuten, 0 = aus)</td>
+</tr>
+<tr>
+<td><strong>Screenshotupdate</strong></td>
+<td>Wie oft ein Bildschirm-Screenshot zur Kontrolle übertragen wird (in Sekunden, 0 = aus)</td>
+</tr>
+<tr>
+<td><strong>Prüfungsabschnitte aktivieren</strong></td>
+<td>Erlaubt bis zu 4 unterschiedliche Abschnitte innerhalb einer Prüfung (z. B. verschiedene Aufgabenteile)</td>
+</tr>
+<tr>
+<td><strong>Gruppen aktivieren</strong></td>
+<td>Erlaubt es, Teilnehmer:innen in zwei Gruppen (A/B) mit unterschiedlichen Einstellungen/Aufgaben aufzuteilen</td>
+</tr>
+<tr>
+<td><strong>Audio stummschalten</strong></td>
+<td>Schaltet die Audioausgabe der Teilnehmer:innen-Geräte stumm</td>
+</tr>
+</tbody>
+</table>
+<ol>
+<li>Klicken Sie auf <strong>„Prüfung erstellen“</strong>. Sie werden automatisch zur Bearbeitungsseite der neuen Prüfung weitergeleitet und dabei selbst als Prüfer:in eingetragen.</li>
+</ol>
+<hr>
+<h2 id="3-eine-prufung-bearbeiten">3. Eine Prüfung bearbeiten</h2>
+<p>Öffnen Sie eine Prüfung über den Bearbeiten-Link im Dashboard-Block. Die Bearbeitungsseite ist in vier Reiter unterteilt:</p>
+<figure>
+    <a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/bip_edit-exam.png" data-desc-position="bottom"><img alt="Bildungsportal-Tab" src="../img/bip_edit-exam.png" width="50%"></a>
+    <figcaption>Eine Prüfung editieren</figcaption>
+</figure>
+<h3 id="31-reiter-allgemein">3.1 Reiter „Allgemein“</h3>
+<p>Hier können Sie die Grunddaten (siehe Tabelle oben) nachträglich ändern und speichern.</p>
+<div class="admonition info">
+<p class="admonition-title">Prüfung abgeschlossen</p>
+<p>Sobald eine Prüfung auf <strong>„Abgeschlossen“</strong> gesetzt wurde, können keine Einstellungen mehr verändert werden.</p>
+</div>
+<h3 id="32-reiter-prufungsmodus">3.2 Reiter „Prüfungsmodus“</h3>
+<p>Hier legen Sie fest, <strong>wie</strong> die Prüfung inhaltlich abläuft.</p>
+<ul>
+<li>Haben Sie <em>Prüfungsabschnitte</em> aktiviert, wählen Sie zunächst oben den gewünschten Abschnitt (1–4) aus und geben ihm optional eine <strong>Bezeichnung</strong>.</li>
+<li>Wählen Sie den <strong>Prüfungsmodus</strong>:</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Modus</th>
+<th>Anwendung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Mathematik</strong></td>
+<td>Prüfungen mit mathematischem Editor</td>
+</tr>
+<tr>
+<td><strong>Sprachen</strong></td>
+<td>Texteditor mit Rechtschreibhilfe, Korrekturrand für PDF-Export usw.</td>
+</tr>
+<tr>
+<td><strong>Eduvidual / Moodle</strong></td>
+<td>Verlinkung zu einer Eduvidual/Moodle-Seite, optional per Safe-Exam-Browser-Konfiguration</td>
+</tr>
+<tr>
+<td><strong>Google/Microsoft Forms</strong></td>
+<td>Prüfung über ein externes Formular</td>
+</tr>
+<tr>
+<td><strong>Webseite</strong></td>
+<td>Freigabe einer bestimmten Webseite während der Prüfung</td>
+</tr>
+<tr>
+<td><strong>Active Sheets</strong></td>
+<td>Prüfung auf Basis einer PDF-Vorlage</td>
+</tr>
+<tr>
+<td><strong>Microsoft365</strong></td>
+<td>Prüfung mit Microsoft-365-Anwendungen</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>Je nach gewähltem Modus erscheinen zusätzliche Einstellungsfelder, zum Beispiel:</li>
+<li><strong>Sprachen</strong>: Schriftart/-größe, Zeilenabstand, Korrekturrand-Position im PDF, Rechtschreibhilfe (ein-/ausschalten, Sprache, Vorschläge), Vorlagendatei hochladen, Audio-Wiedergabe beschränken.</li>
+<li><strong>Eduvidual/Moodle</strong>: entweder eine <strong>URL</strong> angeben oder eine <strong>Safe-Exam-Browser-Konfigurationsdatei</strong> (inkl. Browser Exam Key und Passwort) hochladen.</li>
+<li><strong>Webseite</strong>: Ziel-URL sowie optional das Blockieren von Subdomains bzw. anderen Pfaden.</li>
+<li><strong>Active Sheets</strong>: PDF-Vorlagendatei hochladen.</li>
+<li>Ist „Gruppen aktivieren“ in der Prüfung eingeschaltet, können Sie zusätzlich die Option <strong>„Konfiguration pro Gruppe“</strong> wählen, um Gruppe A und Gruppe B unterschiedlich zu konfigurieren (z. B. unterschiedliche Aufgaben).</li>
+</ul>
+<p><strong>Material hinzufügen:</strong> Im unteren Bereich können Sie beliebig viele zusätzliche Materialien für den Abschnitt hochladen – entweder als <strong>Datei</strong> oder als <strong>URL</strong> (mit optionaler Sperre von Subdomains/anderen Pfaden). Bei aktivierten Gruppen legen Sie zusätzlich fest, welcher Gruppe das Material zugeordnet ist.</p>
+<h3 id="33-reiter-pruferinnen">3.3 Reiter „Prüfer:innen“</h3>
+<ul>
+<li><strong>Ansicht:</strong> zeigt alle aktuell zugewiesenen Prüfer:innen (Aufsichten). Sie können hier Personen auswählen und über den Button entfernen.</li>
+<li><strong>Hinzufügen:</strong> über den zweiten Unterreiter wählen Sie weitere Personen aus einer Liste aus und fügen sie als Prüfer:in hinzu.</li>
+</ul>
+<h3 id="34-reiter-teilnehmerinnen">3.4 Reiter „Teilnehmer:innen“</h3>
+<ul>
+<li><strong>Ansicht:</strong> zeigt alle aktuell zugewiesenen Teilnehmer:innen.</li>
+<li>Sie können Teilnehmer:innen auswählen und <strong>entfernen</strong>.</li>
+<li>Ist die Gruppenfunktion aktiv, können Sie ausgewählte Teilnehmer:innen stattdessen einer <strong>anderen Gruppe (A/B)</strong> zuweisen, statt sie zu entfernen.</li>
+<li><strong>Hinzufügen:</strong> wählen Sie weitere Teilnehmer:innen aus der Liste aus. Bei aktivierten Gruppen legen Sie dabei fest, welcher Gruppe die neuen Teilnehmer:innen zugeteilt werden.</li>
+</ul>
+<div class="admonition info">
+<p class="admonition-title">Gruppenzuteilung</p>
+<p>Wenn Sie die Gruppenfunktion nachträglich aktivieren, während bereits Teilnehmer:innen zugewiesen sind, werden diese automatisch der Gruppe A zugeteilt. Sie erhalten dazu einen Hinweis, damit Sie einen Teil der Klasse manuell in Gruppe B umverteilen können.</p>
+</div>
+<hr>
+<h2 id="4-prufungsphase-andern">4. Prüfungsphase ändern</h2>
+<p>Oben auf der Bearbeitungsseite finden Sie drei Buttons, mit denen Sie die <strong>Phase</strong> der Prüfung wechseln:</p>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Entwurf</strong></td>
+<td>Die Prüfung ist für Teilnehmer:innen noch nicht sichtbar. Nutzen Sie diese Phase, solange Sie die Prüfung noch vorbereiten.</td>
+</tr>
+<tr>
+<td><strong>Bereit</strong></td>
+<td>Die Prüfung ist für Teilnehmer:innen sichtbar. Das Betreten ist aber erst möglich, sobald die Prüfung in der Next-Exam-App tatsächlich geöffnet wird.</td>
+</tr>
+<tr>
+<td><strong>Abgeschlossen</strong></td>
+<td>Die Prüfung ist beendet. Es können keine Einstellungen mehr geändert werden.</td>
+</tr>
+</tbody>
+</table>
+<p>Klicken Sie einfach auf die gewünschte Phase, um zu wechseln.</p>
+<hr>
+<h2 id="5-statusanzeige-im-dashboard">5. Statusanzeige im Dashboard</h2>
+<p>Im Dashboard-Block wird jede Prüfung mit einem farbigen Symbol und der aktuellen Phase angezeigt (Entwurf / Bereit / Abgeschlossen), sodass Sie auf einen Blick sehen, in welchem Zustand sich Ihre Prüfungen befinden.</p>
+<hr>
+<h2 id="6-eine-prufung-loschen">6. Eine Prüfung löschen</h2>
+<ol>
+<li>Öffnen Sie die Prüfung oder klicken Sie direkt im Dashboard-Block auf das Löschen-Symbol bei der jeweiligen Prüfung.</li>
+<li>Bestätigen Sie die Sicherheitsabfrage <strong>„Wollen Sie die Prüfung wirklich löschen?“</strong>.</li>
+</ol>
+<div class="admonition warning">
+<p class="admonition-title">Daten</p>
+<p>Das Löschen entfernt unwiderruflich alle Daten der Prüfung (Teilnehmer:innen, Prüfer:innen, Abschnitte, Einstellungen).</p>
+<blockquote>
+<p>🔒 Eine bereits <strong>abgeschlossene</strong> Prüfung kann nicht mehr gelöscht werden.</p>
+</blockquote>
+</div>
+<hr>
+<h2 id="7-berechtigungen">7. Berechtigungen</h2>
+<p>Für die oben beschriebenen Funktionen benötigen Sie das Recht <strong>„Prüfungen bearbeiten“</strong>. Ohne dieses Recht können Sie höchstens Prüfungen ansehen, aber nicht anlegen, ändern oder löschen. Falls Ihnen Funktionen fehlen, wenden Sie sich an die Administration Ihrer Schule bzw. Organisation.</p>
+<hr>
+<h2 id="8-supportinformationen-notfallplan">8. Supportinformationen (Notfallplan)</h2>
+<p>Über den Link <strong>„Supportinformation“</strong> im Dashboard-Block gelangen Sie zu den hinterlegten <strong>Notfallinformationen und Kontaktpersonen</strong> Ihrer Organisation für den Fall von technischen Problemen während einer Prüfung. Nur berechtigte Personen können diese Informationen bearbeiten – alle anderen sehen die Seite in einer schreibgeschützten Ansicht.</p>
+<hr>
+<h2 id="9-kurzubersicht-checkliste-fur-eine-neue-prufung">9. Kurzübersicht / Checkliste für eine neue Prüfung</h2>
+<ol>
+<li>☐ Prüfung im Dashboard erstellen (Name, Datum, Dauer, Grundeinstellungen)</li>
+<li>☐ Prüfungsmodus je Abschnitt festlegen und konfigurieren</li>
+<li>☐ Ggf. Gruppen aktivieren und getrennt konfigurieren</li>
+<li>☐ Zusätzliches Material hochladen (falls nötig)</li>
+<li>☐ Prüfer:innen (Aufsichten) hinzufügen</li>
+<li>☐ Teilnehmer:innen hinzufügen (ggf. mit Gruppenzuweisung)</li>
+<li>☐ Phase auf <strong>„Bereit“</strong> setzen, sobald alles vorbereitet ist</li>
+<li>☐ Nach der Prüfung Phase auf <strong>„Abgeschlossen“</strong> setzen</li>
+</ol>
+<hr>
+<p><em>Bei technischen Problemen während einer laufenden Prüfung nutzen Sie bitte die Kontaktpersonen bzw. den Notfallplan unter „Supportinformation“.</em></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden="">
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"></path></svg>
+  Zurück zum Seitenanfang
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright" style="
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  color: white;
+  background: var(--md-primary-fg-color);
+  border-top: 1px solid var(--md-default-fg-color--lighter);
+  padding: 0.5rem 1rem;
+  text-align: center;
+  z-index: 100;
+">
+Handbuch 2026 - basierend auf der Next-Exam-Version: 2.1
+</div>
+<!-- Platz für Footer schaffen - Abstand zum Text-->
+<style>
+.md-main {
+  padding-bottom: 3rem; /* Höhe des Footers */
+}
+</style>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["toc.integrate", "navigation.instant", "navigation.tabs", "navigation.indexes", "navigation.sections", "navigation.top", "search.highlight", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "In Zwischenablage kopiert", "clipboard.copy": "In Zwischenablage kopieren", "search.result.more.one": "1 weiteres Suchergebnis auf dieser Seite", "search.result.more.other": "# weitere Suchergebnisse auf dieser Seite", "search.result.none": "Keine Suchergebnisse", "search.result.one": "1 Suchergebnis", "search.result.other": "# Suchergebnisse", "search.result.placeholder": "Suchbegriff eingeben", "search.result.term.missing": "Es fehlt", "select.version": "Version ausw\u00e4hlen"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  
+<script id="init-glightbox">const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});
+document$.subscribe(()=>{ lightbox.reload(); });
+</script></body></html>
