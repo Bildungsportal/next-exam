@@ -56,6 +56,29 @@ Bei einem typischen Prüfungsszenario sollten daher insbesondere folgende Punkte
 - Bei automatischer Geräteerkennung ist **Multicast** im lokalen Netzwerk verfügbar.
 - Bei getrennten Netzwerken oder eingeschränkter Multicast-Unterstützung kann die Verbindung über eine Server-Adresse hergestellt werden.
 
+## Windows Firewall-Konfiguration
+Damit die Firewall in einer Windows-Umgebung nachhaltig konfiguriert wird, empfiehlt es sich, die Regeln per GPO an die Clients zu verteilen.
+
+- gpmc.msc öffnen
+- Neue GPO erstellen (z.B. C_Firewall_Next-Exam)
+- Bearbeiten
+
+Navigieren zu:
+
+- Computerkonfiguration
+- --> Richtlinien
+- ---> Windows-Einstellungen
+- ----> Sicherheitseinstellungen
+- -----> Windows Defender Firewall mit erweiterter Sicherheit
+- ------> Eingehende Regeln
+
+Eine erweiterte Regel mit dem Programm-Pfad (jeweilf für Student und Teacher) und dem Protokoll (jeweils TCP/UDP) erstellen (siehe Screenschot).
+<div class='grid' markdown>
+<figure markdown="span">
+    ![Windows-Firewall](img/admin_windows_firewall.png){width="100%"}
+    <figcaption>Windows-Firewall-Regeln</figcaption>
+</figure>
+</div>
 ## Empfehlung für Schulen
 
 Für einen stabilen Schulbetrieb empfiehlt es sich, Next-Exam vor dem ersten Einsatz auf den tatsächlich verwendeten Schulgeräten und im vorhandenen Schulnetzwerk zu testen.
