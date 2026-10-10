@@ -29,10 +29,10 @@ Erkannt werden zwei Arten von Feldern:
     - einzelne Großbuchstaben (A–Z), z. B. zum Ankreuzen bei Multiple-Choice-Antworten
 
 <!-- SCREENSHOT: activesheets_source_pdf -->
-<figure markdown="span">
+<!--figure markdown="span">
     ![Beispiel eines Formular-PDFs](../img/activesheets_source_pdf.png){width="70%"}
     <figcaption>Beispiel eines extern erstellten Formular-PDFs mit Textfeldern und Checkboxen</figcaption>
-</figure>
+</figure-->
 
 !!! warning "Nicht unterstützt: vektorisierte/geflachte PDFs"
     PDFs aus manchen Online-Konvertern (z. B. iLovePDF) enthalten oft keine erkennbaren Formularfelder mehr, da Text und Layout in Vektorgrafik umgewandelt wurden. Die automatische Felderkennung funktioniert in diesem Fall nicht – Formularfelder müssen dann manuell im PDF ergänzt werden.

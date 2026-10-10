@@ -18,10 +18,10 @@ Die Einrichtung erfolgt **direkt am Schüler:innen-Gerät** in der Student-App u
 Auf der Student-Startseite steht dazu die Schaltfläche **Kiosk-Modus einrichten** zur Verfügung (unterhalb von „Lokal absperren“); sie erscheint automatisch, solange der Kiosk-Modus auf dem Gerät noch nicht eingerichtet ist.
 
 <!-- SCREENSHOT: kiosk_win_setup -->
-<figure markdown="span">
+<!--figure markdown="span">
     ![Windows Kiosk-Modus einrichten](../img/kiosk_win_setup.png){width="50%"}
     <figcaption>Dialog „Windows Kiosk-Modus“</figcaption>
-</figure>
+</figure-->
 
 Im Dialog **Windows Kiosk-Modus** wird die Einrichtung bestätigt (Administrator-Rechte per UAC-Abfrage erforderlich). Next-Exam richtet dabei ein separates Betriebssystem-Benutzerkonto ein (kein Passwort), blockiert USB-Massenspeicher und löscht das Profil nach jeder Prüfung.
 
@@ -50,10 +50,10 @@ Ein Verlassen des Kiosk-Modus muss über den Button **Next-Exam beenden** bestä
 Analog zu Windows steht auf der Student-Startseite die Schaltfläche **Kiosk-Modus einrichten** zur Verfügung. Nach Bestätigung des Dialogs **Linux Kiosk-Modus (Cage)** installiert Next-Exam den Compositor **cage** (falls nicht vorhanden) und richtet im Login-Manager einen eigenen Sitzungstyp **„Next Exam Kiosk“** ein.
 
 <!-- SCREENSHOT: kiosk_linux_setup -->
-<figure markdown="span">
+<!--figure markdown="span">
     ![Linux Kiosk-Modus einrichten](../img/kiosk_linux_setup.png){width="50%"}
     <figcaption>Dialog „Linux Kiosk-Modus (Cage)“</figcaption>
-</figure>
+</figure-->
 
 Zum Start der abgesicherten Umgebung wählt die Person am Login-Manager den Sitzungstyp **„Next Exam Kiosk“** und meldet sich mit dem eigenen Linux-Konto an; Next-Exam startet darin automatisch im abgesicherten Vollbild (kein separates Kiosk-Benutzerkonto wie unter Windows).
 

@@ -13,7 +13,7 @@ Die Arbeitsstände der Schüler:innen werden als GeoGebra-Dateien gesichert und 
 
 ## Schüler:in
 
-Nach dem Absichern öffnet sich die GeoGebra-Oberfläche im abgesicherten Vollbildmodus. GeoGebra läuft dabei vollständig lokal (**GeoGebra Web 5.4.920.0** ist in Next-Exam gebündelt) – es ist keine Internetverbindung nötig.
+Nach dem Absichern öffnet sich die GeoGebra-Oberfläche im abgesicherten Vollbildmodus. GeoGebra läuft dabei vollständig lokal (**GeoGebra 6 (Build 5.0.930.2)** ist in Next-Exam gebündelt) – es ist keine Internetverbindung nötig.
 
 <!-- SCREENSHOT: student_abgesichert_mathe -->
 <figure markdown="span">

@@ -19,10 +19,13 @@ Auf der Startseite stehen zwei Tabs zur Verfügung: **Lokale Prüfung** und **Bi
 </figure>
 </div>
 
+!!! tip
+    Der PIN sollte notiert werden. Falls das Teacher-Device getauscht und eine Prüfung neu angelegt werden muss, können sich damit die Schüler:innen nahtlos verbinden. Voraussetung ist, dass die PINs der alten und neuen Prüfung ident sind.
 
 ### Prüfungsname
 
 Der **Prüfungsname** kann frei gewählt werden. Erlaubt sind die Zeichen a–z, A–Z, 0–9, `-` und `_` (max. 20 Zeichen). Für jede Prüfung wird im Arbeitsverzeichnis **EXAM-TEACHER** ein eigener Prüfungsordner mit allen Sicherungen, Abgaben und der Prüfungskonfiguration angelegt.
+
 
 ### Passwort festlegen (optional)
 
