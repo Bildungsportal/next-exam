@@ -1,0 +1,64 @@
+name: User Story
+description: Erstelle eine neue User Story bzw. schlage eine neue Funktion für Next-Exam vor.
+type: User Story
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Bitte trage alle relevanten Informationen für deine User Story rund um Next-Exam ein. Hilfetexte und Beispiele unterstützen dich beim Ausfüllen.**
+  - type: textarea
+    id: user-story
+    attributes:
+      label: Beschreibung / User Story
+      description: Beschreibe die User Story im Format "Als <Rolle> möchte ich <Ziel>, um <Nutzen> zu erreichen."
+      placeholder: |
+        Beispiel:
+        Als Lehrkraft möchte ich für jede digitale Prüfung einen Zeitrahmen angeben können,
+        um sicherzustellen, dass alle SchülerInnen fair bewertet werden und die Bearbeitungszeit einheitlich ist.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Akzeptanzkriterien
+      description: Definiere messbare Kriterien, die erfüllt sein müssen, damit die User Story abgeschlossen ist. Nutze das Format "GIVEN WHEN THEN".
+      placeholder: |
+        Beispiel:
+        - GIVEN eine neue Prüfung wird erstellt
+        - WHEN ich einen Prüfungszeitraum angebe
+        - THEN wird dieser Zeitraum im Prüfungsübersicht angezeigt und nach Ablauf wird die Prüfung automatisch beendet
+    validations:
+      required: false
+  - type: input
+    id: design-link
+    attributes:
+      label: Link zu Designs
+      description: Füge, falls vorhanden, einen Link zum Design, Mockup oder pädagogischen Konzept hinzu.
+      placeholder: https://www.figma.com/file/123456/Next-Exam-Pruefungskonzept
+    validations:
+      required: false
+  - type: textarea
+    id: implementation-details
+    attributes:
+      label: Implementierungsdetails
+      description: Hinweise zur technischen Umsetzung, Besonderheiten, Schnittstellen oder Integrationsanforderungen.
+      placeholder: |
+        Beispiel:
+        - Es muss ein neues Feld "Prüfungszeitraum" im Backend und im UI ergänzt werden.
+        - Nach Ablauf des Zeitraums werden keine weiteren Antworten akzeptiert.
+        - Automatisierte Benachrichtigung an die SchülerInnen nach Beendigung.
+    validations:
+      required: false
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notizen, Risiken & Annahmen
+      description: Gibt es weitere Informationen, potenzielle Herausforderungen, noch offene Fragen oder Annahmen?
+      placeholder: |
+        Beispiel:
+        - Risiko: Schüler:innen mit Sonderrechten benötigen einen individuell verlängerten Zeitraum.
+        - Annahme: Alle Prüfungen laufen synchron für die Klasse.
+        - Zu klären: Wie werden Nachteilsausgleiche technisch umgesetzt?
+    validations:
+      required: false

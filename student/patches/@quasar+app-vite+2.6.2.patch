@@ -1,0 +1,22 @@
+diff --git a/node_modules/@quasar/app-vite/lib/utils/open-ide.js b/node_modules/@quasar/app-vite/lib/utils/open-ide.js
+index 1cba679..657089e 100644
+--- a/node_modules/@quasar/app-vite/lib/utils/open-ide.js
++++ b/node_modules/@quasar/app-vite/lib/utils/open-ide.js
+@@ -7,14 +7,10 @@ import { warn, fatal } from './logger.js'
+ 
+ function findXcodeWorkspace(folder) {
+   const root = fs.readdirSync(folder)
++  const item = root.find(item => item.endsWith('.xcworkspace'))
++    || root.find(item => item.endsWith('.xcodeproj'))
+ 
+-  for (const item of root) {
+-    const __path = path.join(folder, item)
+-
+-    if (item.endsWith('.xcworkspace') || item.endsWith('.xcodeproj')) {
+-      return __path
+-    }
+-  }
++  return item && path.join(folder, item)
+ }
+ 
+ function runMacOS(mode, target, appPaths) {

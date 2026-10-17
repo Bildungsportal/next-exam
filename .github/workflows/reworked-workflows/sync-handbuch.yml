@@ -1,0 +1,51 @@
+name: Sync handbuch branch to public repo
+
+on:
+  push:
+    branches:
+      - Handbuch-mkdocs
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# opt in to Node 24 runtime for js actions (default from 2026-06-16); pre-validate
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  push-handbuch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Handbuch-mkdocs
+        uses: actions/checkout@v4
+        with:
+          ref: Handbuch-mkdocs
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Configure git author
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Add public remote
+        env:
+          PUBLIC_TOKEN: ${{ secrets.PAT_VALUEERROR}}
+        run: |
+          if [ -z "$PUBLIC_TOKEN" ]; then
+            echo "PUBLIC_TOKEN is not set"; exit 1; 
+          fi
+          git config url."https://x-access-token:${PUBLIC_TOKEN}@github.com/".insteadOf "https://github.com/"
+          git remote remove public >/dev/null 2>&1 || true
+          git remote add public "https://x-access-token:${PUBLIC_TOKEN}@github.com/Bildungsportal/next-exam.git"
+
+
+      - name: Push to public handbuch
+        env:
+          PUBLIC_TOKEN: ${{ secrets.PAT_VALUEERROR }}
+        run: |
+          if [ -z "$PUBLIC_TOKEN" ]; then
+            echo "PUBLIC_TOKEN is not set"; exit 1; 
+          fi
+          git push public Handbuch-mkdocs:handbuch --force

@@ -1,0 +1,177 @@
+name: Build MacOS x64 Student DMG
+
+on:
+  workflow_call:
+  workflow_dispatch: {}
+
+# opt in to Node 24 runtime for js actions (default from 2026-06-16); pre-validate
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  # UI (vite/esbuild) built on cheap ubuntu runner; macOS job only packages/signs/notarizes.
+  # UnPackaged is transferred as tar because upload-artifact strips executable bits (JRE/qemu binaries in public/).
+  student-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Inject production secrets into .env.production
+        env:
+          NEXT_EXAM_API_SECRET: ${{ secrets.NEXT_EXAM_API_SECRET }}
+          CONNECTION_SECRET: ${{ secrets.CONNECTION_SECRET }}
+        run: |
+          if [ -z "$NEXT_EXAM_API_SECRET" ] || [ -z "$CONNECTION_SECRET" ]; then
+            echo "Missing NEXT_EXAM_API_SECRET or CONNECTION_SECRET" >&2
+            exit 1
+          fi
+          for ENV_FILE in student/.env.production teacher/.env.production; do
+            sed -i "s/^NEXT_EXAM_API_SECRET=.*/NEXT_EXAM_API_SECRET=${NEXT_EXAM_API_SECRET}/" "$ENV_FILE"
+            sed -i "s/^CONNECTION_SECRET=.*/CONNECTION_SECRET=${CONNECTION_SECRET}/" "$ENV_FILE"
+          done
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24.18.0'
+          cache: 'npm'
+          cache-dependency-path: |
+            student/package-lock.json
+
+      - name: Student cache dependencies
+        id: student-node-cache
+        uses: actions/cache@v5
+        with:
+          path: ./student/node_modules
+          key: ${{ runner.os }}-node-s-${{ hashFiles('./student/**/package-lock.json') }}
+
+      - name: Student install dependencies
+        if: steps.student-node-cache.outputs.cache-hit != 'true'
+        working-directory: ./student
+        run: npm install
+
+      - name: Student build electron UI
+        working-directory: ./student
+        run: npm run build:electron:ui
+
+      - name: Pack UnPackaged (preserve file modes)
+        working-directory: ./student
+        run: tar -cf unpackaged.tar -C dist/electron UnPackaged
+
+      - name: Upload Student UnPackaged
+        uses: actions/upload-artifact@v6
+        with:
+          name: student-electron-unpackaged-x64
+          path: ./student/unpackaged.tar
+          retention-days: 1
+
+  student:
+    needs: student-ui
+    runs-on: macos-15-intel
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Decode .p12 file
+        env:
+          P12_BASE64_APPLE: ${{ secrets.P12_BASE64_APPLE }}
+        run: echo "$P12_BASE64_APPLE" | base64 -d > ./certificate.p12
+
+      - name: Import signing certificate
+        run: |
+          security create-keychain -p "" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security import ./certificate.p12 -k ~/Library/Keychains/build.keychain -P "$CSC_KEY_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+        env:
+          CSC_KEY_PASSWORD: ${{ secrets.P12_PASSWORD_APPLE }}
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24.18.0'
+          cache: 'npm'
+          cache-dependency-path: |
+            student/package-lock.json
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Cache electron download
+        uses: actions/cache@v5
+        with:
+          path: ~/Library/Caches/electron
+          key: ${{ runner.os }}-electron-dl-x64-${{ hashFiles('student/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-electron-dl-x64-
+
+      - name: Student cache dependencies
+        id: student-node-cache
+        uses: actions/cache@v5
+        with:
+          path: ./student/node_modules
+          key: ${{ runner.os }}-node-s-x64-${{ hashFiles('./student/**/package-lock.json') }}
+
+      - name: Student install dependencies
+        if: steps.student-node-cache.outputs.cache-hit != 'true'
+        working-directory: ./student
+        run: npm install
+
+      - name: Download Student UnPackaged
+        uses: actions/download-artifact@v6
+        with:
+          name: student-electron-unpackaged-x64
+          path: ./student
+
+      - name: Unpack UnPackaged
+        working-directory: ./student
+        run: |
+          mkdir -p dist/electron
+          tar -xf unpackaged.tar -C dist/electron
+          rm unpackaged.tar
+
+      - name: Cache pre-signed LanguageTool jars
+        id: lt-jars-cache
+        uses: actions/cache@v5
+        with:
+          path: ./student/dist/electron/UnPackaged/public/LanguageTool/libs
+          key: ${{ runner.os }}-ltjars-x64-${{ hashFiles('student/public/LanguageTool/libs/**') }}
+
+      - name: Pre-sign LanguageTool jars
+        if: steps.lt-jars-cache.outputs.cache-hit != 'true'
+        working-directory: ./student
+        env:
+          SHAID: ${{ secrets.SHAID }}
+          NXE_EB_MAC_ARCH: x64
+          NXE_LT_LIBS_PATH: dist/electron/UnPackaged/public/LanguageTool/libs
+        run: node scripts/sign-languagetool-jars-presign.cjs
+
+      - name: Unlock keychain for package step
+        run: |
+          security set-keychain-settings -lut 3600 ~/Library/Keychains/build.keychain
+          security unlock-keychain -p "" ~/Library/Keychains/build.keychain
+
+      - name: Student package
+        working-directory: ./student
+        env:
+          CSC_KEYCHAIN: build.keychain
+          APPLEID: ${{ secrets.APPLEID }}
+          APPLEIDPASS: ${{ secrets.APPLEIDPASS }}
+          TEAMID: ${{ secrets.TEAMID }}
+          SHAID: ${{ secrets.SHAID }}
+          NXE_LT_JARS_PRESIGNED: "1"
+          USE_HARD_LINKS: "false"
+          ELECTRON_BUILDER_DISABLE_LINKS: "true"
+        run: npm run package:mac:x64
+
+      - name: Upload Student MacOS x64 DMG
+        uses: actions/upload-artifact@v6
+        with:
+          name: next-exam-student-macos-x64-dmg
+          path: ./student/dist/electron/Packaged/Next-Exam-Student*x64*.dmg
+          retention-days: 1

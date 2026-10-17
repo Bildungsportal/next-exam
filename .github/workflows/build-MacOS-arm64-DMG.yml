@@ -1,0 +1,142 @@
+name: Build MacOS arm64 DMG
+
+on:
+  workflow_call:
+  workflow_dispatch: {}
+
+# opt in to Node 24 runtime for js actions (default from 2026-06-16); pre-validate
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+concurrency:
+  group: macos-codesign-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Inject production secrets into .env.production
+        env:
+          NEXT_EXAM_API_SECRET: ${{ secrets.NEXT_EXAM_API_SECRET }}
+          CONNECTION_SECRET: ${{ secrets.CONNECTION_SECRET }}
+        run: |
+          if [ -z "$NEXT_EXAM_API_SECRET" ] || [ -z "$CONNECTION_SECRET" ]; then
+            echo "Missing NEXT_EXAM_API_SECRET or CONNECTION_SECRET" >&2
+            exit 1
+          fi
+          for ENV_FILE in student/.env.production teacher/.env.production; do
+            perl -i -pe "s/^NEXT_EXAM_API_SECRET=.*/NEXT_EXAM_API_SECRET=${NEXT_EXAM_API_SECRET}/" "$ENV_FILE"
+            perl -i -pe "s/^CONNECTION_SECRET=.*/CONNECTION_SECRET=${CONNECTION_SECRET}/" "$ENV_FILE"
+          done
+
+      - name: Decode .p12 file
+        env:
+          P12_BASE64_APPLE: ${{ secrets.P12_BASE64_APPLE }}
+        run: echo "$P12_BASE64_APPLE" | base64 -d > ./certificate.p12
+
+      - name: Import signing certificate
+        run: |
+          security create-keychain -p "" build.keychain
+          security default-keychain -s build.keychain
+          security set-keychain-settings -lut 21600 build.keychain
+          security unlock-keychain -p "" build.keychain
+          security import ./certificate.p12 -k ~/Library/Keychains/build.keychain -P "$CSC_KEY_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+        env:
+          CSC_KEY_PASSWORD: ${{ secrets.P12_PASSWORD_APPLE }}
+
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.18.0'
+          cache: 'npm'
+          cache-dependency-path: |
+            teacher/package-lock.json
+            student/package-lock.json
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Pre-sign LanguageTool jars
+        working-directory: ./student
+        env:
+          SHAID: ${{ secrets.SHAID }}
+          NXE_EB_MAC_ARCH: arm64
+        run: node scripts/sign-languagetool-jars-presign.cjs
+
+      - name: Teacher cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: ./teacher/node_modules
+          key: ${{ runner.os }}-node-t-arm64-${{ hashFiles('./teacher/**/package-lock.json') }}
+
+      - name: Teacher install dependencies
+        working-directory: ./teacher
+        run: |
+          npm install
+          mkdir dist
+
+      - name: Teacher build
+        working-directory: ./teacher
+        env:
+          CSC_KEYCHAIN: build.keychain
+          APPLEID: ${{ secrets.APPLEID }}
+          APPLEIDPASS: ${{ secrets.APPLEIDPASS }}
+          TEAMID: ${{ secrets.TEAMID }}
+          USE_HARD_LINKS: "false"
+          ELECTRON_BUILDER_DISABLE_LINKS: "true"
+        run: npm run build:mac:arm64
+
+      - name: Upload Teacher MacOS arm64 DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-exam-teacher-macos-arm64-dmg
+          path: ./teacher/dist/electron/Packaged/Next-Exam-Teacher*arm64*.dmg
+          retention-days: 5
+
+
+      - name: Student cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: ./student/node_modules
+          key: ${{ runner.os }}-node-s-arm64-${{ hashFiles('./student/**/package-lock.json') }}
+
+      - name: Student install dependencies
+        working-directory: ./student
+        run: |
+          npm install
+          mkdir dist
+
+      - name: Student build apple helpers
+        working-directory: ./student
+        env:
+          SHAID: ${{ secrets.SHAID }}
+          CSC_NAME: ${{ secrets.SHAID }}
+        run: npm run build:apple
+
+      - name: Student build
+        working-directory: ./student
+        env:
+          CSC_KEYCHAIN: build.keychain
+          APPLEID: ${{ secrets.APPLEID }}
+          APPLEIDPASS: ${{ secrets.APPLEIDPASS }}
+          TEAMID: ${{ secrets.TEAMID }}
+          SHAID: ${{ secrets.SHAID }}
+          NXE_LT_JARS_PRESIGNED: "1"
+          USE_HARD_LINKS: "false"
+          ELECTRON_BUILDER_DISABLE_LINKS: "true"
+        run: npm run build:mac:arm64
+
+      - name: Upload Student MacOS arm64 DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-exam-student-macos-arm64-dmg
+          path: ./student/dist/electron/Packaged/Next-Exam-Student*arm64*.dmg
+          retention-days: 5

@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.languagetool</groupId>
+    <artifactId>languagetool-parent</artifactId>
+    <version>6.3</version>
+    <relativePath>../../pom.xml</relativePath>
+  </parent>
+  <groupId>org.languagetool</groupId>
+  <artifactId>language-el</artifactId>
+  <version>6.3</version>
+  <name>Greek module for LanguageTool</name>
+  <url>https://www.languagetool.org</url>
+  <licenses>
+    <license>
+      <name>GNU Lesser General Public License</name>
+      <url>http://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt</url>
+      <distribution>repo</distribution>
+      <comments>The license refers to the source code, resources may be under different licenses</comments>
+    </license>
+  </licenses>
+  <developers>
+    <developer>
+      <name>Panagiotis Minos</name>
+      <roles>
+        <role>Maintainer</role>
+      </roles>
+    </developer>
+    <developer>
+      <name>Daniel Naber</name>
+      <roles>
+        <role>Maintainer</role>
+      </roles>
+    </developer>
+    <developer>
+      <name>Marcin Miłkowski</name>
+      <roles>
+        <role>Maintainer</role>
+      </roles>
+    </developer>
+  </developers>
+  <dependencies>
+    <dependency>
+      <groupId>org.ioperm</groupId>
+      <artifactId>morphology-el</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.languagetool</groupId>
+      <artifactId>languagetool-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.languagetool</groupId>
+      <artifactId>languagetool-core</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>de.jflex</groupId>
+        <artifactId>maven-jflex-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase></phase>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <outputDirectory>src/main/java</outputDirectory>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>
