@@ -96,7 +96,7 @@ Mit **Geräte absichern** wird die Prüfungsumgebung auf den Student-Geräten ak
 
 Mit **Gruppen** können Schüler:innen innerhalb einer Prüfung verschiedenen Gruppen zugeordnet werden. Dadurch können beispielsweise unterschiedliche Materialien oder Einstellungen verwendet werden.
 
-### Kiosk-Modus
+### Kiosk-Modus (Linux)
 
 Der **Kiosk-Modus** schränkt den Zugriff auf das Betriebssystem des Student-Geräts ein. Dadurch wird verhindert, dass während einer Prüfung auf andere Programme oder Systemfunktionen zugegriffen wird.
 
