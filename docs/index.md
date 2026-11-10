@@ -189,5 +189,3 @@ Ein **Teacher** ist eine Lehrkraft, die eine Prüfung mit Next-Exam vorbereitet,
 
 **QEMU** ist eine Software zur Virtualisierung und Emulation von Computersystemen. Im Prüfungsmodus **Lokale VM** wird QEMU verwendet, um die virtuelle Prüfungsumgebung auf dem Student-Gerät auszuführen.
 
-## [Datenschutzrichtlinie](privacy-policy.md)
-
