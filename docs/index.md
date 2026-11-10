@@ -30,7 +30,7 @@ Lehrkräfte erstellen und überwachen Prüfungen, während Schüler:innen in ein
 - **[Active Sheets](modes/activesheets.md)**
   PDF-Arbeitsblätter mit interaktiven Formularfeldern – direkt ausfüllbar, inklusive Korrekturwerkzeugen für die Lehrkraft.
 
-Zusätzlich kann jede Prüfung statt lokal auch über das **[Bildungsportal](bildungsportal.md)** vorbereitet und gestartet werden, und jedes Schüler:innen-Gerät kann unabhängig vom Prüfungsmodus zusätzlich über den **[Kiosk-Modus](modes/kiosk.md)** auf Betriebssystemebene abgesichert werden.
+Zusätzlich kann jede Prüfung statt lokal auch über das **[Bildungsportal](bildungsportal.md)** vorbereitet und gestartet werden.
 
 ---
 
