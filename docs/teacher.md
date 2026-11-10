@@ -95,7 +95,7 @@ Zusätzliche Symbole erscheinen bei Ereignissen wie eingegangener Abgabe, erkann
 
 ---
 
-## Prüfungsmodus wählen
+## [Prüfungsmodus](modes.md) wählen
 
 <!-- SCREENSHOT: teacher_dashboard-02 -->
 <figure markdown="span">
@@ -103,7 +103,7 @@ Zusätzliche Symbole erscheinen bei Ereignissen wie eingegangener Abgabe, erkann
     <figcaption>Auswahl des Prüfungsmodus</figcaption>
 </figure>
 
-Die Auswahl erfolgt über das Dropdown **Prüfungsmodus**:
+Die Auswahl erfolgt über das Dropdown **Prüfungsmodus** ([Details](modes.md)):
 
 - **Mathematik** – GeoGebra Suite/Classic ([Details](modes/mathematik.md))
 - **Sprachen** – Texteditor ([Details](modes/sprachen.md))
