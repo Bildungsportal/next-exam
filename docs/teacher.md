@@ -87,7 +87,7 @@ Das Dashboard bietet eine Übersicht über alle verbundenen Geräte und stellt a
 - **Datei senden:** Einzelne Dateien gezielt an diese Person übertragen.
 - **Screenshot speichern:** Aktuellen Screenshot im Ordner `screenshots` ablegen.
 - **Gerät absichern / freigeben:** Abgesicherten Modus für dieses eine Gerät starten oder beenden.
-- **A / B:** Gruppenzuweisung (sofern Gruppen aktiviert sind, siehe [Erweiterte Funktionen](advanced.md#gruppen-ab)).
+- **A / B:** Gruppenzuweisung (sofern Gruppen aktiviert sind).
 - **Verbindung trennen (Kick):** Person vom Prüfungsserver entfernen. Liegt noch keine Abgabe (PDF) vor, warnt Next-Exam davor.
 - **Arbeitsordner bereinigen:** Arbeitsordner auf dem Gerät der Person leeren.
 
@@ -112,7 +112,7 @@ Die Auswahl erfolgt über das Dropdown **Prüfungsmodus**:
 - **RDP** – RD Web Client ([Details](modes/rdp.md))
 - **LocalVM** – lokale virtuelle Maschine ([Details](modes/localvm.md))
 
-Je nach Modus erscheinen in der Seitenleiste die modusspezifischen Einstellungen (z. B. Test-URL, Texteditor-Optionen, PDF-Auswahl). Über das **Zahnrad-Symbol** (oben rechts) sind die **erweiterten Einstellungen** der Prüfung erreichbar (Abschnitte, Gruppen, Zeitlimits, Sicherheitsfunktionen – siehe [Erweiterte Funktionen](advanced.md)).
+Je nach Modus erscheinen in der Seitenleiste die modusspezifischen Einstellungen (z. B. Test-URL, Texteditor-Optionen, PDF-Auswahl). Über das **Zahnrad-Symbol** (oben rechts) sind die **erweiterten Einstellungen** der Prüfung erreichbar (Abschnitte, Gruppen, Zeitlimits, Sicherheitsfunktionen).
 
 ---
 
@@ -163,7 +163,7 @@ Die Schaltfläche **Abgabenübersicht** öffnet eine Tabelle aller eingegangenen
 ### Sicherungen anfordern
 
 - **Sicherung holen** fordert von allen Geräten den aktuellen Arbeitsstand an (Sicherungskopien und Log-Dateien).
-- Über die **Automatische Sicherung** (Backup-Intervall in Minuten) geschieht dies regelmäßig ohne Zutun – siehe [Erweiterte Funktionen](advanced.md#erweiterte-sicherheitsfunktionen).
+- Über die **Automatische Sicherung** (Backup-Intervall in Minuten) geschieht dies regelmäßig ohne Zutun.
 - **Letzte Abgaben zusammenfassen** erzeugt eine Sammel-PDF der jeweils neuesten Abgaben aller Schüler:innen.
 
 ### Abgaben herunterladen / Arbeitsordner öffnen
@@ -179,7 +179,7 @@ Die Schaltfläche **Ordner öffnen** startet den integrierten Dateimanager mit d
 - Pro Schüler:in ein Ordner mit allen geholten Sicherungen (mit Zeitstempel).
 - Finale Abgaben liegen im Ordner `ABGABE` (nummeriert und mit Namen gekennzeichnet).
 - Dateien können in der Vorschau angesehen, extern geöffnet, gedruckt oder gezielt an einzelne Schüler:innen zurückgesendet werden (z. B. Editor-Sicherungen beim Gerätetausch).
-- Verschlüsselte Abgaben (NXE1) lassen sich über **PDF entschlüsseln** öffnen; signierte Abgaben können validiert werden (siehe [Erweiterte Funktionen](advanced.md#signierte-pdfs-validieren)).
+- Verschlüsselte Abgaben (NXE1) lassen sich über **PDF entschlüsseln** öffnen; signierte Abgaben können validiert werden.
 - Über die Sidebar-Funktion **Dateien senden** können Dateien an alle Schüler:innen verteilt werden (pdf, jpg, mp3, htm, ggb, png, gif, wav, ogg). Gesendete Dateien stehen auch im abgesicherten Modus zur Verfügung.
 
 ### Abgabenübersicht

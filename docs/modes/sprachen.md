@@ -108,7 +108,7 @@ Hat die Lehrkraft LanguageTool aktiviert, erscheint ein Seitenbereich mit der Re
 
 - **Arbeit an Lehrperson senden:** Erzeugt aus dem Text ein PDF (mit den von der Lehrkraft vorgegebenen Einstellungen wie Korrekturrand und Schriftbild) und überträgt es an den Teacher. Für die finale Abgabe steht **Finale Abgabe an Lehrperson senden** zur Verfügung.
 - **drucken:** Sendet eine Druckanfrage an die Lehrperson bzw. druckt direkt, wenn der autonome Druck freigegeben ist.
-- Abgaben werden automatisch signiert (siehe [Erweiterte Funktionen → Signierte PDFs validieren](../advanced.md#signierte-pdfs-validieren)).
+- Abgaben werden automatisch signiert.
 
 <!-- SCREENSHOT: student_sprache_abgabe_dialog -->
 <figure markdown="span">
