@@ -1,43 +1,10 @@
-# FAQ
-
-## Verbindungsprobleme
-
-### Die Prüfung wird nicht automatisch gefunden
-
-Next-Exam ist eine Netzwerkapplikation. Überprüfen Sie, ob alle Teilnehmer:innen:
-
-- sich im selben Netzwerk befinden,
-- dieselbe Version von Next-Exam verwenden (Teacher und Student).
-
-Die Firewall muss die Anwendung zulassen. Wird die Prüfung nicht automatisch gefunden, kann bei den Schüler:innen über **Manuell suchen** die **Server-Adresse** aus dem Teacher-Dashboard eingegeben werden.
-
-### Versionsmismatch
-
-Stimmen die Programmversionen von Teacher und Student nicht überein, wird die Anmeldung mit der Meldung **„Die Programmversionen stimmen nicht überein“** verweigert. In diesem Fall auf allen Geräten dieselbe Version installieren (Hinweis in der Student-App: Version zu alt / zu neu).
-
-### Eigener Build kann nicht mit einem Release verbinden
-
-Selbst kompilierte oder anderweitig nicht-offizielle Builds von Next-Exam können nicht mit einem offiziellen Release verbunden werden. Das ist keine Fehlfunktion, sondern beabsichtigt: Offizielle Release-Builds und eigene/fremde Builds sind grundsätzlich nicht miteinander kompatibel.
-
-### Welche Ports werden von Next-Exam verwendet?
-
-- Die **Teacher-API** nutzt Port **22422 (TCP)**.
-- Für die automatische Erkennung („Autodiscovery“) von Prüfungen muss **Multicast** im lokalen Netzwerk erlaubt sein.
-- Verwendete **Multicast-Ports (UDP)**: **6024** und **6025**.
-
-### Next-Exam funktioniert nicht über VLANs hinweg
-
-*Dies ist eine erwünschte Einschränkung und eine der Hauptfunktionen von VLANs. Dies kann nicht von der Software behoben werden.*
-
-Sie können auf Ihrem Layer-3-Gerät jedoch dafür sorgen, dass Port 22422 (Teacher-API) über die VLANs hinweg geroutet wird. Erstellen Sie z. B. auf einer OPNsense-Firewall eine „pass“-Regel für das Zielnetzwerk mit Port-Filter 22422. Die automatische Erkennung funktioniert über VLANs hinweg nicht; die Schüler:innen geben die Server-Adresse manuell ein.
-
----
+# Herausforderungen
 
 ## Schüler:innenseite
 
 ### Next-Exam Student muss neu gestartet werden
 
-Bei Fehlern in Next-Exam Student sollte das Programm geschlossen und neu gestartet werden. Der Editor bzw. Active Sheets stellt vorhandene Sicherungen automatisch wieder her („Backup gefunden“). Die Lehrkraft kann zusätzlich bereits geholte Sicherungen an die betroffene Person senden, um die Prüfung nahtlos fortzusetzen.
+Bei Fehlern in Next-Exam Student sollte das Programm geschlossen und neu gestartet werden. Im Modus "*Sprachen*" oder "*Active Sheets*" werden vorhandene Sicherungen zur Wiederherstellung vorgeschlagen („*Backup gefunden*“). Die Lehrkraft kann zusätzlich bereits übertragene Sicherungen an die betroffene Person senden, um die Prüfung nahtlos fortzusetzen.
 
 ### Endgerät auf Schüler:innenseite muss getauscht werden
 
@@ -57,12 +24,12 @@ Die Lehrkraft öffnet den Dateimanager (**Ordner öffnen**), wählt im Schüler:
 
 Jede Prüfung bleibt im Arbeitsordner **EXAM-TEACHER** gespeichert. Auf der Startseite unter **Lokale Prüfungen** die Prüfung anklicken, um sie mit allen Einstellungen fortzusetzen.
 
-### Endgerät der Lehrkraft muss getauscht werden
+### Endgerät der Lehrkraft muss getauscht oder neu gestartet werden
 
 1. Neues Endgerät und Next-Exam Teacher starten.
 2. Prüfung mit demselben Namen und denselben Einstellungen wieder anlegen (oder aus dem Backupverzeichnis übernehmen).
 3. **WICHTIG:** Die Schüler:innen verbinden sich **noch nicht** zum neuen Gerät. Zuerst muss **Geräte absichern** betätigt werden, um den abgesicherten Modus serverseitig erneut zu aktivieren.
-4. Erst jetzt wird der PIN der neuen Prüfung mitgeteilt und die Schüler:innen melden sich neu an. Da sie den Prüfungsmodus nicht verlassen haben, gehen keine Inhalte verloren; sie werden automatisch übertragen. Verbinden sich Schüler:innen mit einer nicht abgesicherten Prüfung, wird die Prüfung auf ihrer Seite sofort beendet.
+4. Erst jetzt wird der PIN der neuen Prüfung mitgeteilt und die Schüler:innen melden sich neu an (optional kann der alte PIN verwendet werden). Da die Students den Prüfungsmodus nicht verlassen haben und ihre bisherigen Arbeiten lokal gespeichert sind, gehen keine Inhalte verloren - sie werden automatisch übertragen.
 5. Optional kann aus dem Backupverzeichnis die letzte Version an einzelne Schüler:innen gesendet werden.
 
 ### Backup
@@ -116,6 +83,38 @@ sudo sysctl -p /etc/sysctl.d/20-apparmor-userns.conf
 
 Temporär kann das AppImage auch mit `--no-sandbox` gestartet werden.
 
+## Verbindungsprobleme
+
+### Die Prüfung wird nicht automatisch gefunden
+
+Next-Exam ist eine Netzwerkapplikation. Überprüfen Sie, ob alle Teilnehmer:innen:
+
+- sich im selben Netzwerk befinden,
+- dieselbe Version von Next-Exam verwenden (Teacher und Student).
+
+Die Firewall muss die Anwendung zulassen. Wird die Prüfung nicht automatisch gefunden, kann bei den Schüler:innen über **Manuell suchen** die **Server-Adresse** aus dem Teacher-Dashboard eingegeben werden.
+
+### Versionsmismatch
+
+Stimmen die Programmversionen von Teacher und Student nicht überein, wird die Anmeldung mit der Meldung **„Die Programmversionen stimmen nicht überein“** verweigert. In diesem Fall auf allen Geräten dieselbe Version installieren (Hinweis in der Student-App: Version zu alt / zu neu).
+
+### Eigener Build kann nicht mit einem Release verbinden
+
+Selbst kompilierte oder anderweitig nicht-offizielle Builds von Next-Exam können nicht mit einem offiziellen Release verbunden werden. Das ist keine Fehlfunktion, sondern beabsichtigt: Offizielle Release-Builds und eigene/fremde Builds sind grundsätzlich nicht miteinander kompatibel.
+
+### Welche Ports werden von Next-Exam verwendet?
+
+- Die **Teacher-API** nutzt Port **22422 (TCP)**.
+- Für die automatische Erkennung („Autodiscovery“) von Prüfungen muss **Multicast** im lokalen Netzwerk erlaubt sein.
+- Verwendete **Multicast-Ports (UDP)**: **6024** und **6025**.
+
+### Next-Exam funktioniert nicht über VLANs hinweg
+
+*Dies ist eine erwünschte Einschränkung und eine der Hauptfunktionen von VLANs. Dies kann nicht von der Software behoben werden.*
+
+Sie können auf Ihrem Layer-3-Gerät jedoch dafür sorgen, dass Port 22422 (Teacher-API) über die VLANs hinweg geroutet wird. Erstellen Sie z. B. auf einer OPNsense-Firewall eine „pass“-Regel für das Zielnetzwerk mit Port-Filter 22422. Die automatische Erkennung funktioniert über VLANs hinweg nicht; die Schüler:innen geben die Server-Adresse manuell ein.
+
+---
 
 Folgende Probleme sind bekannt. An der Behebung wird gearbeitet.
 

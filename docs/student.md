@@ -59,12 +59,15 @@ Den Prüfungsmodus (Mathematik, Sprachen, Web, Active Sheets …) wählt ausschl
 
 ## Lokal absperren
 
-Wenn einzelne Geräte ohne Teacher-Instanz abgesichert werden sollen, steht auf der Startseite die Funktion **Lokal absperren** zur Verfügung. Im Dialog werden festgelegt:
+Wenn einzelne Geräte ohne Teacher-Instanz abgesichert werden sollen, steht auf der Startseite die Funktion **Lokal absperren** zur Verfügung. 
+Dazu wird der Prüfungsname "*local-exam*" verwendet und dementsprechend ein gleichlautender Ordner in "*Student*" am Desktop erstellt.
+Im Dialog werden festgelegt:
 
 - **Prüfungsmodus:** Sprachen (Texteditor) oder Mathematik (GeoGebra)
 - **Name** der arbeitenden Person
 - **Passwort** (mit Bestätigung) – wird zum Verlassen des abgesperrten Modus benötigt
 - Bei Sprachen zusätzlich: **LanguageTool aktivieren**, **Vorschläge zeigen** und die Sprache der Rechtschreibhilfe
+- "*Dateien der letzten Prüfung löschen*" bewirkt, dass etwaig vorhande Dateien vergangener Prüfungen vor dem Start gelöscht werden.
 
 <!-- SCREENSHOT: loc_local_settings -->
 <figure markdown="span">
