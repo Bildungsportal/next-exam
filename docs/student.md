@@ -49,7 +49,7 @@ Die App zeigt den aktuellen Verbindungszustand an:
 
 Statt Name und Pincode manuell einzugeben, kann sich die Prüfungsperson auch über das österreichische **Bildungsportal** anmelden – siehe [Bildungsportal](bildungsportal.md#als-schulerin-anmelden). Next-Exam übernimmt dabei automatisch den Namen aus dem Portal-Konto und verbindet die Person mit der passenden, von der Lehrkraft vorbereiteten Prüfung. Hat die Lehrkraft **Bildungsportal Login erzwingen** aktiviert, ist diese Anmeldeart verpflichtend.
 
-## Gruppen A/B
+## Gruppen
 
 Hat die Lehrkraft Gruppen aktiviert, zeigt die Student-App die eigene Gruppenzugehörigkeit (**A** oder **B**) im Kopfbereich an. Materialien und Modus-Einstellungen können sich je nach Gruppe unterscheiden.
 
