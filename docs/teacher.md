@@ -1,4 +1,4 @@
-# Teacher – Grundlegende Funktionen
+# Teacher
 
 Die Teacher-App legt Prüfungen an, verwaltet die verbundenen Schüler:innen-Geräte und überwacht die laufende Prüfung.
 
