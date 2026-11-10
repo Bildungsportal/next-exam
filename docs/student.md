@@ -1,4 +1,4 @@
-# Student – Grundlegende Funktionen
+# Student
 
 Die Student-App verbindet das Schüler:innen-Gerät mit dem Prüfungsserver der Lehrkraft und führt die Prüfung im abgesicherten Modus durch.
 
