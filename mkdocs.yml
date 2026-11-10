@@ -28,6 +28,7 @@ theme:
     - toc.integrate
     - navigation.instant
     - navigation.tabs
+    - navigation.tabs.sticky
     - navigation.indexes
     - navigation.sections
     - navigation.top
