@@ -1,0 +1,867 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="../../../../../../../../../languagetool-core/src/main/resources/org/languagetool/rules/print.xsl" ?>
+<?xml-stylesheet type="text/css" href="../../../../../../../../../languagetool-core/src/main/resources/org/languagetool/rules/rules.css"
+title="Easy editing stylesheet" ?>
+<!--
+American English Grammar and Typo Rules for LanguageTool
+See tagset.txt for the meaning of the POS tags
+Copyright (C) 2012 Marcin Miłkowski (https://www.languagetool.org)
+
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
+
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301
+USA
+-->
+<!--suppress CheckTagEmptyBody -->
+
+<!DOCTYPE rules [
+    <!ENTITY apostrophe "['’`´‘ʻ]">
+
+        <!ENTITY weekdays "Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday">
+        <!ENTITY abbrevWeekdays "Mon|Mo|Tue|Tu|Wed|We|Thu|Th|Fri|Fr|Sat|Sa|Sun|Su">
+        <!ENTITY months "January|February|March|April|May|June|July|August|September|October|November|December">
+        <!ENTITY abbrevMonths "Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec">
+
+    <!ENTITY hyphen "(?:[-‑])">
+    <!ENTITY subordinating_conjunctions "after|although|as|because|before|if|lest|like|once|since|than|that|though|unless|until|whenever|where|whereas|wherever|whether|while|why"><!-- #2988 -->
+    <!ENTITY ambiguous_date '
+        <token regexp="yes">0?[1-9]|1[0-2]</token>
+        <token>/</token>
+        <token regexp="yes">0?[1-9]|1[0-2]</token>
+        <token>/</token>
+        <token regexp="yes">\d\d\d\d</token>
+    '>
+    <!-- "7 October 2014" and "7th October 2014" -->
+    <!ENTITY date_dmy '
+        <token regexp="yes">\d\d?(th)?</token>
+        <token regexp="yes">&months;|&abbrevMonths;</token>
+        <token regexp="yes">\d\d\d\d</token>
+    '>
+    <!ENTITY date_dmy_skip '
+        <token regexp="yes">\d\d?</token>
+        <token regexp="yes">&months;|&abbrevMonths;</token>
+        <token regexp="yes" skip="-1">\d\d\d\d</token>
+    '>
+    <!-- "October 7, 2014" -->
+    <!ENTITY date_mdy '
+        <token regexp="yes">&months;|&abbrevMonths;</token>
+        <token regexp="yes">\d\d?</token>
+        <token>,</token>
+        <token regexp="yes">\d\d\d\d</token>
+    '>
+    <!ENTITY date_mdy_skip '
+        <token regexp="yes">&months;|&abbrevMonths;</token>
+        <token regexp="yes">\d\d?</token>
+        <token>,</token>
+        <token regexp="yes" skip="-1">\d\d\d\d</token>
+    '>
+    <!-- "31/10/2014" -->
+    <!ENTITY date_dmy_numbers '
+        <token regexp="yes">0?[1-9]|[12][0-9]|3[01]</token>
+        <token>/</token>
+        <token regexp="yes">0?[1-9]|1[0-2]</token>
+        <token>/</token>
+        <token regexp="yes">\d\d\d\d</token>
+    '>
+    <!ENTITY date_dmy_numbers_skip '
+        <token regexp="yes">0?[1-9]|[12][0-9]|3[01]</token>
+        <token>/</token>
+        <token regexp="yes">0?[1-9]|1[0-2]</token>
+        <token>/</token>
+        <token regexp="yes" skip="-1">\d\d\d\d</token>
+    '>
+    <!-- "10/31/2014" -->
+    <!ENTITY date_mdy_numbers '
+        <token regexp="yes">0?[1-9]|1[0-2]</token>
+        <token>/</token>
+        <token regexp="yes">0?[1-9]|[12][0-9]|3[01]</token>
+        <token>/</token>
+        <token regexp="yes">\d\d\d\d</token>
+    '>
+    <!ENTITY date_mdy_numbers_skip '
+        <token regexp="yes">0?[1-9]|1[0-2]</token>
+        <token>/</token>
+        <token regexp="yes">0?[1-9]|[12][0-9]|3[01]</token>
+        <token>/</token>
+        <token regexp="yes" skip="-1">\d\d\d\d</token>
+    '>
+]>
+
+<rules lang="en-US" xsi:noNamespaceSchemaLocation="../../../../../../../../../../languagetool-core/src/main/resources/org/languagetool/rules/rules.xsd"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <category id="GRAMMAR" name="Grammar" type="grammar">
+            <rulegroup id="US_ONE_ENTITY" name="The United States are (is) 246 years old">
+                <rule>  <!-- 'United States' -->
+                    <antipattern>
+                        <token>the</token>
+                        <token>united</token>
+                        <token>states</token>
+                        <token>are</token>
+                        <token min="0" max="2" postag="RB" />
+                        <token chunk="B-NP-plural">
+                            <exception postag="CD" />
+                        </token>
+                    </antipattern>
+                    <antipattern>
+                        <token chunk="E-NP-plural" />
+                        <token regexp="yes">of|for</token>
+                        <token>the</token>
+                        <token>united</token>
+                        <token>states</token>
+                    </antipattern>
+                    <antipattern>
+                        <token regexp="yes">.+s</token>
+                        <token regexp="yes">of|for</token>
+                        <token>the</token>
+                        <token>united</token>
+                        <token>states</token>
+                    </antipattern>
+                    <antipattern>
+                        <token skip="5" chunk="B-PP" />
+                        <token>the</token>
+                        <token>united</token>
+                        <token>states</token>
+                    </antipattern>
+                    <pattern>
+                        <token postag="SENT_START|CC|PCT" postag_regexp="yes">
+                            <exception>and</exception>
+                        </token>
+                        <token>the</token>
+                        <token>united</token>
+                        <token>states</token>
+                        <marker>
+                            <token postag="VBP?" postag_regexp="yes" chunk="B-VP">
+                                <exception postag="MD|VB[DN]" postag_regexp="yes" />
+                            </token>
+                        </marker>
+                    </pattern>
+                    <message>In American English, 'the United States' is considered a singular entity, and therefore takes a third-person verb form.</message>
+                    <suggestion><match no="5" postag="VBZ" /></suggestion>
+                    <example correction="is">The United States <marker>are</marker> 246 years old.</example>
+                    <example correction="tries">If the United States <marker>try</marker> to hit and annihilate Iran, this will be its last war.</example>
+                    <example correction="does">Whenever the United States <marker>do</marker> not succeed in invading, annihilating, dividing or controlling a country, they feel humiliated.</example>
+                    <example>The United States are not currently the only cultural imperialists, but today, as a global economic and political superpower, the spread of American values in the entire world is at the leading edge of a wave of spread of Western goods and consumerist culture.</example>
+                    <example>A noted series of HPIs for the United States are the Case–Shiller indices, devised by American economists Karl Case, Robert J. Shiller, and Allan Weiss.</example>
+                    <example>In another twenty years, the United States will no longer be able to be the police for the world.</example>
+                    <example>In that final, the United States upset the Cubans, beating them 4–0.</example>
+                    <example>Fur company posts that became cities in what is now the United States include Vancouver, Washington (Fort Vancouver), formerly the "capital" of Hudson's Bay operations in the Columbia District, Colville, Washington and Walla Walla, Washington (old Fort Nez Percés).</example>
+                </rule>
+                <rule>  <!-- 'US' -->
+                    <antipattern>
+                        <token chunk="E-NP-plural" />
+                        <token regexp="yes">of|for</token>
+                        <token>the</token>
+                        <token regexp="yes" case_sensitive="yes">USA?</token>
+                    </antipattern>
+                    <antipattern>
+                        <token regexp="yes">.+s</token>
+                        <token regexp="yes">of|for</token>
+                        <token>the</token>
+                        <token regexp="yes" case_sensitive="yes">USA?</token>
+                    </antipattern>
+                    <pattern>
+                        <token postag="SENT_START|CC|PCT" postag_regexp="yes">
+                            <exception>and</exception>
+                        </token>
+                        <token>the</token>
+                        <token regexp="yes" case_sensitive="yes">USA?</token>
+                        <marker>
+                            <token postag="VBP?" postag_regexp="yes" chunk="B-VP">
+                                <exception postag="MD|VB[DN]" postag_regexp="yes" />
+                            </token>
+                        </marker>
+                    </pattern>
+                    <message>In American English, 'the \3' is considered a singular entity, and therefore takes a third-person verb form.</message>
+                    <suggestion><match no="4" postag="VBZ" /></suggestion>
+                    <example correction="tries">If the US <marker>try</marker> to hit and annihilate Iran, this will be its last war.</example>
+                    <example correction="gets">How much longer until the US <marker>get</marker> full blown “Shithole Country” status? </example>
+                </rule>
+                <rule>  <!-- 'U.S.' -->
+                    <antipattern>
+                        <token chunk="E-NP-plural" />
+                        <token regexp="yes">of|for</token>
+                        <token>the</token>
+                        <token case_sensitive="yes">U</token>
+                        <token>.</token>
+                        <token case_sensitive="yes">S</token>
+                        <token>.</token>
+                        <token min="0" case_sensitive="yes">A</token>
+                        <token min="0">.</token>
+                    </antipattern>
+                    <antipattern>
+                        <token regexp="yes">.+s</token>
+                        <token regexp="yes">of|for</token>
+                        <token>the</token>
+                        <token case_sensitive="yes">U</token>
+                        <token>.</token>
+                        <token case_sensitive="yes">S</token>
+                        <token>.</token>
+                        <token min="0" case_sensitive="yes">A</token>
+                        <token min="0">.</token>
+                    </antipattern>
+                    <pattern>
+                        <token postag="SENT_START|CC|PCT" postag_regexp="yes">
+                            <exception>and</exception>
+                        </token>
+                        <token>the</token>
+                        <token case_sensitive="yes">U</token>
+                        <token>.</token>
+                        <token case_sensitive="yes">S</token>
+                        <token>.</token>
+                        <token min="0" case_sensitive="yes">A</token>
+                        <token min="0">.</token>
+                        <marker>
+                            <token postag="VBP?" postag_regexp="yes" chunk="B-VP">
+                                <exception postag="MD|VB[DN]" postag_regexp="yes" />
+                            </token>
+                        </marker>
+                    </pattern>
+                    <message>In American English, 'the United States' is considered a singular entity, and therefore takes a third-person verb form.</message>
+                    <suggestion><match no="9" postag="VBZ" /></suggestion>
+                    <example correction="tries">If the U.S. <marker>try</marker> to hit and annihilate Iran, this will be its last war.</example>
+                </rule>
+            </rulegroup>
+        </category>
+
+        <category id="COMPOUNDING" name="Compounding">
+            <rulegroup id="PER_CENT" name="per cent (percent)">
+                <url>https://www.merriam-webster.com/dictionary/percent</url>
+                <rule>
+                    <pattern>
+                        <token>per</token>
+                        <token>cent</token>
+                    </pattern>
+                    <message>In American English, <suggestion>percent</suggestion> is the recommended spelling.</message>
+                    <example correction="percent">He increased the revenue by 100 <marker>per cent</marker>.</example>
+                </rule>
+                <rule>
+                    <pattern>
+                        <token>per-cent</token>
+                    </pattern>
+                    <message>In American English, <suggestion>percent</suggestion> is the recommended spelling.</message>
+                    <example correction="percent">He increased the revenue by 100 <marker>per-cent</marker>.</example>
+                </rule>
+            </rulegroup>
+            <rule id="STREET_LIGHTS_COMPOUND" name="street light (streetlight)">
+                <pattern>
+                    <token>street</token>
+                    <token regexp="yes">lights?|lamps?</token>
+                </pattern>
+                <message>In American English this noun is spelled as one word.</message>
+                <suggestion>street<match no="2" case_conversion="alllower" /></suggestion>
+                <url>https://www.merriam-webster.com/dictionary/streetlight</url>
+                <example correction="streetlights">I only go out once the <marker>street lights</marker> are turned on.</example>
+            </rule>
+
+            <rule id="SHIT_SHOW_COMPOUND" name="shit show (shitshow)">
+                <pattern>
+                    <token regexp="yes">an?</token>
+                    <token postag="JJ" min="0" />
+                    <marker>
+                        <token>shit</token>
+                        <token>show</token>
+                    </marker>
+                </pattern>
+                <message>The noun <suggestion>shitshow</suggestion> is spelled as one word.</message>
+                <url>https://www.dictionary.com/browse/shitshow</url>
+                <example correction="shitshow">The TV debate was an absolute <marker>shit show</marker>.</example>
+            </rule>
+
+            <rule id="HOME_COMPOUNDS_EN_US" name="home town (hometown)">
+                <pattern>
+                    <token>home</token>
+                    <token regexp="yes">towns?</token>
+                </pattern>
+                <message>The word <suggestion>home<match no="2" case_conversion="alllower" /></suggestion> is normally spelled as one word.</message>
+                <example correction="hometown">He came to visit her <marker>home town</marker>.</example>
+            </rule>
+
+            <rule id="ANY_MORE" name="any more (anymore)">
+                <antipattern><!-- Tom could not have been any more helpful. -->
+                    <token>more</token>
+                    <token postag="JJ"/>
+                </antipattern>
+                <antipattern><!-- #2985 any more random lag spikes -->
+                    <token chunk="B-NP-plural">any</token>
+                    <token chunk="I-NP-plural">more</token>
+                    <token min="0" max="4" chunk="I-NP-plural"/>
+                    <token postag="NNS"/>
+                </antipattern>
+                <antipattern><!-- #3057 have any more unless -->
+                    <token postag_regexp="yes" postag="VB.*"/>
+                    <token>any</token>
+                    <token>more</token>
+                    <token regexp="yes">&subordinating_conjunctions;</token>
+                </antipattern>
+                <antipattern><!-- #3057 want any more because -->
+                    <token postag_regexp="yes" postag="VB.*"/>
+                    <token>any</token>
+                    <token>more</token>
+                    <token postag="CC"/>
+                </antipattern>
+                <antipattern><!-- if you need any more, let me know -->
+                    <token inflected="yes" postag="V.*" postag_regexp="yes" regexp="yes">need|want|demand|require</token>
+                    <token>any</token>
+                    <token>more</token>
+                </antipattern>
+                <antipattern><!-- I couldn't ask any more of him -->
+                    <token postag="V.*" postag_regexp="yes"/>
+                    <token>any</token>
+                    <token>more</token>
+                    <token regexp="yes">from|of</token>
+                    <token postag="NNP|PRP" postag_regexp="yes"/>
+                </antipattern>
+                <pattern>
+                    <marker>
+                        <token>any</token>
+                        <token>more
+                            <exception scope="next" regexp="yes">of|than|often</exception>
+                            <exception scope="next" postag="NN.*" postag_regexp="yes"/>
+                        </token>
+                    </marker>
+                </pattern>
+                <message>Did you mean the adverb <suggestion>\1\2</suggestion>?</message>
+                <url>https://www.merriam-webster.com/dictionary/anymore</url>
+                <short>American English, possible typo</short>
+                <example correction="anymore">I couldn't find my way around it <marker>any more</marker>.</example>
+                <example correction="anymore">You're not sure <marker>any more</marker>, are you?</example>
+                <example correction="anymore">Stop submitting the results, the test will not be completed <marker>any more</marker>.</example><!-- #2309. -->
+                <example correction="anymore">Stop submitting the results, the test will not be completed <marker>any more</marker></example><!-- #2309. No full stop. -->
+                <example correction="anymore">You don't have to take care of them <marker>any more</marker>   </example><!-- #2779. Extra spaces -->
+                <example>I couldn't find my way around it <marker>anymore</marker>.</example>
+                <example>If we see that your plan isn't a good fit anymore in the long run, we'd contact you.</example><!-- #2368 -->
+                <example>But I don't think it's any more likely than a farmer harvesting guano...</example><!-- #2717 -->
+                <example>Do it so that there aren't any more random lag spikes.</example><!-- #2985 -->
+                <example>There aren't any more random spikes.</example><!-- #2985 -->
+                <example>We probably should tell him that we don't have any more unless New Albany is enough.</example><!-- #3057 -->
+                <example>Tell her that we don't really want any more because we have sufficient.</example><!-- #3057 -->
+                <example>If we had bought any more while prices were high, we would have lose money.</example><!-- #3057 -->
+                <example>I know that Tom isn't any more likely to do that today than he was yesterday.</example>
+                <example>Tom could not have been any more helpful.</example>
+                <example>Those people do not visit emergency rooms any more often than the general population.</example>
+                <example>I'll let you know if I need any more from you.</example>
+                <example>If you ask any more of me, I won't be able to comply.</example>
+            </rule>
+        </category>
+
+        <category id="PUNCTUATION" name="Punctuation" type="typographical">
+            <rulegroup id="MISSING_PERIOD_AFTER_ABBREVIATION" name="Missing period after an abbreviation" tags="picky">
+                <url>https://www.quickanddirtytips.com/education/grammar/when-you-need-periods-after-abbreviations</url>
+                <short>Missing period</short>
+                <antipattern><!-- https://www.drpepper.com/en -->
+                    <token>Dr</token>
+                    <token>Pepper</token>
+                </antipattern>
+                <rule>
+                    <pattern>
+                        <token case_sensitive="yes" regexp="yes">Dr|Mrs?|Prof|St|Capt<exception scope="next" spacebefore="no">.</exception></token>
+                    </pattern>
+                    <message>In American English, use a period after an abbreviation.</message>
+                    <suggestion>\1.</suggestion>
+                    <example correction="Mr."><marker>Mr</marker> Peters told me so.</example>
+                </rule>
+                <rule>
+                    <antipattern>
+                        <token>Jan</token>
+                        <token postag="NNP|UNKNOWN" postag_regexp="yes" regexp="yes">[a-z].*</token>
+                    </antipattern>
+                    <antipattern>
+                        <token>Mar</token>
+                        <token regexp="yes">del?</token>
+                    </antipattern>
+                    <antipattern>
+                        <token>Mar</token>
+                        <token>a</token>
+                        <token>Lago</token>
+                    </antipattern>
+                    <antipattern>
+                        <token case_sensitive="yes" regexp="yes">Sun|We</token>
+                    </antipattern>
+                    <pattern>
+                        <token postag="IN"/>
+                        <marker>
+                            <token case_sensitive="yes" regexp="yes">&abbrevWeekdays;|&abbrevMonths;
+                                <exception regexp="yes">mo|su|tu</exception>
+                                <exception scope="next" spacebefore="no" regexp="yes">\.|['’].*</exception>
+                            </token>
+                        </marker>
+                    </pattern>
+                    <message>In American English, use a period after an abbreviation.</message>
+                    <suggestion>\2.</suggestion>
+                    <example correction="Fri.">See me on <marker>Fri</marker> 27 at 10:00.</example>
+                    <example correction="Jan.">See you next year in <marker>Jan</marker>!</example><!-- Not sure whether AmE has a period for the abbreviation. -->
+                    <example>See me on <marker>Fri.</marker> 27 at 10:00.</example>
+                    <example>Did you see <marker>Jan</marker> at the party?</example>
+                    <example>I saw Peter on <marker>Jan's</marker> birthday.</example>
+                    <example>It was created by Jan Luyken and his son.</example>
+                    <example>He lives in Mar del Plata.</example>
+                </rule>
+                <rule>
+                    <pattern>
+                        <token regexp="yes">.*[a-z0-9].*</token>
+                        <marker>
+                            <token case_sensitive="yes" spacebefore="yes">vs</token>
+                        </marker>
+                        <token regexp="yes" spacebefore="yes">.*[a-z0-9].*</token>
+                    </pattern>
+                    <message>In American English, use a period after an abbreviation.</message>
+                    <suggestion>vs.</suggestion>
+                    <example correction="vs.">In the end, it's you <marker>vs</marker> me.</example>
+                </rule>
+            </rulegroup>
+            <rule id="QUOTATION_MARKS_COMMA" name="rearranges final comma in reported speech">
+            <!-- TODO: should be part of larger rule group for punctuating reported speech -->
+                <antipattern>
+                    <token regexp="yes">\?|!</token>
+                    <token postag="''"/>
+                    <token postag=","/>
+                    <example>Asked to explain the meaning of "Ut!", he stated</example>
+                </antipattern>
+                <pattern>
+                    <marker>
+                        <token postag="''"/>
+                        <token postag=","/>
+                    </marker>
+                    <token min="1" chunk_re=".-NP-.*"/>
+                    <and>
+                        <token inflected="yes" regexp="yes">say|tell|add|admit|advise|agree|announce|answer|ask|claim|comment|complain|confess|confirm|continue|cry|demand|enquire|explain|hint|inform|insist|interrupt|maintain|note|observe|offer|order|point out|promise|protest|repeat|reply|shout|state|suggest|threaten|warn|wonder|question|yell|whisper|share|exclaim|ramble|chime|bemoan|scold</token>
+                        <token chunk_re="B-VP"/>
+                    </and>
+                </pattern>
+                <message>When punctuating reported speech in US English, the comma is usually placed before the closing quotation mark.</message>
+                <suggestion>,"</suggestion>
+                <example correction=',"'>"I'd like to explore this with you<marker>",</marker> Fergus replied.</example>
+            </rule>
+        </category>
+    <!-- ====================================================================== -->
+    <!-- Possible typos -->
+    <!-- ====================================================================== -->
+    <category id="TYPOS" name="Possible Typo" type="misspelling">
+        <rule id="FOR_EVER_US" name="for ever (forever)">
+            <antipattern>
+                <token>ever</token>
+                <token regexp="yes">since|one|body|thing|glades?|bloomers?|changing</token>
+            </antipattern>
+            <antipattern>
+                <token>ever</token>
+                <token postag="JJR" />
+            </antipattern>
+            <antipattern>
+                <token>ever</token>
+                <token regexp="yes">and|&amp;|or</token>
+                <token>ever</token>
+            </antipattern>
+            <pattern>
+                <token>for</token>
+                <token>ever</token>
+            </pattern>
+            <message>The adverb <suggestion>forever</suggestion> is spelled as one word.</message>
+            <url>https://www.merriam-webster.com/dictionary/forever</url>
+            <example correction="forever">Your texts are stored <marker>for ever</marker>.</example>
+        </rule>
+        <rule id="TRAD_TRADE" name="trad vs trade">
+            <antipattern>
+                <token skip="5">trad</token>
+                <token regexp="yes">music|jazz|musicians?|componists?|bands?|sessions?|rock|festivals?|singers?|climbing|British|crowds?|ballads?|goth|girls?|wife|wives</token>
+            </antipattern>
+            <pattern>
+                <token regexp="yes" case_sensitive="yes">[Tt]rad</token>
+            </pattern>
+            <message>Did you mean <suggestion>\1e</suggestion> or <suggestion>traditional</suggestion>?</message>
+            <example correction="trade|traditional">I will <marker>trad</marker> my shares on the open market.</example>
+        </rule>
+        <rulegroup id="THEE" name="thee (the)">
+            <antipattern><!-- https://en.wikipedia.org/wiki/Megan_Thee_Stallion -->
+                <token regexp="yes">Megh?an</token>
+                <token>Thee</token>
+            </antipattern>
+            <antipattern><!-- https://en.wikipedia.org/wiki/Fare_Thee_Well -->
+                <token>fare</token>
+                <token>thee</token>
+                <token>well</token>
+            </antipattern>
+            <antipattern><!-- https://en.wikipedia.org/wiki/America_(My_Country,_%27Tis_of_Thee) -->
+                <token>tis</token>
+                <token>of</token>
+                <token>thee</token>
+            </antipattern>
+            <antipattern>
+                <token>thee</token>
+                <token postag="MD|CC|IN|PRP.*|W.*|PCT" postag_regexp="yes" /><!-- word types uncommon after the article "the" -->
+            </antipattern>
+            <rule>
+                <pattern>
+                    <marker>
+                        <token regexp="yes" case_sensitive="yes">[Tt]hee</token>
+                    </marker>
+                    <token postag="RB" min="0" />
+                    <token postag="JJ.*" postag_regexp="yes" min="0" />
+                    <token postag="NNP?S" postag_regexp="yes" />
+                </pattern>
+                <message>Did you actually mean the archaic form of 'you', or did you maybe mean <suggestion>the</suggestion> or <suggestion>three</suggestion>?</message>
+                <example correction="the|three">She is <marker>thee</marker> miles away.</example>
+                <example>My Country, 'Tis of Thee!</example>
+            </rule>
+            <rule>
+                <pattern>
+                    <marker>
+                        <token regexp="yes" case_sensitive="yes">[Tt]hee</token>
+                    </marker>
+                    <token postag="RB" min="0" />
+                    <token postag="JJ.*" postag_regexp="yes" min="0" />
+                    <token postag="NNP|NN|NN:UN?" postag_regexp="yes" />
+                </pattern>
+                <message>Did you actually mean the archaic form of 'you', or did you maybe mean <suggestion>the</suggestion>?</message>
+                <example correction="the">She is <marker>thee</marker> best of all.</example>
+                <example correction="the">She is <marker>thee</marker> mother of those children.</example>
+                <example>Megan Thee Stallion is an American pop singer.</example>
+            </rule>
+        </rulegroup>
+    </category>
+
+    <category id="BRITISH_ENGLISH" name="British English phrases" type="locale-violation">
+        <rule id="AFTERWARDS_US" name="We visited them afterwards (afterward)">
+        <!-- TODO: IF rule is popular in US English, add equivalent rule for GB/CA English -->
+            <pattern>
+                <token>afterwards</token>
+            </pattern>
+            <message>In American English, 'afterward' is the preferred variant. 'Afterwards' is more commonly used in British English and other dialects.</message>
+            <suggestion>afterward</suggestion>
+            <example correction="afterward">We visited him <marker>afterwards</marker>.</example>
+        </rule>
+        <rule id="AUBERGINE" name="eggplant/aubergine">
+            <pattern>
+                <token regexp="yes">aubergines?</token>
+            </pattern>
+            <message>This term is chiefly British English. Consider a replacement.</message>
+            <suggestion><match no="1" regexp_match="(?i)aubergine" regexp_replace="eggplant" /></suggestion>
+            <url>https://www.merriam-webster.com/dictionary/aubergine</url>
+            <example correction="eggplants">He loved to eat <marker>aubergines</marker> for breakfast.</example>
+        </rule>
+
+        <rule id="GROUND_FIRST_FLOOR" name="ground floor/first floor">
+            <pattern>
+                <token>ground</token>
+                <token regexp="yes">floors?</token>
+            </pattern>
+            <message>This word is British English. Did you mean <suggestion>first \2</suggestion>?</message>
+            <url>http://www.learnenglish.de/mistakes/USvsBrEnglish.html</url>
+            <example correction="first floor">The room is on the <marker>ground floor</marker>.</example>
+            <example correction="first floors">Historic Buildings: insulating solid <marker>ground floors</marker>.</example>
+            <example>The room is on the <marker>first</marker> floor.</example>
+        </rule>
+        <rule id="MASTERS_DISSERTATION_THESIS" name="master's dissertation (thesis)">
+            <pattern>
+                <token>master</token>
+                <token spacebefore="no">'s</token>
+                <token inflected="yes">dissertation</token>
+            </pattern>
+            <message>In the US, the word '\3' is usually for doctoral degrees. Did you mean <suggestion>\1\2 <match no="3" postag="(NN.*)" postag_replace="$1">thesis</match></suggestion>?</message>
+            <url>https://en.wikipedia.org/wiki/Thesis#United_States</url>
+            <short>BrE/AmE: dissertation/thesis</short>
+            <example correction="master's thesis">Her <marker>master's dissertation</marker> is excellent.</example>
+            <example correction="Master's theses"><marker>Master’s dissertations</marker> are not easy to write.</example>
+            <example correction="master's thesis">Example sentence with no full stop: <marker>master's dissertation</marker></example>
+        </rule>
+        <rule id="SI_UNITS_OF_MEASUREMENT_ADJECTIVES_BRE" name="1-litre/1-liter">
+            <pattern>
+                <token regexp="yes">([0-9]+-)(yotta|zetta|exa|peta|tera|giga|mega|kilo|hecto|deca|deci|centi|milli|micro|nano|pico|femto|atto|zepto|yocto)?(gramme|litre|metre)<exception postag="NNP"/></token>
+            </pattern>
+            <message>The word '<match no="1"/>' is an adjective (SI unit of measurement), but the spelling is not correct American English.</message>
+            <short>AmE/BrE: SI units (adjectives)</short>
+            <example correction="">Use a <marker>6-millimetre</marker> bolt.</example>
+            <example>Use a <marker>6-millimeter</marker> bolt.</example>
+            <example>Do not find incorrect English: use a <marker>10-millimetres</marker> bolt.</example>
+            <example correction="">Use a <marker>10-metre</marker> rope.</example>
+            <example correction="">The 4.<marker>6-centigramme</marker> difference is not a problem.</example>
+            <example correction="">Also find typgoraphic errors: a 5.7.<marker>8-femtogramme</marker> difference is not important.</example>
+       </rule>
+
+    <rule id="AT_THE_WEEKEND" name="Collocation: at the weekend"><!-- Premium #983 -->
+    <!-- Modified. Originally created by Nicholas Walker (Bokomaru), 2017-11-14 -->
+      <pattern>
+          <marker>
+              <token>at</token>
+              <token>the</token>
+              <token chunk_re="E-NP.*">weekend</token>
+          </marker>
+      </pattern>
+      <message>The phrase '\1 \2 \3' is a British English expression.</message>
+      <suggestion>on \2 \3</suggestion>
+      <suggestion>over \2 \3</suggestion>
+      <url>http://learnersdictionary.com/qa/Over-the-weekend-on-the-weekend-at-the-weekend</url>
+      <short>Collocation error</short>
+      <example correction="on the weekend|over the weekend">I like to play soccer <marker>at the weekend</marker>.</example>
+    </rule>
+
+        <rule id="IN_FUTURE" name="Missing definite article referring to a time period">
+            <pattern>
+                <marker>
+                    <token>in</token>
+                    <token>future</token>
+                </marker>
+                <token regexp='yes'>[,\.:;]</token>
+            </pattern>
+            <message>The phrase '\1 \2' is British English. Did you mean: <suggestion><match no="1"/> the <match no="2"/></suggestion>?</message>
+            <url>https://www.merriam-webster.com/dictionary/in%20future</url>
+            <short>Missing definite article</short>
+            <example correction="In the future"><marker>In future</marker>, we will do better.</example>
+            <example><marker>In the future</marker>, we will do better.</example>
+        </rule>
+        <rule id="HAVE_A_SHOWER" name="have a shower → take a shower">
+            <antipattern>
+                <token regexp="yes">\w*(room|house|home)$</token>
+                <token />
+            </antipattern>
+            <pattern>
+                <marker>
+                    <token inflected="yes">have</token>
+                </marker>
+                <token min="0" postag="RB" />
+                <token postag_regexp="yes" postag="DT|CD" />
+                <token min="0" postag_regexp="yes" postag="JJ|RB"><exception regexp="yes">baby|steam|spacious|big|large|small</exception></token>
+                <token regexp="yes" chunk_re="E-NP.*">shower|bath</token>
+            </pattern>
+            <message>In American English, the verb <suggestion><match no="1" postag="VB.*">take</match></suggestion> is usually used before '\5'.</message>
+            <example correction="took">He <marker>had</marker> a shower before breakfast.</example>
+            <example correction="takes">He <marker>has</marker> a shower every day.</example>
+            <example correction="taken">I haven't <marker>had</marker> a bath in years.</example>
+            <example>I haven't taken a bath in years.</example>
+            <example>They have a baby shower.</example>
+            <example>I have two really cold showers per day.</example>
+            <example>If your home has a shower</example>
+            <example>My bathroom has a spacious shower.</example>
+        </rule>
+
+        <rulegroup id="HAVE_A_LOOK" name="have a look → take a look">
+            <short>British spelling</short>
+            <antipattern>
+                <token skip="5">on</token>
+                <token inflected="yes" regexp="yes">face|eye</token>
+                <example>She was perspiring profusely and had a look on her face that was very unusual.</example>
+            </antipattern>
+            <antipattern>
+                <token>look</token>
+                <token>on</token>
+                <token min="0">,</token>
+                <token regexp="yes">that|which</token>
+                <example>She had a look on that nobody will ever forget.</example>
+            </antipattern>
+            <rule>
+                <pattern>
+                    <token postag="CC|PCT|SENT_START" postag_regexp="yes" />
+                    <token regexp="yes">have|has|had</token>
+                    <token min="0">n't</token>
+                    <token postag="PRP_S.*|NNP" postag_regexp="yes" />
+                    <marker>
+                        <token chunk_re=".-VP">had</token>
+                        <token>a</token>
+                        <token min="0" regexp="yes">closer?|first|second|deeper|brief|quick|careful</token>
+                        <token chunk_re="E-NP.*">look</token>
+                    </marker>
+                    <token regexp="yes" skip="-1">at|if|and|on|because|but|when|once|over|in(to)?|whether|later|before|afterwards?|after|tomorrow|here|please|,|\.|…|\?|\!</token>
+                </pattern>
+                <message>In American English, "take a look" is more commonly used.</message>
+                <suggestion>taken \6 \7 \8</suggestion>
+                <example correction="taken a look">Have you <marker>had a look</marker>?</example>
+            </rule>
+            <rule>
+                <antipattern>
+                    <token inflected="yes" regexp="yes" skip="5">have|be</token>
+                    <token skip="2">had</token>
+                    <token>look</token>
+                </antipattern>
+                <pattern>
+                    <token chunk_re="E-NP.*" />
+                    <token postag="RB" min="0" />
+                    <marker>
+                        <token chunk_re=".-VP">had</token>
+                        <token>a</token>
+                        <token min="0" regexp="yes">closer?|first|second|deeper|brief|quick|careful</token>
+                        <token chunk_re="E-NP.*">look</token>
+                    </marker>
+                    <token regexp="yes">at|if|and|on|because|but|when|once|over|in(to)?|whether|later|before|afterwards?|after|tomorrow|here|please|,|\.|…|\?|\!</token>
+                </pattern>
+                <message>In American English, "take a look" is more commonly used.</message>
+                <suggestion>took \4 \5 \6</suggestion>
+                <example correction="took a look">I recently <marker>had a look</marker> at it.</example>
+            </rule>
+            <rule>
+                <pattern>
+                    <token postag="SENT_START" />
+                    <marker>
+                        <token chunk_re=".-VP">had</token>
+                        <token>a</token>
+                        <token min="0" regexp="yes">closer?|first|second|deeper|brief|quick|careful</token>
+                        <token chunk_re="E-NP.*">look</token>
+                    </marker>
+                    <token regexp="yes">at|if|and|on|because|but|when|once|over|in(to)?|whether|later|before|afterwards?|after|tomorrow|here|please|,|\.|…|\?|\!</token>
+                </pattern>
+                <message>In American English, "take a look" is more commonly used.</message>
+                <suggestion>took \3 \4 \5</suggestion>
+                <example correction="Took a look"><marker>Had a look</marker> at it and agree that it doesn't work.</example>
+            </rule>
+            <rule>
+                <pattern>
+                    <token regexp="yes">have|'ve</token>
+                    <token postag="RB" min="0" />
+                    <marker>
+                        <token chunk_re=".-VP">had</token>
+                        <token>a</token>
+                        <token min="0" regexp="yes">closer?|first|second|deeper|brief|quick|careful</token>
+                        <token chunk_re="E-NP.*">look</token>
+                    </marker>
+                    <token regexp="yes">at|if|and|on|because|but|when|once|over|in(to)?|whether|later|before|afterwards?|after|tomorrow|here|please|,|\.|…|\?|\!</token>
+                </pattern>
+                <message>In American English, "take a look" is more commonly used.</message>
+                <suggestion>taken \4 \5 \6</suggestion>
+                <example correction="taken a look">I've <marker>had a look</marker> at it.</example>
+            </rule>
+            <rule>
+                <pattern>
+                    <marker>
+                        <token inflected="yes" chunk_re=".-VP">
+                            have
+                            <exception>had</exception><!-- see rules above -->
+                        </token>
+                        <token>a</token>
+                        <token min="0" regexp="yes">closer?|first|second|deeper|brief|quick|careful</token>
+                        <token chunk_re="E-NP.*">look</token>
+                    </marker>
+                    <token regexp="yes">at|if|and|on|because|but|when|once|over|in(to)?|whether|later|before|afterwards?|after|tomorrow|here|please|,|\.|…|\?|\!</token>
+                </pattern>
+                <message>In American English, "take a look" is more commonly used.</message>
+                <suggestion><match no="1" postag="VB.*" postag_regexp="yes">take</match> \2 \3 \4</suggestion>
+                <example correction="take a look">I promise that I will <marker>have a look</marker> later.</example>
+            </rule>
+        </rulegroup>
+    </category>
+
+    <category id="SEMANTICS" name="Semantics" type="inconsistency">
+        <rulegroup id="DATE_FUTURE_VERB_PAST_US" name="Future date, but verb in past tense (US)" default="off">
+            <antipattern>
+                <token>due</token>
+                <token regexp="yes">&months;|&abbrevMonths;</token>
+            </antipattern>
+            <antipattern>
+                <token regexp="yes">is|was|the</token>
+                &date_mdy_numbers;
+                <example>The date that was set is 12/31/2022.</example>
+                <example>The date given was the 08/28/2022.</example>
+            </antipattern>
+            <antipattern>
+                <token regexp="yes">by|to|for</token>
+                &date_mdy_numbers;
+                <example>They were supposed to be finished by 8/20/2022.</example>
+                <example>They moved the expiration date to 08/28/2022.</example>
+                <example>They rescheduled for 08/28/2022.</example>
+            </antipattern>
+            <antipattern>
+                <token skip="-1" postag="SENT_START" />
+                <token skip="-1" postag="MD" />
+                <token postag="SENT_END" />
+                <example>We won't have it finished 8/2/2022.</example>
+                <example>I wanted to know if I could start on 08/28/2022.</example>
+                <example>They had agreed the project would begin from 08/28/2022  to 08/29/2022.</example>
+            </antipattern>
+            <antipattern>
+                <token postag="VBN" />
+                <token>to</token>
+                <token skip="1" postag="VB" />
+                &date_mdy_numbers;
+                <example>It it set to auto-renew on 8/20/2022.</example>
+            </antipattern>
+            <antipattern>
+                <token postag="VBN" />
+                <token>to</token>
+                <token>be</token>
+                <token skip="1" postag="VBN" />
+                &date_mdy_numbers;
+                <example>They were set to be processed 8/20/2022, but something came up and that date got pushed back even further.</example>
+            </antipattern>
+            <rule> <!-- We have visited the client on 10/27/2040 -->
+                <pattern>
+                    <token inflected="yes" postag="VBD?" postag_regexp="yes" skip="-1">have</token>
+                    <token postag="VBN" skip="-1" chunk_re=".-VP">
+                        <exception>scheduled</exception>
+                        <exception regexp="yes">wed|sat</exception>
+                        <exception scope='next' regexp='yes'>before|until|will</exception></token>
+                    <marker> &date_mdy_numbers; </marker>
+                </pattern>
+                <filter class="org.languagetool.rules.en.FutureDateFilter" args="year:\7 month:\3 day:\5"/>
+                <message>The given date is in the future, but the verb is in past tense.</message>
+                <example correction="">We have visited the client on <marker>10/27/2040</marker>.</example>
+                <example correction="">I had already informed the customer on <marker>10/27/2040</marker>.</example>
+                <example>We have visited the client on <marker>10/27/2010</marker>.</example>
+                <example>I had already informed the customer on <marker>10/27/2010</marker>.</example>
+                <example>We will inform the client on 10/27/2010.</example>
+                <example>He promised to do it before 30/08/2020.</example>
+            </rule>
+            <rule> <!-- On 10/27/2040, we have visited the client -->
+                <pattern>
+                    <token>
+                        <exception regexp='yes'>before|until</exception></token>
+                    <marker> &date_mdy_numbers_skip; </marker>
+                    <token inflected="yes" postag="VBD?" postag_regexp="yes" skip="-1">have</token>
+                    <token postag="VBN" skip="-1" chunk_re=".-VP">
+                        <exception regexp="yes">wed|sat</exception>
+                    </token>
+                </pattern>
+                <filter class="org.languagetool.rules.en.FutureDateFilter" args="year:\6 month:\2 day:\4"/>
+                <message>The given date is in the future, but the verb is in past tense.</message>
+                <example correction="">On <marker>10/27/2040</marker>, we have visited the client.</example>
+                <example correction="">On <marker>10/27/2040</marker>, I had already informed the customer.</example>
+                <example>On <marker>10/27/2010</marker>, we have visited the client.</example>
+                <example>On <marker>10/27/2010</marker>, I had already informed the customer.</example>
+                <example>On 10/27/2010, we will inform the client.</example>
+                <example>He promised to do it before 30/08/2020.</example>
+            </rule>
+            <rule> <!-- We visited the client on 27/10/2040  -->
+                <pattern>
+                    <token postag="VBD" skip="-1" chunk_re=".-VP">
+                        <exception scope='next' regexp='yes'>before|until|will</exception>
+                        <exception regexp="yes">wed|sat</exception>
+                    </token>
+                    <marker> &date_mdy_numbers; </marker>
+                </pattern>
+                <filter class="org.languagetool.rules.en.FutureDateFilter" args="year:\6 month:\2 day:\4"/>
+                <message>The given date is in the future, but the verb is in past tense.</message>
+                <example correction="">We visited the client on <marker>10/27/2040</marker>.</example>
+                <example correction="">I already informed the customer on <marker>10/27/2040</marker>.</example>
+                <example>We visited the client on <marker>10/27/2010</marker>.</example>
+                <example>I already informed the customer on <marker>10/27/2010</marker>.</example>
+                <example>We will inform the client on 10/27/2010.</example>
+                <example>He promised to do it before 30/08/2020.</example>
+            </rule>
+            <rule> <!-- On 27/10/2040, we visited the client -->
+                <pattern>
+                    <token>
+                        <exception regexp='yes'>before|until</exception></token>
+                    <marker> &date_mdy_numbers_skip; </marker>
+                    <token postag="VBD" skip="-1" chunk_re=".-VP">
+                        <exception regexp="yes">wed|sat</exception>
+                    </token>
+                </pattern>
+                <filter class="org.languagetool.rules.en.FutureDateFilter" args="year:\6 month:\2 day:\4"/>
+                <message>The given date is in the future, but the verb is in past tense.</message>
+                <example correction="">On <marker>10/27/2040</marker>, we visited the client.</example>
+                <example correction="">On <marker>10/27/2040</marker>, I already informed the customer.</example>
+                <example>On <marker>10/27/2010</marker>, we visited the client.</example>
+                <example>On <marker>10/27/2010</marker>, I already informed the customer.</example>
+                <example>On 10/27/2010, we will inform the client.</example>
+                <example>He promised to do it before 30/08/2020.</example>
+            </rule>
+        </rulegroup>
+    </category>
+
+</rules>

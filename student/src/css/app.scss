@@ -1,0 +1,21 @@
+@import '../../node_modules/bootstrap/scss/functions';
+@import '../../node_modules/bootstrap/scss/variables';
+@import '../../node_modules/bootstrap/scss/variables-dark';
+@import '../../../shared/css/nxe-bootstrap-config.scss';
+@import '../../node_modules/bootstrap/scss/bootstrap';
+@import '../../node_modules/sweetalert2/dist/sweetalert2.css';
+@import './style-main.css';
+@import '../../../shared/css/nxe-theme.scss';
+
+.btn-mediumlight       { background-color: $gray-400; border-color: $gray-400; color: $gray-900; }
+.btn-mediumlight:hover { background-color: $gray-300; border-color: $gray-400; color: $gray-900; }
+
+#description {
+    background-color: $gray-900;
+    border-color: $teal-300;
+    color: $white;
+}
+
+html, body {
+    height: 100%;
+}

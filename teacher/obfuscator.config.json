@@ -1,0 +1,28 @@
+{
+  "compact": true,
+  "controlFlowFlattening": true,
+  "controlFlowFlatteningThreshold": 0.12,
+  "deadCodeInjection": true,
+  "deadCodeInjectionThreshold": 0.1,
+  "disableConsoleOutput": true,
+  "identifierNamesGenerator": "hexadecimal",
+  "renameGlobals": true,
+  "selfDefending": false,
+  "simplify": true,
+  "splitStrings": true,
+  "splitStringsChunkLength": 4,
+  "stringArray": true,
+  "stringArrayCallsTransform": true,
+  "stringArrayEncoding": [
+    "rc4"
+  ],
+  "stringArrayIndexesType": [
+    "hexadecimal-number"
+  ],
+  "stringArrayRotate": true,
+  "stringArrayThreshold": 0.75,
+  "target": "node",
+  "transformObjectKeys": true,
+  "unicodeEscapeSequence": false
+}
+

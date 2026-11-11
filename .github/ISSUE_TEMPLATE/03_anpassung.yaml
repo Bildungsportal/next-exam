@@ -1,0 +1,42 @@
+name: Anpassung
+description: Änderungen bzw. Anpassung von bestehenden Features, z. B. Text- oder Ablaufänderungen in Next-Exam.
+type: Anpassung
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Hier kannst du Anpassungen oder Änderungen an bestehenden Funktionen in Next-Exam melden, z. B. Textänderungen, UI-Anpassungen oder Änderungen am Prüfungsablauf.**
+  - type: textarea
+    id: description
+    attributes:
+      label: Beschreibung
+      description: Was soll angepasst oder verbessert werden?
+      placeholder: |
+        Beispiel:
+        In der Lehrermaske soll der Button "Prüfung starten" zu "Exam starten" umbenannt werden,
+        um die Terminologie an den im Kollegium üblichen Sprachgebrauch anzupassen.
+    validations:
+      required: true
+  - type: textarea
+    id: reason
+    attributes:
+      label: Grund
+      description: Warum sollte diese Anpassung stattfinden?
+      placeholder: |
+        Beispiel:
+        Die Bezeichnung "Exam starten" ist allgemein verständlicher und verringert mögliche Verwechslungen seitens der Lehrkräfte.
+    validations:
+      required: false
+  - type: textarea
+    id: impact
+    attributes:
+      label: Betroffene Bereiche
+      description: Was ist betroffen? Gibt es mögliche Abhängigkeiten, Risiken oder Nebeneffekte?
+      placeholder: |
+        Beispiel:
+        Betrifft die Lehrermaske auf allen Seiten, auf denen der Button "Prüfung starten" vorkommt.
+        Eventuell müssen auch Hilfetexte, Schulungsunterlagen und automatisierte UI-Tests angepasst werden.
+    validations:
+      required: false
+ 

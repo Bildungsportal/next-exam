@@ -1,0 +1,53 @@
+name: Bug
+description: Melde einen Fehler.
+type: Bug
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Danke, dass du einen Bug meldest! Bitte fülle die Felder für eine schnelle Bearbeitung aus. Je genauer die Angaben, desto leichter ist die Behebung des Fehlers in Next-Exam.**
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: Was ist passiert?
+      description: Beschreibe den Fehler und füge, wenn möglich, Screenshots, Logs usw. hinzu.
+      placeholder: |
+        Beispiel:
+        Beim Starten einer digitalen Prüfung wird die Liste der Schüler:innen nicht geladen.
+        Erwartet hätte ich, dass alle Teilnehmenden angezeigt werden, damit ich den Prüfungsstart bestätigen kann.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Schritte zur Reproduktion
+      description: Wie kann der Fehler reproduziert werden? Schritt für Schritt.
+      placeholder: |
+        Beispiel:
+        1. Melde dich als Lehrkraft in Next-Exam an.
+        2. Gehe zur Übersicht „Prüfungen“.
+        3. Wähle eine Prüfung aus und klicke auf „Prüfung starten“.
+        4. Es wird keine Teilnehmendenliste angezeigt.
+    validations:
+      required: true
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Erwartetes Verhalten
+      description: Wie sollte es sich verhalten?
+      placeholder: |
+        Beispiel:
+        Nach dem Klick auf „Prüfung starten“ sollte die Liste aller zugeordneten Schüler:innen angezeigt werden.
+    validations:
+      required: false
+  - type: textarea
+    id: tech-hints
+    attributes:
+      label: Technische Hinweise
+      description: Lösungsvorschläge, weitere technische Hinweise.
+      placeholder: |
+        Beispiel:
+        Es dürfte sich um ein Problem mit der Chromuium-Version handeln.
+    validations:
+      required: false

@@ -1,0 +1,30 @@
+name: sign-test
+on: workflow_dispatch
+
+permissions:
+  id-token: write                # OIDC Token
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    environment: release         # muss zum Subject passen
+    steps:
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - run: Copy-Item "$env:SystemRoot\System32\whoami.exe" "$env:RUNNER_TEMP\test.exe"   # Dummy-Exe
+      - uses: azure/artifact-signing-action@v2
+        with:
+          endpoint: https://neu.codesigning.azure.net/   # North Europe
+          signing-account-name: Weissel-Thomas
+          certificate-profile-name: next-exam
+          files: ${{ runner.temp }}\test.exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+
+      - run: Get-AuthenticodeSignature "$env:RUNNER_TEMP\test.exe" | Format-List SignerCertificate, Status, TimeStamperCertificate   # Signatur prüfen

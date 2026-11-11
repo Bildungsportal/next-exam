@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Decrypts a Next-Exam NXE1 file (scrypt + AES-256-GCM via CTR, tag not verified) using only openssl + coreutils.
+# Usage: decryptnextexam <file>   → writes <name>_decrypted.<ext>
+set -e
+in="$1"
+[ -f "$in" ] || { echo "usage: decryptnextexam <file>" >&2; exit 1; }
+status="$(dirname "$in")/serverstatus.json"
+pw=$( [ -f "$status" ] && grep -o '"encryptionPassword": *"[^"]*"' "$status" | sed 's/.*"\([^"]*\)"$/\1/' || true )
+[ -n "$pw" ] || { read -rsp "encryptionPassword: " pw; echo; }
+out="${in%.*}_decrypted.${in##*.}"
+cp "$in" "$out"
+h(){ od -An -tx1 | tr -d ' \n'; }
+while [ "$(head -c5 "$out" | h)" = 4e58453101 ]; do
+    s=$(tail -c+6 "$out" | head -c16 | h)
+    iv=$(tail -c+22 "$out" | head -c12 | h)
+    k=$(openssl kdf -keylen 32 -kdfopt pass:"$pw" -kdfopt hexsalt:$s -kdfopt n:32768 -kdfopt r:8 -kdfopt p:1 SCRYPT | tr -d :)
+    tail -c+34 "$out" | head -c-16 | openssl enc -d -aes-256-ctr -K $k -iv ${iv}00000002 > "$out.tmp" && mv "$out.tmp" "$out"
+done
+echo "$out"
